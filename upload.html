@@ -1,46 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Clixly • Upload Post</title>
+  <meta charset="UTF-8" />
+  <title>Upload - Clixly</title>
   <style>
+    /* (keep your existing CSS) */
     body {
       font-family: 'Segoe UI', sans-serif;
-      max-width: 500px;
-      margin: auto;
+      background: #f2f5f9;
+      margin: 0;
       padding: 20px;
-      background: #f5f5f8;
+      display: flex;
+      justify-content: center;
     }
-    input, textarea, button {
+
+    .upload-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       width: 100%;
-      margin-bottom: 15px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+      max-width: 500px;
     }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .preview-img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    input[type="file"], textarea, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+
+    textarea {
+      resize: none;
+      height: 100px;
+    }
+
+    #charCount {
+      text-align: right;
+      font-size: 0.85em;
+      color: #555;
+    }
+
     button {
       background-color: #0077ff;
       color: white;
+      font-weight: bold;
       border: none;
       cursor: pointer;
+      transition: 0.3s ease;
     }
-    button:hover {
-      background-color: #005bb5;
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button:hover:enabled {
+      background-color: #005dc1;
+    }
+
+    #status {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.95em;
+      color: #444;
     }
   </style>
 </head>
 <body>
-  <h2>Upload Post</h2>
-
-  <input type="file" id="imageFile" accept="image/*" />
-  <textarea id="caption" rows="4" placeholder="Write a caption..."></textarea>
-  <button onclick="uploadPost()">Upload</button>
+  <div class="upload-container">
+    <h2>📤 Upload Post</h2>
+    <img id="previewImg" class="preview-img" src="#" alt="Preview" />
+    <input type="file" id="imageInput" accept="image/*" />
+    <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
+    <div id="charCount">0 / 300</div>
+    <button id="uploadBtn">🚀 Upload</button>
+    <div id="status"></div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -54,72 +110,129 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
+    const imageInput = document.getElementById('imageInput');
+    const captionInput = document.getElementById('caption');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const statusDiv = document.getElementById('status');
+    const previewImg = document.getElementById('previewImg');
+    const charCount = document.getElementById('charCount');
+
+    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/image/upload";
+    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+
+    let currentUser = null;
     let currentUsername = null;
-    let currentUserId = null;
 
     onAuthStateChanged(auth, async user => {
-      if (user) {
-        currentUserId = user.uid;
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          currentUsername = userDoc.data().username;
+      if (!user) {
+        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload posts.';
+        uploadBtn.disabled = true;
+        return;
+      }
+      currentUser = user;
+
+      // Fetch username from Firestore "users" collection by UID
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          currentUsername = userDocSnap.data().username;
+          uploadBtn.disabled = false;
+          statusDiv.textContent = '';
         } else {
-          alert("Username not found! Please complete your profile.");
+          statusDiv.textContent = "Username not found in profile. Please update your profile.";
+          uploadBtn.disabled = true;
         }
-      } else {
-        alert("Please log in to upload a post.");
-        // You can redirect to login page here if you want
+      } catch (err) {
+        statusDiv.textContent = "Error fetching username: " + err.message;
+        uploadBtn.disabled = true;
       }
     });
 
-    window.uploadPost = async function() {
-      if (!currentUserId) {
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          previewImg.src = e.target.result;
+          previewImg.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewImg.style.display = 'none';
+      }
+    });
+
+    captionInput.addEventListener('input', () => {
+      const len = captionInput.value.length;
+      charCount.textContent = `${len} / 300`;
+      if (len > 300) {
+        captionInput.style.borderColor = "red";
+        uploadBtn.disabled = true;
+      } else {
+        captionInput.style.borderColor = "#ccc";
+        if (currentUsername) uploadBtn.disabled = false;
+      }
+    });
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!currentUser) {
         alert("You must be logged in!");
         return;
       }
-
-      const fileInput = document.getElementById("imageFile");
-      const caption = document.getElementById("caption").value.trim();
-
-      if (!fileInput.files.length) {
-        alert("Please select an image file.");
-        return;
-      }
-      if (!caption) {
-        alert("Please write a caption.");
+      if (!currentUsername) {
+        alert("Username not found! Cannot upload.");
         return;
       }
 
-      const file = fileInput.files[0];
-      const storageRef = ref(storage, `posts/${currentUserId}_${Date.now()}_${file.name}`);
+      const file = imageInput.files[0];
+      const caption = captionInput.value.trim();
+
+      if (!file) return alert('Please select an image to upload.');
+      if (!caption) return alert('Please write a caption.');
+
+      uploadBtn.disabled = true;
+      statusDiv.textContent = '📡 Uploading image to Cloudinary...';
 
       try {
-        // Upload image to Firebase Storage
-        await uploadBytes(storageRef, file);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-        // Get public URL
-        const imageURL = await getDownloadURL(storageRef);
+        const response = await fetch(CLOUDINARY_URL, {
+          method: 'POST',
+          body: formData
+        });
 
-        // Save post to Firestore
-        await addDoc(collection(db, "posts"), {
-          userId: currentUserId,
-          username: currentUsername,
-          caption,
-          imageURL,
+        if (!response.ok) throw new Error('Cloudinary upload failed');
+
+        const data = await response.json();
+        const imageURL = data.secure_url;
+
+        statusDiv.textContent = '📝 Saving post to database...';
+
+        await addDoc(collection(db, 'posts'), {
+          imageURL: imageURL,
+          caption: caption,
+          username: currentUsername,  // <-- save username here, NOT email
+          userId: currentUser.uid,
           createdAt: serverTimestamp()
         });
 
-        alert("Post uploaded successfully!");
-        // Clear inputs
-        fileInput.value = "";
-        document.getElementById("caption").value = "";
+        statusDiv.textContent = '✅ Post uploaded successfully!';
+        imageInput.value = '';
+        captionInput.value = '';
+        previewImg.style.display = 'none';
+        charCount.textContent = '0 / 300';
 
-      } catch (err) {
-        alert("Error uploading post: " + err.message);
+      } catch (error) {
+        alert('❌ Upload failed: ' + error.message);
+        statusDiv.textContent = '';
+      } finally {
+        uploadBtn.disabled = false;
       }
-    };
+    });
   </script>
 </body>
 </html>
