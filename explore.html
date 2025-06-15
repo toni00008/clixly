@@ -106,8 +106,28 @@
     const searchInput = document.getElementById("searchInput");
 
     let allPosts = [];
+    const userCache = {}; // Cache for userId => username
 
-    onAuthStateChanged(auth, user => {
+    // Get username by userId with caching
+    async function getUsername(userId) {
+      if (!userId) return "unknown";
+      if (userCache[userId]) return userCache[userId];
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+          const username = userDoc.data().username || "unknown";
+          userCache[userId] = username;
+          return username;
+        }
+        userCache[userId] = "unknown";
+        return "unknown";
+      } catch {
+        return "unknown";
+      }
+    }
+
+    onAuthStateChanged(auth, async user => {
       if (!user) {
         postsDiv.innerHTML = 'Please <a href="login.html">login</a> to view posts.';
         return;
@@ -118,20 +138,26 @@
       onSnapshot(q, async snapshot => {
         allPosts = [];
 
+        // Process each post
         for (const docSnap of snapshot.docs) {
           const post = docSnap.data();
           const postId = docSnap.id;
-          const likesDoc = await getDoc(doc(db, "posts", postId));
-          const likes = likesDoc.data()?.likes || [];
+
+          // Get likes safely
+          const likes = post.likes || [];
+
+          // Get username of post owner
+          const username = await getUsername(post.userId);
 
           allPosts.push({
             ...post,
             id: postId,
-            likes
+            likes,
+            username,
           });
         }
 
-        renderPosts(); // render after data loaded
+        renderPosts();
       });
     });
 
@@ -149,7 +175,7 @@
         postEl.className = "post";
 
         postEl.innerHTML = `
-          <div class="user" onclick="viewUser('${post.userId}')"><b>${post.userEmail}</b></div>
+          <div class="user" onclick="viewUser('${post.userId}')"><b>@${post.username || "unknown"}</b></div>
           <img src="${post.imageURL}" alt="Post image">
           <div class="caption">${post.caption || ""}</div>
           <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
@@ -162,20 +188,23 @@
         postsDiv.appendChild(postEl);
 
         const commentsRef = collection(db, "posts", post.id, "comments");
-        onSnapshot(commentsRef, snapshot => {
+        onSnapshot(commentsRef, async snapshot => {
           const commentsDiv = document.getElementById(`comments-${post.id}`);
           commentsDiv.innerHTML = "";
-          snapshot.forEach(commentDoc => {
+
+          // Load usernames for commenters
+          for (const commentDoc of snapshot.docs) {
             const c = commentDoc.data();
+            const commenterUsername = await getUsername(c.userId);
             const cEl = document.createElement("div");
-            cEl.innerHTML = `<b>${c.userEmail}:</b> ${c.text}`;
+            cEl.innerHTML = `<b>@${commenterUsername}:</b> ${c.text}`;
             commentsDiv.appendChild(cEl);
-          });
+          }
         });
       });
     }
 
-    // 🧠 Smart Notification Sender
+    // Notification sender (unchanged)
     async function sendNotification(toUserId, type, fromUserId, fromUserEmail, postId = null) {
       const notifRef = collection(db, "users", toUserId, "notifications");
       const messages = {
@@ -193,7 +222,7 @@
       });
     }
 
-    // ❤️ Like Function with Notification
+    // Like function (unchanged except username display is handled above)
     window.likePost = async function(postId, userId) {
       const postRef = doc(db, "posts", postId);
       await updateDoc(postRef, {
@@ -208,7 +237,7 @@
       }
     };
 
-    // 💬 Comment Function with Notification
+    // Comment function (unchanged except username display is handled above)
     window.addComment = async function(postId, userId, userEmail) {
       const input = document.getElementById(`comment-input-${postId}`);
       const text = input.value.trim();
