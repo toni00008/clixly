@@ -32,7 +32,7 @@
 <body>
   <h2>Upload Post</h2>
 
-  <input type="text" id="imageURL" placeholder="Image URL" />
+  <input type="file" id="imageFile" accept="image/*" />
   <textarea id="caption" rows="4" placeholder="Write a caption..."></textarea>
   <button onclick="uploadPost()">Upload</button>
 
@@ -40,6 +40,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -53,6 +54,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     let currentUsername = null;
     let currentUserId = null;
@@ -68,7 +70,7 @@
         }
       } else {
         alert("Please log in to upload a post.");
-        // Optionally redirect to login page here
+        // You can redirect to login page here if you want
       }
     });
 
@@ -77,26 +79,43 @@
         alert("You must be logged in!");
         return;
       }
-      const imageURL = document.getElementById("imageURL").value.trim();
+
+      const fileInput = document.getElementById("imageFile");
       const caption = document.getElementById("caption").value.trim();
 
-      if (!imageURL || !caption) {
-        alert("Please fill in all fields.");
+      if (!fileInput.files.length) {
+        alert("Please select an image file.");
+        return;
+      }
+      if (!caption) {
+        alert("Please write a caption.");
         return;
       }
 
+      const file = fileInput.files[0];
+      const storageRef = ref(storage, `posts/${currentUserId}_${Date.now()}_${file.name}`);
+
       try {
+        // Upload image to Firebase Storage
+        await uploadBytes(storageRef, file);
+
+        // Get public URL
+        const imageURL = await getDownloadURL(storageRef);
+
+        // Save post to Firestore
         await addDoc(collection(db, "posts"), {
-          imageURL,
-          caption,
-          username: currentUsername,
           userId: currentUserId,
+          username: currentUsername,
+          caption,
+          imageURL,
           createdAt: serverTimestamp()
         });
+
         alert("Post uploaded successfully!");
-        // Clear inputs after upload
-        document.getElementById("imageURL").value = "";
+        // Clear inputs
+        fileInput.value = "";
         document.getElementById("caption").value = "";
+
       } catch (err) {
         alert("Error uploading post: " + err.message);
       }
