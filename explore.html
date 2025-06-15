@@ -82,8 +82,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, onSnapshot, doc,
-      updateDoc, arrayUnion, setDoc, getDoc
+      getFirestore, collection, query, orderBy, onSnapshot,
+      doc, updateDoc, arrayUnion, setDoc, getDoc, addDoc, Timestamp
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import {
       getAuth, onAuthStateChanged
@@ -131,7 +131,7 @@
           });
         }
 
-        renderPosts(); // ✅ Now run this AFTER loading is done
+        renderPosts(); // render after data loaded
       });
     });
 
@@ -175,17 +175,40 @@
       });
     }
 
-    searchInput.addEventListener('input', e => {
-      renderPosts(e.target.value.trim());
-    });
+    // 🧠 Smart Notification Sender
+    async function sendNotification(toUserId, type, fromUserId, fromUserEmail, postId = null) {
+      const notifRef = collection(db, "users", toUserId, "notifications");
+      const messages = {
+        like: `${fromUserEmail} liked your post.`,
+        comment: `${fromUserEmail} commented on your post.`
+      };
 
+      await addDoc(notifRef, {
+        type,
+        fromUserId,
+        fromUserEmail,
+        postId,
+        text: messages[type],
+        createdAt: Timestamp.now()
+      });
+    }
+
+    // ❤️ Like Function with Notification
     window.likePost = async function(postId, userId) {
       const postRef = doc(db, "posts", postId);
       await updateDoc(postRef, {
         likes: arrayUnion(userId)
       });
+
+      const postDoc = await getDoc(postRef);
+      const postOwnerId = postDoc.data().userId;
+
+      if (postOwnerId !== userId) {
+        await sendNotification(postOwnerId, 'like', userId, auth.currentUser.email, postId);
+      }
     };
 
+    // 💬 Comment Function with Notification
     window.addComment = async function(postId, userId, userEmail) {
       const input = document.getElementById(`comment-input-${postId}`);
       const text = input.value.trim();
@@ -199,12 +222,24 @@
         createdAt: new Date()
       });
 
+      const postDoc = await getDoc(doc(db, "posts", postId));
+      const postOwnerId = postDoc.data().userId;
+
+      if (postOwnerId !== userId) {
+        await sendNotification(postOwnerId, 'comment', userId, userEmail, postId);
+      }
+
       input.value = "";
     };
 
     window.viewUser = function(userId) {
       window.location.href = `user.html?id=${userId}`;
     };
+
+    searchInput.addEventListener('input', e => {
+      renderPosts(e.target.value.trim());
+    });
   </script>
 </body>
 </html>
+
