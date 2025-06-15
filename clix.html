@@ -24,6 +24,7 @@
       width: 100%;
       border-radius: 10px;
       background: black;
+      cursor: pointer;
     }
     .info {
       margin-top: 8px;
@@ -100,7 +101,7 @@
     import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // Firebase config - replace with your own
+    // Your Firebase config here:
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -118,16 +119,17 @@
 
     onAuthStateChanged(auth, user => {
       currentUser = user;
+      // You might want to re-render comment inputs or other UI parts here if needed
     });
 
     const clixList = document.getElementById('clixList');
 
-    // Load Clix videos (type='clix') ordered by newest first
+    // Query posts of type 'clix' ordered by newest first, limit 20
     const postsRef = collection(db, 'posts');
     const clixQuery = query(postsRef, where('type', '==', 'clix'), orderBy('createdAt', 'desc'), limit(20));
 
     onSnapshot(clixQuery, snapshot => {
-      clixList.innerHTML = ''; // Clear
+      clixList.innerHTML = ''; // Clear existing
 
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -136,22 +138,21 @@
         const container = document.createElement('div');
         container.classList.add('clix-container');
 
-        // Video element with loop, playsinline, controls, muted default
+        // Video element
         const video = document.createElement('video');
         video.src = data.mediaURL;
         video.loop = true;
         video.playsInline = true;
         video.controls = false;
-        video.muted = true; // Start muted, user can unmute
-        video.style.cursor = 'pointer';
+        video.muted = true;
 
-        // Toggle mute/unmute on click
+        // Toggle mute/unmute on video click
         video.addEventListener('click', () => {
           video.muted = !video.muted;
           muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
         });
 
-        // Info: username and caption
+        // Info bar with username, mute and share buttons
         const infoDiv = document.createElement('div');
         infoDiv.classList.add('info');
 
@@ -159,7 +160,13 @@
         usernameSpan.classList.add('username');
         usernameSpan.textContent = '@' + (data.username || 'unknown');
 
-        // Share button
+        const muteBtn = document.createElement('button');
+        muteBtn.textContent = '🔇 Unmute';
+        muteBtn.addEventListener('click', () => {
+          video.muted = !video.muted;
+          muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
+        });
+
         const shareBtn = document.createElement('button');
         shareBtn.textContent = 'Share';
         shareBtn.addEventListener('click', async () => {
@@ -172,7 +179,6 @@
             if (navigator.share) {
               await navigator.share(shareData);
             } else {
-              // fallback: copy URL to clipboard
               await navigator.clipboard.writeText(shareData.url);
               alert('Link copied to clipboard!');
             }
@@ -181,24 +187,16 @@
           }
         });
 
-        // Mute/unmute toggle button
-        const muteBtn = document.createElement('button');
-        muteBtn.textContent = '🔇 Unmute';
-        muteBtn.addEventListener('click', () => {
-          video.muted = !video.muted;
-          muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
-        });
-
         infoDiv.appendChild(usernameSpan);
         infoDiv.appendChild(muteBtn);
         infoDiv.appendChild(shareBtn);
 
-        // Caption below
+        // Caption text
         const captionP = document.createElement('p');
         captionP.classList.add('caption');
         captionP.textContent = data.caption || '';
 
-        // Comments Section
+        // Comment section
         const commentSection = document.createElement('div');
         commentSection.classList.add('comment-section');
 
@@ -206,7 +204,7 @@
         commentsList.classList.add('comments-list');
         commentsList.textContent = 'Loading comments...';
 
-        // Comment input if logged in
+        // Comment input if user logged in
         const commentInputDiv = document.createElement('div');
         commentInputDiv.classList.add('comment-input');
 
@@ -252,7 +250,7 @@
           commentSection.appendChild(commentInputDiv);
         }
 
-        // Append all parts to container
+        // Append elements to container
         container.appendChild(video);
         container.appendChild(infoDiv);
         container.appendChild(captionP);
@@ -281,7 +279,7 @@
       });
     });
 
-    // Simple HTML escape for comment text
+    // Escape HTML for safe comment display
     function escapeHtml(text) {
       return text.replace(/[&<>"']/g, m => ({
         '&': '&amp;',
