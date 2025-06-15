@@ -71,13 +71,13 @@
 </head>
 <body>
 
-  <!-- 🔍 Smart Live Search Bar (Explore Style) -->
+  <!-- 🔍 Explore Search -->
   <div class="search-bar">
-    <input id="searchInput" type="text" placeholder="🔍 Explore posts / hashtags...">
+    <input id="searchInput" type="text" placeholder="🔍 Search posts / hashtags...">
   </div>
 
-  <h2>🌎 Explore</h2>
-  <div id="posts">Loading posts...</div>
+  <h2>🔍 Explore Clixly</h2>
+  <div id="posts"><i>Fetching explore posts...</i></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -116,14 +116,13 @@
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
       onSnapshot(q, async snapshot => {
-        postsDiv.innerHTML = "";
         allPosts = [];
 
         for (const docSnap of snapshot.docs) {
           const post = docSnap.data();
           const postId = docSnap.id;
           const likesDoc = await getDoc(doc(db, "posts", postId));
-          const likes = likesDoc.data().likes || [];
+          const likes = likesDoc.data()?.likes || [];
 
           allPosts.push({
             ...post,
@@ -132,7 +131,7 @@
           });
         }
 
-        renderPosts();
+        renderPosts(); // ✅ Now run this AFTER loading is done
       });
     });
 
@@ -148,7 +147,6 @@
       (filtered.length ? filtered : allPosts).forEach(post => {
         const postEl = document.createElement("div");
         postEl.className = "post";
-        const hashtags = post.caption.match(/#\w+/g) || [];
 
         postEl.innerHTML = `
           <div class="user" onclick="viewUser('${post.userId}')"><b>${post.userEmail}</b></div>
@@ -210,5 +208,3 @@
   </script>
 </body>
 </html>
-
-
