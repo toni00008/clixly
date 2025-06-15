@@ -1,18 +1,62 @@
 <!DOCTYPE html>
 <html>
-<head><title>Sign Up</title></head>
+<head>
+  <title>Clixly • Sign Up</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .signup-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0056d2;
+    }
+  </style>
+</head>
 <body>
-  <h2>Sign Up</h2>
-  <input type="text" id="username" placeholder="Username">
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="signup()">Sign Up</button>
+
+  <div class="signup-box">
+    <h2>Create Account</h2>
+    <input type="text" id="username" placeholder="Username (e.g. clixlyfan)">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="signup()">Sign Up</button>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -22,58 +66,42 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
+    // ✅ Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    window.signup = async function() {
+    // ✅ Signup Function
+    window.signup = async function () {
+      const username = document.getElementById("username").value.trim();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
-      const usernameInput = document.getElementById("username");
-      const username = usernameInput.value.trim().toLowerCase();
 
-      if (!username) {
-        alert("Please enter a username");
-        usernameInput.focus();
-        return;
-      }
-      if (!email) {
-        alert("Please enter an email");
-        return;
-      }
-      if (!password) {
-        alert("Please enter a password");
+      if (!username || !email || !password) {
+        alert("Please fill out all fields.");
         return;
       }
 
       try {
-        // Check if username already exists
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("username", "==", username));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          alert("Username already taken! Please choose another.");
-          usernameInput.focus();
-          return;
-        }
-
-        // Create user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Save username in Firestore under users collection
+        // ✅ Save username to Firestore (users collection)
         await setDoc(doc(db, "users", user.uid), {
-          username: username,
           email: email,
+          username: username,
           createdAt: new Date()
         });
 
-        alert("Signup successful!");
+        alert("Signup successful! Welcome, " + username);
+        // Redirect to feed/home if needed
+        // window.location.href = "feed.html";
       } catch (err) {
         alert("Signup failed: " + err.message);
       }
-    }
+    };
   </script>
+
 </body>
 </html>
+
