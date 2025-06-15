@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clixly • Profile</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 600px; margin: auto; background: #f5f5f8; }
+    nav a { margin-right: 15px; color: #0077ff; text-decoration: none; }
+    .profile { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+    .profile-pic { width:80px; height:80px; border-radius:50%; object-fit:cover; }
+    .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; }
+    .follow { background: #0077ff; color: white; }
+    .post-card { background: white; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+    .post-card img { width: 100%; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <nav><a href="feed.html">Feed</a><a href="explore.html">Explore</a><a href="profile.html">Profile</a></nav>
+  <div id="profile-section"><h2>Loading profile...</h2></div>
+  <div id="user-posts"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, setDoc, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp({
+      apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...",
+      messagingSenderId: "...", appId: "..."
+    });
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const profileSec = document.getElementById('profile-section');
+    const postsEl = document.getElementById('user-posts');
+    const urlParams = new URLSearchParams(location.search);
+    const uid = urlParams.get('uid');
+
+    onAuthStateChanged(auth, user => {
+      if (!user) return;
+      loadProfile(user);
+      loadPosts();
+    });
+
+    async function loadProfile(user) {
+      const udoc = await getDoc(doc(db, 'users', uid));
+      const data = udoc.exists()? udoc.data(): {};
+      const isMe = user.uid === uid;
+
+      // Follow logic
+      let isFollowing = false;
+      const followerRef = doc(db, 'users', uid, 'followers', user.uid);
+      onSnapshot(followerRef, snap => {
+        isFollowing = snap.exists();
+        renderProfile(data, isMe, isFollowing);
+      });
+    }
+
+    function renderProfile(data, isMe, isFollowing) {
+      profileSec.innerHTML = `
+        <div class="profile">
+          <img class="profile-pic" src="${data.profilePic||'https://via.placeholder.com/80'}">
+          <div>
+            <h2>${data.displayName||data.email}</h2>
+            <p>${data.bio||''}</p>
+            <button class="btn follow">${isMe ? 'Edit Profile' : (isFollowing ? 'Unfollow' : 'Follow')}</button>
+          </div>
+        </div>
+      `;
+      if (!isMe) {
+        profileSec.querySelector("button.follow").onclick = () => toggleFollow(isFollowing);
+      }
+    }
+
+    async function toggleFollow(isFollowing) {
+      const a = auth.currentUser.uid, b = uid;
+      if (isFollowing) {
+        await deleteDoc(doc(db,'users',b,'followers',a));
+        await deleteDoc(doc(db,'users',a,'following',b));
+      } else {
+        await setDoc(doc(db,'users',b,'followers',a),{});
+        await setDoc(doc(db,'users',a,'following',b),{});
+      }
+    }
+
+    function loadPosts() {
+      const q = query(collection(db, 'posts'), orderBy('createdAt','desc'));
+      onSnapshot(q, snap => {
+        postsEl.innerHTML = '';
+        snap.docs.filter(d=>d.data().userId===uid).forEach(d=>{
+          const p = d.data();
+          const div = document.createElement('div');
+          div.className = 'post-card';
+          div.innerHTML = `<img src="${p.imageURL}"><p>${p.caption}</p>`;
+          postsEl.append(div);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
+
