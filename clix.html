@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Explore Clix</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      background: black; color: white;
+    }
+    .clix-slide {
+      width: 100vw;
+      height: 100vh;
+      scroll-snap-align: start;
+      position: relative;
+    }
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+    .info {
+      position: absolute;
+      bottom: 80px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 80%;
+    }
+    .interactions {
+      position: absolute;
+      right: 10px;
+      bottom: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    button {
+      background: #0077ff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    #clixContainer {
+      height: 100vh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+    }
+  </style>
+</head>
+<body>
+  <div id="clixContainer">Loading...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, collection, onSnapshot, doc, updateDoc,
+      getDoc, arrayUnion, setDoc, addDoc, Timestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const clixContainer = document.getElementById("clixContainer");
+
+    const getUsername = async (uid) => {
+      const userDoc = await getDoc(doc(db, "users", uid));
+      return userDoc.exists() ? userDoc.data().username || "Unknown" : "Unknown";
+    };
+
+    window.likeClix = async function(clixId, userId) {
+      const clixRef = doc(db, "clix", clixId);
+      await updateDoc(clixRef, { likes: arrayUnion(userId) });
+
+      const clixDoc = await getDoc(clixRef);
+      const ownerId = clixDoc.data().userId;
+      if (ownerId !== userId) {
+        await sendNotification(ownerId, "like", userId, auth.currentUser.email, clixId);
+      }
+    };
+
+    window.commentClix = async function(clixId) {
+      const comment = prompt("Enter your comment:");
+      if (!comment) return;
+      const commentRef = doc(collection(db, "clix", clixId, "comments"));
+      await setDoc(commentRef, {
+        userId: auth.currentUser.uid,
+        userEmail: auth.currentUser.email,
+        text: comment,
+        createdAt: Timestamp.now()
+      });
+
+      const clixDoc = await getDoc(doc(db, "clix", clixId));
+      const ownerId = clixDoc.data().userId;
+      if (ownerId !== auth.currentUser.uid) {
+        await sendNotification(ownerId, "comment", auth.currentUser.uid, auth.currentUser.email, clixId);
+      }
+    };
+
+    async function sendNotification(toUserId, type, fromUserId, fromUserEmail, clixId = null) {
+      const notifRef = collection(db, "users", toUserId, "notifications");
+      const text = type === "like"
+        ? `${fromUserEmail} liked your Clix.`
+        : `${fromUserEmail} commented on your Clix.`;
+
+      await addDoc(notifRef, {
+        type,
+        fromUserId,
+        fromUserEmail,
+        clixId,
+        text,
+        createdAt: Timestamp.now()
+      });
+    }
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        clixContainer.innerHTML = "<p>Please <a href='login.html'>login</a>.</p>";
+        return;
+      }
+
+      onSnapshot(collection(db, "clix"), async snapshot => {
+        const clixSlides = await Promise.all(snapshot.docs.map(async docSnap => {
+          const clix = docSnap.data();
+          const clixId = docSnap.id;
+          const videoURL = clix.videoURL;
+          const caption = clix.caption || "";
+          const likes = clix.likes || [];
+          const ownerId = clix.userId || "unknown";
+          const username = await getUsername(ownerId);
+
+          const slide = document.createElement("div");
+          slide.className = "clix-slide";
+          slide.innerHTML = `
+            <video src="${videoURL}" controls autoplay loop muted></video>
+            <div class="info">
+              <b>@${username}</b><br>
+              ${caption}
+            </div>
+            <div class="interactions">
+              <button onclick="likeClix('${clixId}', '${auth.currentUser.uid}')">❤️ ${likes.length}</button>
+              <button onclick="commentClix('${clixId}')">💬</button>
+            </div>
+          `;
+          return slide;
+        }));
+
+        clixContainer.innerHTML = "";
+        clixSlides.forEach(slide => clixContainer.appendChild(slide));
+      });
+    });
+  </script>
+</body>
+</html>
+
+
