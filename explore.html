@@ -9,6 +9,10 @@
     .post-card { background: white; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
     .post-card img { width: 100%; border-radius: 8px; margin-top: 10px; }
     .hashtag { display: inline-block; background: #e0f2ff; color: #0077ff; padding: 4px 8px; margin-right: 6px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; }
+    .actions { margin-top: 10px; }
+    .actions button { background: none; border: none; color: #0077ff; cursor: pointer; margin-right: 15px; font-weight: bold; }
+    .actions button.liked { color: #e0245e; }
+    .stats { margin-top: 8px; color: #555; font-size: 0.9em; }
   </style>
 </head>
 <body>
@@ -24,7 +28,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, collectionGroup, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const app = initializeApp({
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -34,27 +39,38 @@
       messagingSenderId: "33343695899",
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     });
+
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
     const postsEl = document.getElementById('posts');
     let posts = [];
-    const userCache = {}; // cache email → username
+    const userCache = {}; // email -> username
+    let currentUserEmail = null;
+
+    onAuthStateChanged(auth, user => {
+      currentUserEmail = user ? user.email : null;
+      // re-render posts so like buttons update
+      renderPosts(document.getElementById('searchInput').value.toLowerCase());
+    });
 
     const postsQ = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
 
     onSnapshot(postsQ, async snap => {
       posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Fetch usernames for each post's userEmail
       await Promise.all(posts.map(async post => {
         if (!userCache[post.userEmail]) {
           const userDoc = await getDoc(doc(db, 'users', post.userEmail));
           userCache[post.userEmail] = userDoc.exists() ? userDoc.data().username : post.userEmail;
         }
         post.username = userCache[post.userEmail];
+
+        // Ensure likes array exists
+        if (!Array.isArray(post.likes)) post.likes = [];
       }));
 
-      renderPosts();
+      renderPosts(document.getElementById('searchInput').value.toLowerCase());
     });
 
     document.getElementById('searchInput').oninput = e => renderPosts(e.target.value.toLowerCase());
@@ -74,15 +90,80 @@
 
         const hashtags = p.caption.match(/#\w+/g) || [];
 
+        const liked = currentUserEmail && p.likes.includes(currentUserEmail);
+
+        // We will also fetch comments count (async) and display it:
+        // For performance, we'll do this here asynchronously, but render first without comments count
         div.innerHTML = `
           <div><b>${p.username}</b></div>
           <img src="${p.imageURL}" alt="">
           <div>${p.caption}</div>
           <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}</div>
+          <div class="actions">
+            <button class="like-btn ${liked ? 'liked' : ''}">${liked ? '❤️' : '🤍'} Like (${p.likes.length})</button>
+            <button class="comment-btn">💬 Comment</button>
+          </div>
+          <div class="stats" id="comments-count-${p.id}">Comments: Loading...</div>
         `;
 
         postsEl.append(div);
+
+        // Like button click
+        div.querySelector('.like-btn').onclick = () => toggleLike(p.id, p.likes);
+
+        // Comment button click
+        div.querySelector('.comment-btn').onclick = () => addComment(p.id);
+
+        // Load comments count asynchronously
+        loadCommentsCount(p.id);
       });
+    }
+
+    async function toggleLike(postId, likes) {
+      if (!currentUserEmail) {
+        alert('Please log in to like posts.');
+        return;
+      }
+      const postRef = doc(db, 'posts', postId);
+      if (likes.includes(currentUserEmail)) {
+        // Unlike
+        await updateDoc(postRef, {
+          likes: arrayRemove(currentUserEmail)
+        });
+      } else {
+        // Like
+        await updateDoc(postRef, {
+          likes: arrayUnion(currentUserEmail)
+        });
+      }
+    }
+
+    async function addComment(postId) {
+      if (!currentUserEmail) {
+        alert('Please log in to comment.');
+        return;
+      }
+      const commentText = prompt('Write your comment:');
+      if (!commentText || commentText.trim().length === 0) return;
+
+      const commentsRef = collection(db, 'posts', postId, 'comments');
+      await addDoc(commentsRef, {
+        userEmail: currentUserEmail,
+        text: commentText.trim(),
+        createdAt: new Date()
+      });
+
+      alert('Comment added!');
+      // Refresh comment count after adding
+      loadCommentsCount(postId);
+    }
+
+    async function loadCommentsCount(postId) {
+      const commentsRef = collection(db, 'posts', postId, 'comments');
+      const commentsSnap = await getDocs(commentsRef);
+      const count = commentsSnap.size;
+      const countEl = document.getElementById(`comments-count-${postId}`);
+      if (countEl) countEl.textContent = `Comments: ${count}`;
     }
   </script>
 </body>
