@@ -3,47 +3,12 @@
 <head>
   <title>Clixly • Explore</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
-      max-width: 700px;
-      margin: auto;
-      background: #f5f5f8;
-    }
-    nav a {
-      margin-right: 15px;
-      color: #0077ff;
-      text-decoration: none;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    .post-card {
-      background: white;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-    .post-card img {
-      width: 100%;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    .hashtag {
-      display: inline-block;
-      background: #e0f2ff;
-      color: #0077ff;
-      padding: 4px 8px;
-      margin-right: 6px;
-      margin-bottom: 6px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 700px; margin: auto; background: #f5f5f8; }
+    nav a { margin-right: 15px; color: #0077ff; text-decoration: none; }
+    input { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; }
+    .post-card { background: white; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+    .post-card img { width: 100%; border-radius: 8px; margin-top: 10px; }
+    .hashtag { display: inline-block; background: #e0f2ff; color: #0077ff; padding: 4px 8px; margin-right: 6px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -52,7 +17,6 @@
     <a href="explore.html">Explore</a>
     <a href="profile.html">Profile</a>
   </nav>
-
   <h2>Explore</h2>
   <input type="text" id="searchInput" placeholder="Search posts / hashtags..." />
 
@@ -60,57 +24,66 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
+    const app = initializeApp({
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
-
-    const app = initializeApp(firebaseConfig);
+    });
     const db = getFirestore(app);
+
     const postsEl = document.getElementById('posts');
     let posts = [];
+    const userCache = {}; // cache email → username
 
-    // Load posts in real-time, newest first
     const postsQ = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-    onSnapshot(postsQ, snap => {
+
+    onSnapshot(postsQ, async snap => {
       posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Fetch usernames for each post's userEmail
+      await Promise.all(posts.map(async post => {
+        if (!userCache[post.userEmail]) {
+          const userDoc = await getDoc(doc(db, 'users', post.userEmail));
+          userCache[post.userEmail] = userDoc.exists() ? userDoc.data().username : post.userEmail;
+        }
+        post.username = userCache[post.userEmail];
+      }));
+
       renderPosts();
     });
 
-    // Filter posts when user types in the search box
     document.getElementById('searchInput').oninput = e => renderPosts(e.target.value.toLowerCase());
 
-    // Render all posts or filtered ones
     function renderPosts(filter = '') {
       postsEl.innerHTML = '';
+
       const filtered = posts.filter(p =>
-        p.caption?.toLowerCase().includes(filter) ||
-        p.caption?.match(/#\w+/g)?.some(tag => tag.toLowerCase().includes(filter)) ||
-        (filter.startsWith('#') && p.caption?.match(/#\w+/g)?.includes(filter))
+        p.caption.toLowerCase().includes(filter) ||
+        (p.caption.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(filter)) ||
+        (filter.startsWith('#') && (p.caption.match(/#\w+/g) || []).includes(filter))
       );
 
       (filtered.length ? filtered : posts).forEach(p => {
         const div = document.createElement('div');
         div.className = 'post-card';
-        const hashtags = p.caption?.match(/#\w+/g) || [];
-        const author = p.username || p.userEmail || "Anonymous";
+
+        const hashtags = p.caption.match(/#\w+/g) || [];
 
         div.innerHTML = `
-          <div><b>${author}</b></div>
-          <img src="${p.imageURL}" alt="Post image">
-          <div>${p.caption || ''}</div>
+          <div><b>${p.username}</b></div>
+          <img src="${p.imageURL}" alt="">
+          <div>${p.caption}</div>
           <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}</div>
         `;
-        postsEl.appendChild(div);
+
+        postsEl.append(div);
       });
     }
   </script>
 </body>
 </html>
-
