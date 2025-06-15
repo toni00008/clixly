@@ -1,120 +1,143 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Clixly • Explore</title>
+  <title>Clixly Explore</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
-      max-width: 700px;
+      max-width: 600px;
       margin: auto;
-      background: #f5f5f8;
+      background: #f9f9f9;
+      padding: 20px;
     }
-    nav a {
-      margin-right: 15px;
-      color: #0077ff;
-      text-decoration: none;
+    .search-bar {
+      margin-bottom: 20px;
     }
-    input {
+    .search-bar input {
       width: 100%;
       padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 8px;
+      font-size: 1em;
       border: 1px solid #ccc;
-    }
-    .post-card {
-      background: white;
       border-radius: 10px;
-      padding: 16px;
+    }
+    h2 {
+      margin-top: 20px;
+    }
+    .post {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
       margin-bottom: 20px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      padding: 16px;
+      transition: transform 0.2s;
     }
-    .post-card img {
-      width: 100%;
+    .post:hover {
+      transform: translateY(-3px);
+    }
+    .post img {
+      max-width: 100%;
       border-radius: 8px;
-      margin-top: 10px;
     }
-    .hashtag {
-      display: inline-block;
-      background: #e0f2ff;
-      color: #0077ff;
-      padding: 4px 8px;
-      margin-right: 6px;
+    .user {
+      color: #555;
+      font-size: 0.9em;
       margin-bottom: 6px;
-      border-radius: 6px;
       cursor: pointer;
+    }
+    .caption {
+      margin-top: 10px;
+      font-size: 1em;
+    }
+    .likes, .comments {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #333;
+    }
+    button {
+      cursor: pointer;
+      padding: 6px 12px;
+      background: #0077ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      margin-top: 6px;
+    }
+    input.comment-input {
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
     }
   </style>
 </head>
 <body>
-  <nav>
-    <a href="feed.html">Feed</a>
-    <a href="explore.html">Explore</a>
-    <a href="profile.html">Profile</a>
-  </nav>
 
-  <h2>Explore</h2>
-  <input type="text" id="searchInput" placeholder="Search posts / hashtags..." />
+  <!-- 🔍 Smart Live Search Bar (Explore Style) -->
+  <div class="search-bar">
+    <input id="searchInput" type="text" placeholder="🔍 Explore posts / hashtags...">
+  </div>
 
-  <div id="posts">Loading...</div>
+  <h2>🌎 Explore</h2>
+  <div id="posts">Loading posts...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore,
-      collection,
-      query,
-      orderBy,
-      onSnapshot,
-      doc,
-      getDoc
+      getFirestore, collection, query, orderBy, onSnapshot, doc,
+      updateDoc, arrayUnion, setDoc, getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    const app = initializeApp({
+    const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    });
+    };
 
+    const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const postsEl = document.getElementById('posts');
-    const searchInput = document.getElementById('searchInput');
-    const userCache = {};
+    const auth = getAuth(app);
 
-    const postsQ = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    const postsDiv = document.getElementById("posts");
+    const searchInput = document.getElementById("searchInput");
 
     let allPosts = [];
 
-    onSnapshot(postsQ, async snap => {
-      const posts = await Promise.all(snap.docs.map(async docSnap => {
-        const post = docSnap.data();
-        const id = docSnap.id;
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        postsDiv.innerHTML = 'Please <a href="login.html">login</a> to view posts.';
+        return;
+      }
 
-        const userEmail = post.userEmail || 'unknown@clixly.com';
-        let username = userEmail;
+      const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
-        if (!userCache[userEmail] && userEmail.includes("@")) {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', userEmail));
-            userCache[userEmail] = userDoc.exists() ? userDoc.data().username : userEmail;
-          } catch (e) {
-            userCache[userEmail] = userEmail;
-          }
+      onSnapshot(q, async snapshot => {
+        postsDiv.innerHTML = "";
+        allPosts = [];
+
+        for (const docSnap of snapshot.docs) {
+          const post = docSnap.data();
+          const postId = docSnap.id;
+          const likesDoc = await getDoc(doc(db, "posts", postId));
+          const likes = likesDoc.data().likes || [];
+
+          allPosts.push({
+            ...post,
+            id: postId,
+            likes
+          });
         }
-        username = userCache[userEmail] || userEmail;
 
-        return { id, ...post, username };
-      }));
-
-      allPosts = posts;
-      renderPosts();
+        renderPosts();
+      });
     });
 
     function renderPosts(filter = '') {
-      postsEl.innerHTML = '';
+      postsDiv.innerHTML = '';
       const lower = filter.toLowerCase();
 
       const filtered = allPosts.filter(p =>
@@ -122,27 +145,70 @@
         (p.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower))
       );
 
-      (filtered.length ? filtered : allPosts).forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'post-card';
+      (filtered.length ? filtered : allPosts).forEach(post => {
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+        const hashtags = post.caption.match(/#\w+/g) || [];
 
-        const hashtags = p.caption?.match(/#\w+/g) || [];
-
-        div.innerHTML = `
-          <div><b>${p.username}</b></div>
-          <img src="${p.imageURL}" alt="">
-          <div>${p.caption || ""}</div>
-          <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join(' ')}</div>
+        postEl.innerHTML = `
+          <div class="user" onclick="viewUser('${post.userId}')"><b>${post.userEmail}</b></div>
+          <img src="${post.imageURL}" alt="Post image">
+          <div class="caption">${post.caption || ""}</div>
+          <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
+          <button onclick="likePost('${post.id}', '${auth.currentUser.uid}')">❤️ Like</button>
+          <div class="comments" id="comments-${post.id}">💬 Comments loading...</div>
+          <input type="text" placeholder="Add a comment..." class="comment-input" id="comment-input-${post.id}">
+          <button onclick="addComment('${post.id}', '${auth.currentUser.uid}', '${auth.currentUser.email}')">➕ Comment</button>
         `;
 
-        postsEl.append(div);
+        postsDiv.appendChild(postEl);
+
+        const commentsRef = collection(db, "posts", post.id, "comments");
+        onSnapshot(commentsRef, snapshot => {
+          const commentsDiv = document.getElementById(`comments-${post.id}`);
+          commentsDiv.innerHTML = "";
+          snapshot.forEach(commentDoc => {
+            const c = commentDoc.data();
+            const cEl = document.createElement("div");
+            cEl.innerHTML = `<b>${c.userEmail}:</b> ${c.text}`;
+            commentsDiv.appendChild(cEl);
+          });
+        });
       });
     }
 
     searchInput.addEventListener('input', e => {
       renderPosts(e.target.value.trim());
     });
+
+    window.likePost = async function(postId, userId) {
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
+        likes: arrayUnion(userId)
+      });
+    };
+
+    window.addComment = async function(postId, userId, userEmail) {
+      const input = document.getElementById(`comment-input-${postId}`);
+      const text = input.value.trim();
+      if (!text) return;
+
+      const commentRef = doc(collection(db, "posts", postId, "comments"));
+      await setDoc(commentRef, {
+        userId,
+        userEmail,
+        text,
+        createdAt: new Date()
+      });
+
+      input.value = "";
+    };
+
+    window.viewUser = function(userId) {
+      window.location.href = `user.html?id=${userId}`;
+    };
   </script>
 </body>
 </html>
+
 
