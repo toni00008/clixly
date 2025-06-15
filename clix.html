@@ -2,224 +2,201 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clix • Reels</title>
+  <title>Clix • Reels Style Feed</title>
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
+      height: 100vh;
+      overflow: hidden;
       font-family: 'Segoe UI', sans-serif;
       background: black;
-      overflow: hidden;
     }
-    .reel-container {
+    #clixList {
       height: 100vh;
-      scroll-snap-type: y mandatory;
       overflow-y: scroll;
+      scroll-snap-type: y mandatory;
     }
-    .reel {
-      position: relative;
+    .clix-container {
       height: 100vh;
-      width: 100vw;
       scroll-snap-align: start;
       display: flex;
+      flex-direction: column;
       justify-content: center;
-      align-items: center;
+      position: relative;
+      background: black;
     }
     video {
-      height: 100vh;
       width: 100vw;
+      height: 100vh;
       object-fit: cover;
     }
     .overlay {
       position: absolute;
-      bottom: 60px;
-      left: 10px;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
       color: white;
+      padding: 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.6), transparent 60%);
     }
-    .right-buttons {
+    .side-buttons {
       position: absolute;
       right: 10px;
       bottom: 100px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      align-items: center;
+      gap: 15px;
     }
-    .right-buttons button, .mute-btn {
+    .side-buttons button {
       background: rgba(255,255,255,0.2);
       border: none;
       color: white;
+      font-size: 20px;
       padding: 10px;
       border-radius: 50%;
-      font-size: 18px;
       cursor: pointer;
     }
-    .mute-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
+    .username {
+      font-weight: bold;
     }
-    .heart {
+    .caption {
+      font-size: 0.95em;
+      margin-top: 5px;
+    }
+    .like-heart {
       position: absolute;
-      font-size: 100px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
       color: red;
-      animation: pop 0.5s ease forwards;
+      font-size: 100px;
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
       pointer-events: none;
     }
-    @keyframes pop {
-      0% { transform: scale(0); opacity: 0.6; }
-      100% { transform: scale(1); opacity: 0; }
-    }
-    .comment-popup {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: white;
-      max-height: 60%;
-      overflow-y: auto;
-      border-top-left-radius: 16px;
-      border-top-right-radius: 16px;
-      display: none;
-      flex-direction: column;
-      padding: 10px;
-    }
-    .comment-popup h3 {
-      margin: 0;
-      padding: 10px;
-    }
-    .comment-list {
-      flex: 1;
-      padding: 0 10px;
-    }
-    .comment-input {
-      display: flex;
-      border-top: 1px solid #ccc;
-      padding: 10px;
-    }
-    .comment-input input {
-      flex: 1;
-      padding: 8px;
-      font-size: 1em;
-    }
-    .comment-input button {
-      background: #0077ff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      margin-left: 8px;
+    .like-heart.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
     }
   </style>
 </head>
 <body>
+  <div id="clixList"></div>
 
-<div class="reel-container" id="reelContainer"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-<div class="comment-popup" id="commentPopup">
-  <h3>Comments</h3>
-  <div class="comment-list" id="commentList">No comments yet</div>
-  <div class="comment-input">
-    <input type="text" id="commentText" placeholder="Add a comment...">
-    <button onclick="addComment()">Send</button>
-  </div>
-</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
 
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-    authDomain: "clixly-bc284.firebaseapp.com",
-    projectId: "clixly-bc284",
-    storageBucket: "clixly-bc284.appspot.com",
-    messagingSenderId: "33343695899",
-    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-  };
+    const clixList = document.getElementById('clixList');
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+    const clixQuery = query(
+      collection(db, 'posts'),
+      where('type', '==', 'clix'),
+      orderBy('createdAt', 'desc')
+    );
 
-  let currentUser = null;
-  onAuthStateChanged(auth, user => { currentUser = user });
+    onSnapshot(clixQuery, snapshot => {
+      clixList.innerHTML = '';
 
-  const reelContainer = document.getElementById('reelContainer');
-  const postsRef = collection(db, 'posts');
-  const q = query(postsRef, where('type', '==', 'clix'), orderBy('createdAt', 'desc'));
+      snapshot.forEach(doc => {
+        const data = doc.data();
 
-  onSnapshot(q, snapshot => {
-    reelContainer.innerHTML = '';
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const reel = document.createElement('div');
-      reel.className = 'reel';
+        const container = document.createElement('div');
+        container.className = 'clix-container';
 
-      const video = document.createElement('video');
-      video.src = data.mediaURL;
-      video.autoplay = true;
-      video.loop = true;
-      video.muted = true;
-      video.playsInline = true;
+        const video = document.createElement('video');
+        video.src = data.mediaURL;
+        video.loop = true;
+        video.playsInline = true;
+        video.muted = true;
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('autoplay', 'autoplay');
 
-      const muteBtn = document.createElement('button');
-      muteBtn.className = 'mute-btn';
-      muteBtn.textContent = '🔇';
-      muteBtn.onclick = () => {
-        video.muted = !video.muted;
-        muteBtn.textContent = video.muted ? '🔇' : '🔊';
-      };
+        // Double tap like
+        let lastTap = 0;
+        const heart = document.createElement('div');
+        heart.className = 'like-heart';
+        heart.textContent = '❤';
 
-      const overlay = document.createElement('div');
-      overlay.className = 'overlay';
-      overlay.innerHTML = `<b>@${data.username || 'unknown'}</b><br>${data.caption || ''}<br><button>Follow</button>`;
+        video.addEventListener('touchend', e => {
+          const now = new Date().getTime();
+          const delta = now - lastTap;
+          if (delta < 300) {
+            heart.classList.add('show');
+            setTimeout(() => heart.classList.remove('show'), 600);
+          }
+          lastTap = now;
+        });
 
-      const buttons = document.createElement('div');
-      buttons.className = 'right-buttons';
+        // Overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.innerHTML = `
+          <div class="username">@${data.username || 'user'}</div>
+          <div class="caption">${data.caption || ''}</div>
+        `;
 
-      const likeBtn = document.createElement('button');
-      likeBtn.textContent = '❤️';
-      likeBtn.onclick = () => showHeart(reel);
+        // Side buttons
+        const buttons = document.createElement('div');
+        buttons.className = 'side-buttons';
+        buttons.innerHTML = `
+          <button class="muteBtn">🔊</button>
+          <button class="likeBtn">❤️</button>
+          <button class="commentBtn">💬</button>
+          <button class="shareBtn">🔗</button>
+        `;
 
-      const commentBtn = document.createElement('button');
-      commentBtn.textContent = '💬';
-      commentBtn.onclick = () => document.getElementById('commentPopup').style.display = 'flex';
+        const muteBtn = buttons.querySelector('.muteBtn');
+        muteBtn.addEventListener('click', () => {
+          video.muted = !video.muted;
+          muteBtn.textContent = video.muted ? '🔇' : '🔊';
+        });
 
-      const shareBtn = document.createElement('button');
-      shareBtn.textContent = '📤';
-      shareBtn.onclick = () => navigator.clipboard.writeText(location.href);
+        container.appendChild(video);
+        container.appendChild(heart);
+        container.appendChild(overlay);
+        container.appendChild(buttons);
 
-      buttons.append(likeBtn, commentBtn, shareBtn);
+        clixList.appendChild(container);
+      });
 
-      reel.append(video, muteBtn, overlay, buttons);
-      reel.ondblclick = () => showHeart(reel);
-      reelContainer.appendChild(reel);
+      observeVideos();
     });
-  });
 
-  function showHeart(reel) {
-    const heart = document.createElement('div');
-    heart.className = 'heart';
-    heart.innerHTML = '❤️';
-    heart.style.top = '50%';
-    heart.style.left = '50%';
-    heart.style.transform = 'translate(-50%, -50%)';
-    reel.appendChild(heart);
-    setTimeout(() => heart.remove(), 500);
-  }
+    function observeVideos() {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const video = entry.target.querySelector('video');
+          if (entry.isIntersecting) {
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
+      }, { threshold: 0.75 });
 
-  function addComment() {
-    const text = document.getElementById('commentText').value;
-    if (text.trim()) {
-      const commentList = document.getElementById('commentList');
-      const p = document.createElement('p');
-      p.textContent = text;
-      commentList.appendChild(p);
-      document.getElementById('commentText').value = '';
+      document.querySelectorAll('.clix-container').forEach(container => {
+        observer.observe(container);
+      });
     }
-  }
-</script>
+  </script>
 </body>
 </html>
 
