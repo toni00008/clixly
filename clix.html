@@ -1,134 +1,106 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Clix Feed - Clixly</title>
+  <title>Clix • Short Videos</title>
   <style>
-    /* Reset and basic */
-    * {
-      box-sizing: border-box;
-      margin: 0; padding: 0;
-    }
-    body, html {
-      height: 100%;
-      overflow: hidden;
+    body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: black;
-      color: white;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
+      background: #f2f5f9;
+      margin: 0; padding: 20px;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
     }
-
-    /* Container that holds all clix */
-    #clix-container {
-      height: 100vh;
-      overflow: hidden;
-      scroll-snap-type: y mandatory;
-      scroll-behavior: smooth;
+    .clix-container {
+      max-width: 600px;
+      width: 100%;
+      background: white;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
-
-    /* Each clix/video item */
-    .clix-item {
-      position: relative;
-      height: 100vh;
-      width: 100vw;
-      scroll-snap-align: start;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: black;
-    }
-
     video {
-      max-height: 100vh;
-      max-width: 100vw;
-      object-fit: cover;
+      width: 100%;
+      border-radius: 10px;
+      background: black;
     }
-
-    /* Overlay with info */
-    .overlay {
-      position: absolute;
-      bottom: 60px;
-      left: 20px;
-      right: 80px;
-      color: white;
-      text-shadow: 0 0 10px rgba(0,0,0,0.8);
-      font-size: 16px;
-      line-height: 1.3;
-      user-select: none;
+    .info {
+      margin-top: 8px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-
     .username {
       font-weight: 700;
-      margin-bottom: 5px;
+      color: #0077ff;
     }
-
     .caption {
-      font-weight: 400;
-      opacity: 0.9;
-      white-space: pre-wrap;
+      margin-top: 6px;
+      font-size: 0.9em;
+      color: #333;
     }
-
-    /* Like button container */
-    .like-container {
-      position: absolute;
-      right: 20px;
-      bottom: 100px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      user-select: none;
-    }
-
-    .like-btn {
-      font-size: 28px;
+    button {
       cursor: pointer;
-      color: rgba(255,255,255,0.7);
-      transition: color 0.3s ease;
-      user-select: none;
-    }
-    .like-btn.liked {
-      color: #ff2f6d;
-      filter: drop-shadow(0 0 5px #ff2f6d);
-      transform: scale(1.3);
-    }
-
-    .like-count {
-      font-size: 14px;
-      color: #fff;
-      opacity: 0.8;
-      user-select: none;
-    }
-
-    /* Scrollbar hidden */
-    #clix-container::-webkit-scrollbar {
-      display: none;
-    }
-
-    /* Loading indicator */
-    #loading {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      background: #0077ff;
+      border: none;
       color: white;
-      font-weight: bold;
-      font-size: 18px;
-      user-select: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .comment-section {
+      margin-top: 15px;
+    }
+    .comments-list {
+      max-height: 150px;
+      overflow-y: auto;
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      color: #555;
+    }
+    .comment-item {
+      border-bottom: 1px solid #ddd;
+      padding: 6px 0;
+    }
+    .comment-author {
+      font-weight: 700;
+      color: #0077ff;
+    }
+    .comment-text {
+      margin-left: 5px;
+      color: #333;
+    }
+    .comment-input {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+    .comment-input input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1em;
     }
   </style>
 </head>
 <body>
-  <div id="loading">Loading Clix...</div>
-  <div id="clix-container" style="display:none;"></div>
+
+  <h1>🔥 Clix - Short Videos</h1>
+  <div id="clixList"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // Firebase config - replace with your own!
+    // Firebase config - replace with your own
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -140,155 +112,187 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    const clixContainer = document.getElementById('clix-container');
-    const loading = document.getElementById('loading');
+    let currentUser = null;
 
-    // For demo, we fetch 20 latest clix videos
-    async function fetchClix() {
-      try {
-        const clixQuery = query(
-          collection(db, "posts"),
-          where("type", "==", "clix"),
-          orderBy("createdAt", "desc"),
-          limit(20)
-        );
-        const querySnapshot = await getDocs(clixQuery);
-        if (querySnapshot.empty) {
-          loading.textContent = "No Clix found.";
-          return;
-        }
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+    });
 
-        const clixData = [];
-        querySnapshot.forEach(doc => {
-          clixData.push({ id: doc.id, ...doc.data() });
-        });
+    const clixList = document.getElementById('clixList');
 
-        renderClix(clixData);
-      } catch (e) {
-        loading.textContent = "Error loading Clix: " + e.message;
-      }
-    }
+    // Load Clix videos (type='clix') ordered by newest first
+    const postsRef = collection(db, 'posts');
+    const clixQuery = query(postsRef, where('type', '==', 'clix'), orderBy('createdAt', 'desc'), limit(20));
 
-    // Render all clix items
-    function renderClix(clixList) {
-      clixContainer.innerHTML = '';
-      clixList.forEach((clix, index) => {
-        const item = document.createElement('div');
-        item.className = 'clix-item';
+    onSnapshot(clixQuery, snapshot => {
+      clixList.innerHTML = ''; // Clear
 
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const id = doc.id;
+
+        const container = document.createElement('div');
+        container.classList.add('clix-container');
+
+        // Video element with loop, playsinline, controls, muted default
         const video = document.createElement('video');
-        video.src = clix.mediaURL;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.preload = 'metadata';
-        video.loop = false;
+        video.src = data.mediaURL;
+        video.loop = true;
+        video.playsInline = true;
         video.controls = false;
-        video.muted = true;
-        video.autoplay = false;
+        video.muted = true; // Start muted, user can unmute
+        video.style.cursor = 'pointer';
 
-        item.appendChild(video);
-
-        // Overlay for username and caption
-        const overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        overlay.innerHTML = `
-          <div class="username">@${clix.username || 'unknown'}</div>
-          <div class="caption">${escapeHtml(clix.caption || '')}</div>
-        `;
-        item.appendChild(overlay);
-
-        // Like container
-        const likeContainer = document.createElement('div');
-        likeContainer.className = 'like-container';
-
-        const likeBtn = document.createElement('div');
-        likeBtn.className = 'like-btn';
-        likeBtn.innerHTML = '❤';
-        likeBtn.title = "Like";
-        likeContainer.appendChild(likeBtn);
-
-        const likeCount = document.createElement('div');
-        likeCount.className = 'like-count';
-        likeCount.textContent = clix.likesCount || 0;
-        likeContainer.appendChild(likeCount);
-
-        item.appendChild(likeContainer);
-
-        // Like logic with localStorage
-        const likedKey = 'liked-clix-' + clix.id;
-        if(localStorage.getItem(likedKey) === 'true') {
-          likeBtn.classList.add('liked');
-        }
-
-        likeBtn.addEventListener('click', () => {
-          if(likeBtn.classList.contains('liked')) {
-            likeBtn.classList.remove('liked');
-            likeCount.textContent = Math.max(0, parseInt(likeCount.textContent) - 1);
-            localStorage.setItem(likedKey, 'false');
-          } else {
-            likeBtn.classList.add('liked');
-            likeCount.textContent = parseInt(likeCount.textContent) + 1;
-            localStorage.setItem(likedKey, 'true');
-          }
-          // Optional: sync likes with backend Firestore here
+        // Toggle mute/unmute on click
+        video.addEventListener('click', () => {
+          video.muted = !video.muted;
+          muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
         });
 
-        clixContainer.appendChild(item);
+        // Info: username and caption
+        const infoDiv = document.createElement('div');
+        infoDiv.classList.add('info');
+
+        const usernameSpan = document.createElement('span');
+        usernameSpan.classList.add('username');
+        usernameSpan.textContent = '@' + (data.username || 'unknown');
+
+        // Share button
+        const shareBtn = document.createElement('button');
+        shareBtn.textContent = 'Share';
+        shareBtn.addEventListener('click', async () => {
+          const shareData = {
+            title: 'Clix by ' + (data.username || 'unknown'),
+            text: data.caption || '',
+            url: window.location.origin + '/clix.html?video=' + encodeURIComponent(data.mediaURL),
+          };
+          try {
+            if (navigator.share) {
+              await navigator.share(shareData);
+            } else {
+              // fallback: copy URL to clipboard
+              await navigator.clipboard.writeText(shareData.url);
+              alert('Link copied to clipboard!');
+            }
+          } catch (err) {
+            alert('Error sharing: ' + err.message);
+          }
+        });
+
+        // Mute/unmute toggle button
+        const muteBtn = document.createElement('button');
+        muteBtn.textContent = '🔇 Unmute';
+        muteBtn.addEventListener('click', () => {
+          video.muted = !video.muted;
+          muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
+        });
+
+        infoDiv.appendChild(usernameSpan);
+        infoDiv.appendChild(muteBtn);
+        infoDiv.appendChild(shareBtn);
+
+        // Caption below
+        const captionP = document.createElement('p');
+        captionP.classList.add('caption');
+        captionP.textContent = data.caption || '';
+
+        // Comments Section
+        const commentSection = document.createElement('div');
+        commentSection.classList.add('comment-section');
+
+        const commentsList = document.createElement('div');
+        commentsList.classList.add('comments-list');
+        commentsList.textContent = 'Loading comments...';
+
+        // Comment input if logged in
+        const commentInputDiv = document.createElement('div');
+        commentInputDiv.classList.add('comment-input');
+
+        const commentInput = document.createElement('input');
+        commentInput.type = 'text';
+        commentInput.placeholder = 'Write a comment...';
+
+        const commentBtn = document.createElement('button');
+        commentBtn.textContent = 'Send';
+        commentBtn.disabled = true;
+
+        commentInput.addEventListener('input', () => {
+          commentBtn.disabled = commentInput.value.trim().length === 0;
+        });
+
+        commentBtn.addEventListener('click', async () => {
+          if (!currentUser) {
+            alert('Please login to comment.');
+            return;
+          }
+          const text = commentInput.value.trim();
+          if (text.length === 0) return;
+
+          try {
+            await addDoc(collection(db, 'posts', id, 'comments'), {
+              text,
+              userId: currentUser.uid,
+              username: currentUser.displayName || currentUser.email || 'Anonymous',
+              createdAt: serverTimestamp()
+            });
+            commentInput.value = '';
+            commentBtn.disabled = true;
+          } catch (error) {
+            alert('Error adding comment: ' + error.message);
+          }
+        });
+
+        commentInputDiv.appendChild(commentInput);
+        commentInputDiv.appendChild(commentBtn);
+
+        commentSection.appendChild(commentsList);
+        if (currentUser) {
+          commentSection.appendChild(commentInputDiv);
+        }
+
+        // Append all parts to container
+        container.appendChild(video);
+        container.appendChild(infoDiv);
+        container.appendChild(captionP);
+        container.appendChild(commentSection);
+
+        clixList.appendChild(container);
+
+        // Load comments live
+        const commentsRef = collection(db, 'posts', id, 'comments');
+        const commentsQuery = query(commentsRef, orderBy('createdAt', 'asc'));
+
+        onSnapshot(commentsQuery, commentsSnap => {
+          commentsList.innerHTML = '';
+          if (commentsSnap.empty) {
+            commentsList.textContent = 'No comments yet. Be the first!';
+            return;
+          }
+          commentsSnap.forEach(cdoc => {
+            const cdata = cdoc.data();
+            const cDiv = document.createElement('div');
+            cDiv.classList.add('comment-item');
+            cDiv.innerHTML = `<span class="comment-author">@${cdata.username || 'anon'}</span>: <span class="comment-text">${escapeHtml(cdata.text)}</span>`;
+            commentsList.appendChild(cDiv);
+          });
+        });
       });
+    });
 
-      loading.style.display = 'none';
-      clixContainer.style.display = 'block';
-
-      setupVideoScroll();
-    }
-
-    // Escape HTML for safety
+    // Simple HTML escape for comment text
     function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, function(m) {
-        return ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;'
-        })[m];
-      });
+      return text.replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m]);
     }
-
-    // Autoplay video in viewport & pause others
-    function setupVideoScroll() {
-      const videos = document.querySelectorAll('video');
-
-      function playVisibleVideo() {
-        videos.forEach(video => {
-          const rect = video.getBoundingClientRect();
-          if(rect.top >= 0 && rect.bottom <= window.innerHeight) {
-            if(video.paused) video.play();
-          } else {
-            if(!video.paused) video.pause();
-          }
-        });
-      }
-
-      playVisibleVideo();
-      window.addEventListener('scroll', () => {
-        playVisibleVideo();
-      });
-
-      // Also handle keyboard arrows for desktop scroll
-      window.addEventListener('keydown', e => {
-        if(e.key === 'ArrowDown') {
-          window.scrollBy({top: window.innerHeight, behavior: 'smooth'});
-        } else if(e.key === 'ArrowUp') {
-          window.scrollBy({top: -window.innerHeight, behavior: 'smooth'});
-        }
-      });
-    }
-
-    // Kickoff fetch
-    fetchClix();
   </script>
+
 </body>
 </html>
 
