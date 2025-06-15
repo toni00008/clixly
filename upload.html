@@ -1,62 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Clixly • Sign Up</title>
+  <title>Clixly • Upload Post</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: #f5f5f8;
     }
-    .signup-box {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    input, textarea, button {
       width: 100%;
-      max-width: 400px;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
       margin-bottom: 15px;
-      border: 1px solid #ccc;
+      padding: 10px;
       border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
     }
     button {
-      width: 100%;
-      padding: 12px;
-      background: #007bff;
+      background-color: #0077ff;
       color: white;
       border: none;
-      border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
     }
     button:hover {
-      background: #0056d2;
+      background-color: #005bb5;
     }
   </style>
 </head>
 <body>
+  <h2>Upload Post</h2>
 
-  <div class="signup-box">
-    <h2>Create Account</h2>
-    <input type="text" id="username" placeholder="Username (e.g. clixlyfan)">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="signup()">Sign Up</button>
-  </div>
+  <input type="text" id="imageURL" placeholder="Image URL" />
+  <textarea id="caption" rows="4" placeholder="Write a caption..."></textarea>
+  <button onclick="uploadPost()">Upload</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -66,42 +50,58 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
-    // ✅ Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ✅ Signup Function
-    window.signup = async function () {
-      const username = document.getElementById("username").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+    let currentUsername = null;
+    let currentUserId = null;
 
-      if (!username || !email || !password) {
-        alert("Please fill out all fields.");
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        currentUserId = user.uid;
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          currentUsername = userDoc.data().username;
+        } else {
+          alert("Username not found! Please complete your profile.");
+        }
+      } else {
+        alert("Please log in to upload a post.");
+        // Optionally redirect to login page here
+      }
+    });
+
+    window.uploadPost = async function() {
+      if (!currentUserId) {
+        alert("You must be logged in!");
+        return;
+      }
+      const imageURL = document.getElementById("imageURL").value.trim();
+      const caption = document.getElementById("caption").value.trim();
+
+      if (!imageURL || !caption) {
+        alert("Please fill in all fields.");
         return;
       }
 
       try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // ✅ Save username to Firestore (users collection)
-        await setDoc(doc(db, "users", user.uid), {
-          email: email,
-          username: username,
-          createdAt: new Date()
+        await addDoc(collection(db, "posts"), {
+          imageURL,
+          caption,
+          username: currentUsername,
+          userId: currentUserId,
+          createdAt: serverTimestamp()
         });
-
-        alert("Signup successful! Welcome, " + username);
-        // Redirect to feed/home if needed
-        // window.location.href = "feed.html";
+        alert("Post uploaded successfully!");
+        // Clear inputs after upload
+        document.getElementById("imageURL").value = "";
+        document.getElementById("caption").value = "";
       } catch (err) {
-        alert("Signup failed: " + err.message);
+        alert("Error uploading post: " + err.message);
       }
     };
   </script>
-
 </body>
 </html>
 
