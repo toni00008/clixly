@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Upload - Clixly</title>
   <style>
-    /* (keep your existing CSS) */
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f2f5f9;
@@ -28,21 +27,20 @@
       color: #333;
     }
 
-    .preview-img {
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      display: none;
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
     }
 
-    input[type="file"], textarea, button {
+    select, input[type="file"], textarea, button {
       width: 100%;
       margin: 10px 0;
       padding: 12px;
       border-radius: 6px;
       border: 1px solid #ccc;
       font-size: 1em;
+      box-sizing: border-box;
     }
 
     textarea {
@@ -80,15 +78,38 @@
       font-size: 0.95em;
       color: #444;
     }
+
+    #previewImg, #previewVideo {
+      width: 100%;
+      max-height: 320px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+      object-fit: contain;
+      background: #000;
+    }
   </style>
 </head>
 <body>
   <div class="upload-container">
-    <h2>📤 Upload Post</h2>
-    <img id="previewImg" class="preview-img" src="#" alt="Preview" />
-    <input type="file" id="imageInput" accept="image/*" />
-    <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
+    <h2>📤 Upload Clix or Post</h2>
+
+    <label for="uploadType">Choose Upload Type:</label>
+    <select id="uploadType">
+      <option value="post">Post (Image)</option>
+      <option value="clix">Clix (Short Video)</option>
+    </select>
+
+    <label id="fileLabel" for="mediaInput">Select Image</label>
+    <input type="file" id="mediaInput" accept="image/*" />
+
+    <img id="previewImg" alt="Image Preview" />
+    <video id="previewVideo" controls></video>
+
+    <label for="caption">Caption (Max 300 chars):</label>
+    <textarea id="caption" placeholder="Write a caption..."></textarea>
     <div id="charCount">0 / 300</div>
+
     <button id="uploadBtn">🚀 Upload</button>
     <div id="status"></div>
   </div>
@@ -98,6 +119,7 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // === Your Firebase config here ===
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -107,32 +129,108 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
+    const CLOUDINARY_IMAGE_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/image/upload";
+    const CLOUDINARY_VIDEO_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload";
+    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const imageInput = document.getElementById('imageInput');
+    const uploadTypeSelect = document.getElementById('uploadType');
+    const mediaInput = document.getElementById('mediaInput');
+    const fileLabel = document.getElementById('fileLabel');
+    const previewImg = document.getElementById('previewImg');
+    const previewVideo = document.getElementById('previewVideo');
     const captionInput = document.getElementById('caption');
+    const charCount = document.getElementById('charCount');
     const uploadBtn = document.getElementById('uploadBtn');
     const statusDiv = document.getElementById('status');
-    const previewImg = document.getElementById('previewImg');
-    const charCount = document.getElementById('charCount');
-
-    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/image/upload";
-    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
 
     let currentUser = null;
     let currentUsername = null;
 
+    // Update UI based on upload type
+    function updateUIForUploadType() {
+      if (uploadTypeSelect.value === 'post') {
+        fileLabel.textContent = "Select Image";
+        mediaInput.accept = "image/*";
+        previewImg.style.display = 'none';
+        previewVideo.style.display = 'none';
+        mediaInput.value = '';
+      } else {
+        fileLabel.textContent = "Select Video (15s - 60s)";
+        mediaInput.accept = "video/*";
+        previewImg.style.display = 'none';
+        previewVideo.style.display = 'none';
+        mediaInput.value = '';
+      }
+      statusDiv.textContent = '';
+      captionInput.value = '';
+      charCount.textContent = "0 / 300";
+    }
+
+    uploadTypeSelect.addEventListener('change', () => {
+      updateUIForUploadType();
+    });
+
+    mediaInput.addEventListener('change', () => {
+      const file = mediaInput.files[0];
+      if (!file) {
+        previewImg.style.display = 'none';
+        previewVideo.style.display = 'none';
+        return;
+      }
+      if (uploadTypeSelect.value === 'post') {
+        // Image preview
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+            previewVideo.style.display = 'none';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          alert("Please select a valid image file.");
+          mediaInput.value = '';
+        }
+      } else {
+        // Video preview
+        if (file.type.startsWith('video/')) {
+          const url = URL.createObjectURL(file);
+          previewVideo.src = url;
+          previewVideo.style.display = 'block';
+          previewImg.style.display = 'none';
+        } else {
+          alert("Please select a valid video file.");
+          mediaInput.value = '';
+        }
+      }
+    });
+
+    captionInput.addEventListener('input', () => {
+      const len = captionInput.value.length;
+      charCount.textContent = `${len} / 300`;
+      if (len > 300) {
+        captionInput.style.borderColor = "red";
+        uploadBtn.disabled = true;
+      } else {
+        captionInput.style.borderColor = "#ccc";
+        uploadBtn.disabled = false;
+      }
+    });
+
     onAuthStateChanged(auth, async user => {
       if (!user) {
-        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload posts.';
+        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload.';
         uploadBtn.disabled = true;
+        currentUser = null;
         return;
       }
       currentUser = user;
 
-      // Fetch username from Firestore "users" collection by UID
+      // Fetch username
       try {
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -150,89 +248,84 @@
       }
     });
 
-    imageInput.addEventListener('change', () => {
-      const file = imageInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          previewImg.src = e.target.result;
-          previewImg.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      } else {
-        previewImg.style.display = 'none';
-      }
-    });
-
-    captionInput.addEventListener('input', () => {
-      const len = captionInput.value.length;
-      charCount.textContent = `${len} / 300`;
-      if (len > 300) {
-        captionInput.style.borderColor = "red";
-        uploadBtn.disabled = true;
-      } else {
-        captionInput.style.borderColor = "#ccc";
-        if (currentUsername) uploadBtn.disabled = false;
-      }
-    });
-
     uploadBtn.addEventListener('click', async () => {
       if (!currentUser) {
-        alert("You must be logged in!");
+        alert("Please login first.");
         return;
       }
       if (!currentUsername) {
-        alert("Username not found! Cannot upload.");
+        alert("Username missing. Update your profile.");
         return;
       }
 
-      const file = imageInput.files[0];
+      const file = mediaInput.files[0];
       const caption = captionInput.value.trim();
 
-      if (!file) return alert('Please select an image to upload.');
-      if (!caption) return alert('Please write a caption.');
+      if (!file) {
+        alert("Please select a file to upload.");
+        return;
+      }
+
+      if (!caption) {
+        alert("Please write a caption.");
+        return;
+      }
+
+      if (caption.length > 300) {
+        alert("Caption exceeds 300 characters.");
+        return;
+      }
 
       uploadBtn.disabled = true;
-      statusDiv.textContent = '📡 Uploading image to Cloudinary...';
+      statusDiv.textContent = 'Uploading media...';
+
+      // Determine Cloudinary URL based on type
+      const cloudinaryUrl = (uploadTypeSelect.value === 'post') ? CLOUDINARY_IMAGE_URL : CLOUDINARY_VIDEO_URL;
 
       try {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-        const response = await fetch(CLOUDINARY_URL, {
+        const res = await fetch(cloudinaryUrl, {
           method: 'POST',
           body: formData
         });
 
-        if (!response.ok) throw new Error('Cloudinary upload failed');
+        if (!res.ok) throw new Error('Upload failed.');
 
-        const data = await response.json();
-        const imageURL = data.secure_url;
+        const data = await res.json();
+        const mediaURL = data.secure_url;
 
-        statusDiv.textContent = '📝 Saving post to database...';
+        statusDiv.textContent = 'Saving to database...';
 
         await addDoc(collection(db, 'posts'), {
-          imageURL: imageURL,
+          mediaURL: mediaURL,
+          type: uploadTypeSelect.value,       // 'post' or 'clix'
           caption: caption,
-          username: currentUsername,  // <-- save username here, NOT email
+          username: currentUsername,
           userId: currentUser.uid,
           createdAt: serverTimestamp()
         });
 
-        statusDiv.textContent = '✅ Post uploaded successfully!';
-        imageInput.value = '';
+        statusDiv.textContent = 'Upload successful! 🎉';
+        mediaInput.value = '';
         captionInput.value = '';
         previewImg.style.display = 'none';
+        previewVideo.style.display = 'none';
         charCount.textContent = '0 / 300';
 
       } catch (error) {
-        alert('❌ Upload failed: ' + error.message);
+        alert('Upload error: ' + error.message);
         statusDiv.textContent = '';
       } finally {
         uploadBtn.disabled = false;
       }
     });
+
+    // Initial setup
+    updateUIForUploadType();
+
   </script>
 </body>
 </html>
