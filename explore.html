@@ -5,87 +5,90 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
-      background: #f9f9f9;
+      background: #f5f5f8;
       padding: 20px;
     }
-    .search-bar {
-      margin-bottom: 20px;
+    nav a {
+      margin-right: 15px;
+      color: #0077ff;
+      text-decoration: none;
     }
-    .search-bar input {
+    input {
       width: 100%;
       padding: 10px;
-      font-size: 1em;
+      margin-bottom: 15px;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      border-radius: 10px;
-    }
-    h2 {
-      margin-top: 20px;
     }
     .post {
       background: white;
       border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
       margin-bottom: 20px;
       padding: 16px;
-      transition: transform 0.2s;
-    }
-    .post:hover {
-      transform: translateY(-3px);
     }
     .post img {
-      max-width: 100%;
+      width: 100%;
       border-radius: 8px;
+      margin-top: 10px;
     }
     .user {
-      color: #555;
-      font-size: 0.9em;
-      margin-bottom: 6px;
-      cursor: pointer;
+      color: #333;
+      font-weight: bold;
+      margin-bottom: 5px;
     }
     .caption {
       margin-top: 10px;
-      font-size: 1em;
     }
     .likes, .comments {
       margin-top: 10px;
       font-size: 0.9em;
-      color: #333;
+    }
+    .hashtag {
+      display: inline-block;
+      background: #e0f2ff;
+      color: #0077ff;
+      padding: 4px 8px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      cursor: pointer;
     }
     button {
-      cursor: pointer;
-      padding: 6px 12px;
+      margin-top: 5px;
+      padding: 5px 10px;
       background: #0077ff;
       color: white;
       border: none;
       border-radius: 4px;
-      margin-top: 6px;
+      cursor: pointer;
     }
     input.comment-input {
-      margin-top: 10px;
+      margin-top: 8px;
+      padding: 6px;
       width: 100%;
-      padding: 8px;
-      box-sizing: border-box;
-      border-radius: 6px;
-      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
+  <nav>
+    <a href="feed.html">Feed</a>
+    <a href="explore.html">Explore</a>
+    <a href="profile.html">Profile</a>
+  </nav>
 
-  <div class="search-bar">
-    <input id="searchInput" type="text" placeholder="🔍 Search posts / hashtags...">
-  </div>
+  <h2>🌎 Explore</h2>
+  <input id="searchInput" type="text" placeholder="Search posts / hashtags..." />
 
-  <h2>🔍 Explore Posts</h2>
   <div id="posts">Loading posts...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, onSnapshot, doc,
-      updateDoc, arrayUnion, arrayRemove, setDoc, getDoc
+      getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc,
+      updateDoc, arrayUnion, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import {
       getAuth, onAuthStateChanged
@@ -108,154 +111,132 @@
     const searchInput = document.getElementById("searchInput");
 
     let allPosts = [];
-    const userCache = {}; // cache userId → username/email
+    const userCache = {};
 
-    let currentUser = null;
-
-    onAuthStateChanged(auth, async user => {
-      currentUser = user;
+    onAuthStateChanged(auth, user => {
       if (!user) {
-        postsDiv.innerHTML = 'Please <a href="login.html">login</a> to explore posts.';
+        postsDiv.innerHTML = 'Please <a href="login.html">log in</a> to view posts.';
         return;
       }
 
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
       onSnapshot(q, async snapshot => {
-        allPosts = [];
-        postsDiv.innerHTML = 'Loading posts...';
+        const tempPosts = [];
 
-        for (const docSnap of snapshot.docs) {
-          const postData = docSnap.data();
+        await Promise.all(snapshot.docs.map(async docSnap => {
+          const post = docSnap.data();
           const postId = docSnap.id;
 
-          // Get username or email from users collection, cache to avoid repeated fetches
-          if (!userCache[postData.userId]) {
-            const userDoc = await getDoc(doc(db, "users", postData.userId));
-            if (userDoc.exists()) {
-              userCache[postData.userId] = userDoc.data().username || userDoc.data().email || "Unknown";
-            } else {
-              userCache[postData.userId] = "Unknown";
+          // Fetch username from cache or Firestore
+          if (!userCache[post.userId]) {
+            try {
+              const userDoc = await getDoc(doc(db, "users", post.userId));
+              userCache[post.userId] = userDoc.exists() ? userDoc.data().username || userDoc.data().email : post.userEmail;
+            } catch {
+              userCache[post.userId] = post.userEmail || "Unknown";
             }
           }
 
-          allPosts.push({
+          tempPosts.push({
             id: postId,
-            ...postData,
-            username: userCache[postData.userId],
-            likes: postData.likes || []
+            ...post,
+            username: userCache[post.userId],
+            likes: post.likes || []
           });
-        }
+        }));
 
+        allPosts = tempPosts;
         renderPosts();
       });
-    });
-
-    searchInput.addEventListener('input', e => {
-      renderPosts(e.target.value.trim());
     });
 
     function renderPosts(filter = '') {
       postsDiv.innerHTML = '';
       const lower = filter.toLowerCase();
 
-      const filtered = allPosts.filter(post =>
-        (post.caption?.toLowerCase().includes(lower)) ||
-        ((post.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower)))
+      const filtered = allPosts.filter(p =>
+        p.caption?.toLowerCase().includes(lower) ||
+        (p.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower))
       );
 
       (filtered.length ? filtered : allPosts).forEach(post => {
         const postEl = document.createElement("div");
         postEl.className = "post";
-
-        const hashtags = post.caption?.match(/#\w+/g) || [];
-        const likedByUser = currentUser && post.likes.includes(currentUser.uid);
-        const likeBtnText = likedByUser ? "💙 Unlike" : "❤️ Like";
+        const hashtags = post.caption.match(/#\w+/g) || [];
 
         postEl.innerHTML = `
-          <div class="user" onclick="viewUser('${post.userId}')"><b>${post.username}</b></div>
+          <div class="user">@${post.username}</div>
           <img src="${post.imageURL}" alt="Post image">
-          <div class="caption">${post.caption || ""}</div>
+          <div class="caption">${post.caption}</div>
+          <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join(' ')}</div>
           <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
-          <button id="like-btn-${post.id}">${likeBtnText}</button>
-          <div class="comments" id="comments-${post.id}">💬 Comments loading...</div>
-          <input type="text" placeholder="Add a comment..." class="comment-input" id="comment-input-${post.id}">
-          <button id="comment-btn-${post.id}">➕ Comment</button>
+          <button onclick="likePost('${post.id}')">❤️ Like</button>
+          <div class="comments" id="comments-${post.id}">💬 Loading comments...</div>
+          <input class="comment-input" id="comment-input-${post.id}" placeholder="Add a comment..." />
+          <button onclick="addComment('${post.id}')">➕ Comment</button>
         `;
 
         postsDiv.appendChild(postEl);
 
-        // Like button handler
-        const likeBtn = document.getElementById(`like-btn-${post.id}`);
-        likeBtn.addEventListener('click', async () => {
-          if (!currentUser) {
-            alert("Please login to like posts.");
-            return;
-          }
-          const postRef = doc(db, "posts", post.id);
-          try {
-            if (likedByUser) {
-              // Unlike
-              await updateDoc(postRef, {
-                likes: arrayRemove(currentUser.uid)
-              });
-            } else {
-              // Like
-              await updateDoc(postRef, {
-                likes: arrayUnion(currentUser.uid)
-              });
-            }
-          } catch (e) {
-            console.error("Error updating like:", e);
-            alert("Could not update like. Please try again.");
-          }
-        });
-
-        // Comments realtime listener
+        // Load comments live
         const commentsRef = collection(db, "posts", post.id, "comments");
         onSnapshot(commentsRef, snapshot => {
           const commentsDiv = document.getElementById(`comments-${post.id}`);
-          commentsDiv.innerHTML = "";
-          snapshot.forEach(commentDoc => {
-            const c = commentDoc.data();
-            const cEl = document.createElement("div");
-            cEl.innerHTML = `<b>${c.userEmail || "Unknown"}:</b> ${c.text}`;
-            commentsDiv.appendChild(cEl);
+          commentsDiv.innerHTML = '';
+          snapshot.forEach(doc => {
+            const c = doc.data();
+            const el = document.createElement("div");
+            el.innerHTML = `<b>${c.userEmail}:</b> ${c.text}`;
+            commentsDiv.appendChild(el);
           });
-        });
-
-        // Add comment button handler
-        const commentBtn = document.getElementById(`comment-btn-${post.id}`);
-        commentBtn.addEventListener('click', async () => {
-          if (!currentUser) {
-            alert("Please login to comment.");
-            return;
-          }
-          const input = document.getElementById(`comment-input-${post.id}`);
-          const text = input.value.trim();
-          if (!text) return;
-
-          try {
-            const commentRef = doc(collection(db, "posts", post.id, "comments"));
-            await setDoc(commentRef, {
-              userId: currentUser.uid,
-              userEmail: currentUser.email,
-              text,
-              createdAt: new Date()
-            });
-            input.value = "";
-          } catch (e) {
-            console.error("Error adding comment:", e);
-            alert("Could not add comment. Please try again.");
-          }
         });
       });
     }
 
-    window.viewUser = function(userId) {
-      window.location.href = `user.html?id=${userId}`;
+    searchInput.addEventListener("input", e => {
+      renderPosts(e.target.value.trim());
+    });
+
+    window.likePost = async function(postId) {
+      const user = auth.currentUser;
+      if (!user) return alert("Please login to like.");
+
+      const postRef = doc(db, "posts", postId);
+      try {
+        await updateDoc(postRef, {
+          likes: arrayUnion(user.uid)
+        });
+      } catch (e) {
+        alert("❌ Could not update like.");
+        console.error(e);
+      }
+    };
+
+    window.addComment = async function(postId) {
+      const user = auth.currentUser;
+      if (!user) return alert("Please login to comment.");
+
+      const input = document.getElementById(`comment-input-${postId}`);
+      const text = input.value.trim();
+      if (!text) return;
+
+      try {
+        const commentRef = doc(collection(db, "posts", postId, "comments"));
+        await setDoc(commentRef, {
+          userId: user.uid,
+          userEmail: user.email,
+          text,
+          createdAt: new Date()
+        });
+        input.value = '';
+      } catch (e) {
+        alert("❌ Could not add comment.");
+        console.error(e);
+      }
     };
   </script>
 </body>
 </html>
+
 
