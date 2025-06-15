@@ -76,7 +76,7 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      max-height: 50%;
+      max-height: 60%;
       background: #111;
       color: white;
       padding: 10px;
@@ -87,15 +87,45 @@
       padding: 6px 0;
       border-bottom: 1px solid #333;
     }
+    .comment-input {
+      display: flex;
+      padding: 8px;
+      background: #000;
+      border-top: 1px solid #333;
+    }
+    .comment-input input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      margin-right: 8px;
+    }
+    .comment-input button {
+      background: #444;
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div id="feed"></div>
-  <div id="commentPopup" class="comment-popup" style="display:none"></div>
+  <div id="commentPopup" class="comment-popup" style="display:none">
+    <div id="commentList"></div>
+    <div class="comment-input">
+      <input type="text" id="commentInput" placeholder="Add a comment..." />
+      <button id="sendComment">➤</button>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, collection, query, where,
+      orderBy, onSnapshot, addDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -108,12 +138,17 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
     const feed = document.getElementById("feed");
     const popup = document.getElementById("commentPopup");
-
-    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
+    const commentList = document.getElementById("commentList");
+    const commentInput = document.getElementById("commentInput");
+    const sendComment = document.getElementById("sendComment");
 
     let currentPlaying = null;
+    let activePostId = null;
+
+    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
 
     onSnapshot(q, (snapshot) => {
       feed.innerHTML = "";
@@ -178,19 +213,8 @@
         commentBtn.innerHTML = "💬";
         commentBtn.onclick = () => {
           popup.style.display = "block";
-          popup.innerHTML = `<strong>Comments:</strong><br>Loading...`;
-
-          const commentRef = collection(db, "posts", postId, "comments");
-          const commentQ = query(commentRef, orderBy("createdAt", "asc"));
-
-          onSnapshot(commentQ, snap => {
-            popup.innerHTML = `<strong>Comments:</strong><br>`;
-            if (snap.empty) popup.innerHTML += "No comments yet.";
-            snap.forEach(c => {
-              const cdata = c.data();
-              popup.innerHTML += `<div class="comment"><b>@${cdata.username || 'anon'}</b>: ${cdata.text}</div>`;
-            });
-          });
+          activePostId = postId;
+          loadComments(postId);
         };
 
         const shareBtn = document.createElement("button");
@@ -212,10 +236,45 @@
       });
     });
 
-    // Close comments popup on background click
-    popup.addEventListener("click", () => popup.style.display = "none");
+    async function loadComments(postId) {
+      const commentsRef = collection(db, "posts", postId, "comments");
+      const commentQ = query(commentsRef, orderBy("createdAt", "asc"));
+
+      onSnapshot(commentQ, snap => {
+        commentList.innerHTML = `<strong>Comments:</strong><br>`;
+        if (snap.empty) commentList.innerHTML += "No comments yet.";
+        snap.forEach(c => {
+          const cdata = c.data();
+          commentList.innerHTML += `<div class="comment"><b>@${cdata.username || 'anon'}</b>: ${cdata.text}</div>`;
+        });
+      });
+    }
+
+    async function sendCurrentComment() {
+      const text = commentInput.value.trim();
+      if (!text || !activePostId) return;
+
+      const commentRef = collection(db, "posts", activePostId, "comments");
+      await addDoc(commentRef, {
+        username: "guest",
+        text,
+        createdAt: serverTimestamp()
+      });
+      commentInput.value = "";
+    }
+
+    sendComment.addEventListener("click", sendCurrentComment);
+    commentInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") sendCurrentComment();
+    });
+
+    popup.addEventListener("click", (e) => {
+      if (e.target === popup) popup.style.display = "none";
+    });
   </script>
 </body>
+</html>
+
 </html>
 
 
