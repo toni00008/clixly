@@ -71,7 +71,6 @@
 </head>
 <body>
 
-  <!-- 🔍 Explore Search -->
   <div class="search-bar">
     <input id="searchInput" type="text" placeholder="🔍 Search posts / hashtags...">
   </div>
@@ -106,26 +105,6 @@
     const searchInput = document.getElementById("searchInput");
 
     let allPosts = [];
-    const userCache = {}; // Cache for userId => username
-
-    // Get username by userId with caching
-    async function getUsername(userId) {
-      if (!userId) return "unknown";
-      if (userCache[userId]) return userCache[userId];
-
-      try {
-        const userDoc = await getDoc(doc(db, "users", userId));
-        if (userDoc.exists()) {
-          const username = userDoc.data().username || "unknown";
-          userCache[userId] = username;
-          return username;
-        }
-        userCache[userId] = "unknown";
-        return "unknown";
-      } catch {
-        return "unknown";
-      }
-    }
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
@@ -133,140 +112,140 @@
         return;
       }
 
+      // Cache current user username for comment saving
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const currentUsername = userDoc.exists() ? userDoc.data().username : "unknown";
+
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
       onSnapshot(q, async snapshot => {
         allPosts = [];
 
-        // Process each post
         for (const docSnap of snapshot.docs) {
           const post = docSnap.data();
           const postId = docSnap.id;
-
-          // Get likes safely
-          const likes = post.likes || [];
-
-          // Get username of post owner
-          const username = await getUsername(post.userId);
+          const likesDoc = await getDoc(doc(db, "posts", postId));
+          const likes = likesDoc.data()?.likes || [];
 
           allPosts.push({
             ...post,
             id: postId,
-            likes,
-            username,
+            likes
           });
         }
 
-        renderPosts();
+        renderPosts(); // render after data loaded
       });
-    });
 
-    function renderPosts(filter = '') {
-      postsDiv.innerHTML = '';
-      const lower = filter.toLowerCase();
+      // Render posts with optional filter
+      function renderPosts(filter = '') {
+        postsDiv.innerHTML = '';
+        const lower = filter.toLowerCase();
 
-      const filtered = allPosts.filter(p =>
-        p.caption?.toLowerCase().includes(lower) ||
-        (p.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower))
-      );
+        const filtered = allPosts.filter(p =>
+          p.caption?.toLowerCase().includes(lower) ||
+          (p.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower))
+        );
 
-      (filtered.length ? filtered : allPosts).forEach(post => {
-        const postEl = document.createElement("div");
-        postEl.className = "post";
+        (filtered.length ? filtered : allPosts).forEach(post => {
+          const postEl = document.createElement("div");
+          postEl.className = "post";
 
-        postEl.innerHTML = `
-          <div class="user" onclick="viewUser('${post.userId}')"><b>@${post.username || "unknown"}</b></div>
-          <img src="${post.imageURL}" alt="Post image">
-          <div class="caption">${post.caption || ""}</div>
-          <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
-          <button onclick="likePost('${post.id}', '${auth.currentUser.uid}')">❤️ Like</button>
-          <div class="comments" id="comments-${post.id}">💬 Comments loading...</div>
-          <input type="text" placeholder="Add a comment..." class="comment-input" id="comment-input-${post.id}">
-          <button onclick="addComment('${post.id}', '${auth.currentUser.uid}', '${auth.currentUser.email}')">➕ Comment</button>
-        `;
+          postEl.innerHTML = `
+            <div class="user" onclick="viewUser('${post.userId}')"><b>${post.username || post.userEmail || "unknown"}</b></div>
+            <img src="${post.imageURL}" alt="Post image">
+            <div class="caption">${post.caption || ""}</div>
+            <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
+            <button onclick="likePost('${post.id}', '${auth.currentUser.uid}')">❤️ Like</button>
+            <div class="comments" id="comments-${post.id}">💬 Comments loading...</div>
+            <input type="text" placeholder="Add a comment..." class="comment-input" id="comment-input-${post.id}">
+            <button onclick="addComment('${post.id}', '${auth.currentUser.uid}', '${auth.currentUser.email}')">➕ Comment</button>
+          `;
 
-        postsDiv.appendChild(postEl);
+          postsDiv.appendChild(postEl);
 
-        const commentsRef = collection(db, "posts", post.id, "comments");
-        onSnapshot(commentsRef, async snapshot => {
-          const commentsDiv = document.getElementById(`comments-${post.id}`);
-          commentsDiv.innerHTML = "";
-
-          // Load usernames for commenters
-          for (const commentDoc of snapshot.docs) {
-            const c = commentDoc.data();
-            const commenterUsername = await getUsername(c.userId);
-            const cEl = document.createElement("div");
-            cEl.innerHTML = `<b>@${commenterUsername}:</b> ${c.text}`;
-            commentsDiv.appendChild(cEl);
-          }
+          const commentsRef = collection(db, "posts", post.id, "comments");
+          onSnapshot(commentsRef, snapshot => {
+            const commentsDiv = document.getElementById(`comments-${post.id}`);
+            commentsDiv.innerHTML = "";
+            snapshot.forEach(commentDoc => {
+              const c = commentDoc.data();
+              // Show username if available, else fallback to userEmail or "unknown"
+              const displayName = c.username || c.userEmail || "unknown";
+              const cEl = document.createElement("div");
+              cEl.innerHTML = `<b>${displayName}:</b> ${c.text}`;
+              commentsDiv.appendChild(cEl);
+            });
+          });
         });
-      });
-    }
+      }
 
-    // Notification sender (unchanged)
-    async function sendNotification(toUserId, type, fromUserId, fromUserEmail, postId = null) {
-      const notifRef = collection(db, "users", toUserId, "notifications");
-      const messages = {
-        like: `${fromUserEmail} liked your post.`,
-        comment: `${fromUserEmail} commented on your post.`
+      // Like function with notification
+      window.likePost = async function(postId, userId) {
+        const postRef = doc(db, "posts", postId);
+        await updateDoc(postRef, {
+          likes: arrayUnion(userId)
+        });
+
+        const postDoc = await getDoc(postRef);
+        const postOwnerId = postDoc.data().userId;
+
+        if (postOwnerId !== userId) {
+          await sendNotification(postOwnerId, 'like', userId, auth.currentUser.email, postId);
+        }
       };
 
-      await addDoc(notifRef, {
-        type,
-        fromUserId,
-        fromUserEmail,
-        postId,
-        text: messages[type],
-        createdAt: Timestamp.now()
-      });
-    }
+      // Add comment with username saved + notification
+      window.addComment = async function(postId, userId, userEmail) {
+        const input = document.getElementById(`comment-input-${postId}`);
+        const text = input.value.trim();
+        if (!text) return;
 
-    // Like function (unchanged except username display is handled above)
-    window.likePost = async function(postId, userId) {
-      const postRef = doc(db, "posts", postId);
-      await updateDoc(postRef, {
-        likes: arrayUnion(userId)
-      });
+        // Save comment with username
+        const commentRef = doc(collection(db, "posts", postId, "comments"));
+        await setDoc(commentRef, {
+          userId,
+          userEmail,
+          username: currentUsername,  // saving username here
+          text,
+          createdAt: new Date()
+        });
 
-      const postDoc = await getDoc(postRef);
-      const postOwnerId = postDoc.data().userId;
+        const postDoc = await getDoc(doc(db, "posts", postId));
+        const postOwnerId = postDoc.data().userId;
 
-      if (postOwnerId !== userId) {
-        await sendNotification(postOwnerId, 'like', userId, auth.currentUser.email, postId);
-      }
-    };
+        if (postOwnerId !== userId) {
+          await sendNotification(postOwnerId, 'comment', userId, userEmail, postId);
+        }
 
-    // Comment function (unchanged except username display is handled above)
-    window.addComment = async function(postId, userId, userEmail) {
-      const input = document.getElementById(`comment-input-${postId}`);
-      const text = input.value.trim();
-      if (!text) return;
+        input.value = "";
+      };
 
-      const commentRef = doc(collection(db, "posts", postId, "comments"));
-      await setDoc(commentRef, {
-        userId,
-        userEmail,
-        text,
-        createdAt: new Date()
-      });
+      // Notification sender helper
+      async function sendNotification(toUserId, type, fromUserId, fromUserEmail, postId = null) {
+        const notifRef = collection(db, "users", toUserId, "notifications");
+        const messages = {
+          like: `${fromUserEmail} liked your post.`,
+          comment: `${fromUserEmail} commented on your post.`
+        };
 
-      const postDoc = await getDoc(doc(db, "posts", postId));
-      const postOwnerId = postDoc.data().userId;
-
-      if (postOwnerId !== userId) {
-        await sendNotification(postOwnerId, 'comment', userId, userEmail, postId);
+        await addDoc(notifRef, {
+          type,
+          fromUserId,
+          fromUserEmail,
+          postId,
+          text: messages[type],
+          createdAt: Timestamp.now()
+        });
       }
 
-      input.value = "";
-    };
+      window.viewUser = function(userId) {
+        window.location.href = `user.html?id=${userId}`;
+      };
 
-    window.viewUser = function(userId) {
-      window.location.href = `user.html?id=${userId}`;
-    };
-
-    searchInput.addEventListener('input', e => {
-      renderPosts(e.target.value.trim());
+      searchInput.addEventListener('input', e => {
+        renderPosts(e.target.value.trim());
+      });
     });
   </script>
 </body>
