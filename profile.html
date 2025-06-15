@@ -1,25 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Clixly Profile</title>
+  <meta charset="UTF-8" />
+  <title>Clixly • Profile</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; }
-    #followBtn { background: #0077ff; color: white; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer; font-size: 1em; }
-    #followBtn.unfollow { background: #ccc; color: black; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 600px;
+      margin: auto;
+      background: #f9f9f9;
+      padding: 20px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 0;
+    }
+    .counts {
+      margin: 10px 0 20px;
+      font-size: 1.1em;
+      color: #555;
+    }
+    button.follow-btn {
+      padding: 10px 20px;
+      background: #0077ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+    }
   </style>
 </head>
 <body>
-
   <h2 id="username">Loading...</h2>
-  <p>👥 Followers: <span id="followersCount">0</span> • Following: <span id="followingCount">0</span></p>
-  <button id="followBtn" style="display:none;">Follow</button>
+  <div class="counts">
+    <span id="followersCount">Followers: 0</span> |
+    <span id="followingCount">Following: 0</span>
+  </div>
+  <button id="followBtn" class="follow-btn" style="display:none;"></button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -35,7 +62,7 @@
     const auth = getAuth(app);
 
     const urlParams = new URLSearchParams(window.location.search);
-    const profileUserId = urlParams.get('id'); // Profile user id from URL param: ?id=USER_ID
+    const profileUserId = urlParams.get('id');
 
     const usernameEl = document.getElementById('username');
     const followersCountEl = document.getElementById('followersCount');
@@ -43,88 +70,94 @@
     const followBtn = document.getElementById('followBtn');
 
     let currentUser = null;
-    let isFollowing = false;
+    let profileUserData = null;
+    let currentUserData = null;
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
-        usernameEl.textContent = 'Please log in to view profiles';
-        followBtn.style.display = 'none';
+        usernameEl.innerText = 'Please login to view profiles.';
         return;
       }
-
       currentUser = user;
 
       if (!profileUserId) {
-        usernameEl.textContent = 'No profile specified';
+        usernameEl.innerText = 'No user ID provided in URL.';
         return;
       }
 
-      await loadProfile();
+      await loadProfileUser();
+      await loadCurrentUser();
+      renderProfile();
     });
 
-    async function loadProfile() {
-      const profileDocRef = doc(db, 'users', profileUserId);
-      const profileSnap = await getDoc(profileDocRef);
-
-      if (!profileSnap.exists()) {
-        usernameEl.textContent = 'User not found';
+    async function loadProfileUser() {
+      const docSnap = await getDoc(doc(db, 'users', profileUserId));
+      if (!docSnap.exists()) {
+        usernameEl.innerText = 'User not found.';
+        followBtn.style.display = 'none';
         return;
       }
-
-      const profileData = profileSnap.data();
-      usernameEl.textContent = profileData.username || 'Unknown User';
-
-      // Get followers and following arrays (store as arrays in user doc for simplicity)
-      const followers = profileData.followers || [];
-      const following = profileData.following || [];
-
-      followersCountEl.textContent = followers.length;
-      followingCountEl.textContent = following.length;
-
-      // Check if current user is following this profile user
-      isFollowing = followers.includes(currentUser.uid);
-
-      updateFollowButton();
+      profileUserData = docSnap.data();
     }
 
-    function updateFollowButton() {
-      followBtn.style.display = (profileUserId === currentUser.uid) ? 'none' : 'inline-block';
-      if (isFollowing) {
-        followBtn.textContent = 'Unfollow';
-        followBtn.classList.add('unfollow');
+    async function loadCurrentUser() {
+      const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
+      currentUserData = docSnap.exists() ? docSnap.data() : { following: [] };
+    }
+
+    function renderProfile() {
+      usernameEl.innerText = profileUserData.username || 'Unknown User';
+
+      const followers = profileUserData.followers || [];
+      const following = profileUserData.following || [];
+
+      followersCountEl.innerText = `Followers: ${followers.length}`;
+      followingCountEl.innerText = `Following: ${following.length}`;
+
+      // Show follow/unfollow button only if not viewing own profile
+      if (currentUser.uid !== profileUserId) {
+        followBtn.style.display = 'inline-block';
+        if ((currentUserData.following || []).includes(profileUserId)) {
+          followBtn.innerText = 'Unfollow';
+        } else {
+          followBtn.innerText = 'Follow';
+        }
       } else {
-        followBtn.textContent = 'Follow';
-        followBtn.classList.remove('unfollow');
+        followBtn.style.display = 'none'; // Hide button on own profile
       }
     }
 
-    followBtn.addEventListener('click', async () => {
+    followBtn.onclick = async () => {
+      const currentUserRef = doc(db, 'users', currentUser.uid);
+      const profileUserRef = doc(db, 'users', profileUserId);
+
+      const isFollowing = (currentUserData.following || []).includes(profileUserId);
+
       if (isFollowing) {
-        // Unfollow: remove currentUser.uid from profileUserId followers
-        // Remove profileUserId from currentUser following
-        await updateDoc(doc(db, 'users', profileUserId), {
-          followers: arrayRemove(currentUser.uid)
-        });
-        await updateDoc(doc(db, 'users', currentUser.uid), {
+        // Unfollow
+        await updateDoc(currentUserRef, {
           following: arrayRemove(profileUserId)
         });
-        isFollowing = false;
-      } else {
-        // Follow: add currentUser.uid to profileUserId followers
-        // Add profileUserId to currentUser following
-        await updateDoc(doc(db, 'users', profileUserId), {
-          followers: arrayUnion(currentUser.uid)
+        await updateDoc(profileUserRef, {
+          followers: arrayRemove(currentUser.uid)
         });
-        await updateDoc(doc(db, 'users', currentUser.uid), {
+      } else {
+        // Follow
+        await updateDoc(currentUserRef, {
           following: arrayUnion(profileUserId)
         });
-        isFollowing = true;
+        await updateDoc(profileUserRef, {
+          followers: arrayUnion(currentUser.uid)
+        });
       }
-      await loadProfile(); // Refresh counts and button state
-    });
+
+      // Refresh data
+      await loadCurrentUser();
+      await loadProfileUser();
+      renderProfile();
+    };
   </script>
 </body>
 </html>
-
 
 
