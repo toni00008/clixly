@@ -2,109 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Clix • Explore</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clixly • Shorts</title>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      margin: 0;
-      font-family: sans-serif;
-      overflow-y: scroll;
+      font-family: Arial, sans-serif;
       background: #000;
+      overflow-y: scroll;
+      height: 100vh;
     }
     .video-container {
       position: relative;
-      width: 100vw;
       height: 100vh;
+      width: 100vw;
       overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      scroll-snap-align: start;
     }
     video {
       width: 100%;
-      height: 100%;
+      height: 100vh;
       object-fit: cover;
     }
     .overlay {
       position: absolute;
-      bottom: 80px;
+      bottom: 20px;
       left: 20px;
       color: white;
     }
-    .username {
-      font-weight: bold;
-      font-size: 1.1em;
-    }
-    .caption {
-      margin-top: 4px;
-      font-size: 0.95em;
-    }
-    .buttons {
+    .actions {
       position: absolute;
-      right: 10px;
+      right: 20px;
       bottom: 100px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      gap: 20px;
     }
-    .buttons button {
+    .actions button {
       background: none;
       border: none;
       color: white;
-      font-size: 1.5em;
+      font-size: 24px;
       cursor: pointer;
     }
     .heart {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0);
       font-size: 100px;
       color: red;
       opacity: 0;
-      animation: heart-pop 0.6s ease-out;
+      transition: opacity 0.3s ease-out;
     }
-    @keyframes heart-pop {
-      0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
-      50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+    .heart.show {
+      opacity: 1;
+      animation: pop 0.6s forwards;
     }
-    .comment-modal {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #111;
-      color: white;
-      padding: 1em;
-      max-height: 50vh;
-      overflow-y: auto;
-      display: none;
-      z-index: 999;
-    }
-    .comment-modal.active {
-      display: block;
-    }
-    .follow {
-      margin-left: 10px;
-      background: red;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.8em;
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0; }
     }
   </style>
 </head>
 <body>
   <div id="feed"></div>
-  <div class="comment-modal" id="commentModal">
-    <p><strong>Comments</strong></p>
-    <div id="comments"></div>
-    <input type="text" id="commentInput" placeholder="Write a comment..." style="width: 100%; padding: 5px; margin-top: 10px;">
-  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, where, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -117,126 +85,74 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
-    let currentUser = null;
-    onAuthStateChanged(auth, user => currentUser = user);
 
-    const feed = document.getElementById('feed');
-    const commentModal = document.getElementById('commentModal');
-    const commentsDiv = document.getElementById('comments');
-    const commentInput = document.getElementById('commentInput');
+    const feed = document.getElementById("feed");
+    feed.style.scrollSnapType = "y mandatory";
 
-    const postsRef = collection(db, 'posts');
-    const q = query(postsRef, where('type', '==', 'clix'), orderBy('createdAt', 'desc'), limit(20));
+    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
 
-    let activeVideo = null;
-
-    onSnapshot(q, snapshot => {
-      feed.innerHTML = '';
+    onSnapshot(q, (snapshot) => {
+      feed.innerHTML = "";
       snapshot.forEach(doc => {
         const data = doc.data();
-        const id = doc.id;
+        const container = document.createElement("div");
+        container.className = "video-container";
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'video-container';
-
-        const video = document.createElement('video');
+        const video = document.createElement("video");
         video.src = data.mediaURL;
-        video.muted = true;
+        video.autoplay = true;
         video.loop = true;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('preload', 'metadata');
+        video.muted = true;
+        video.playsInline = true;
 
-        video.addEventListener('play', () => {
-          if (activeVideo && activeVideo !== video) activeVideo.pause();
-          activeVideo = video;
-        });
+        // Heart effect
+        const heart = document.createElement("div");
+        heart.className = "heart";
+        heart.innerHTML = "❤️";
+        container.appendChild(heart);
 
-        video.addEventListener('click', () => {
+        video.addEventListener("click", () => {
           video.muted = !video.muted;
         });
 
-        // double tap like
-        let lastTap = 0;
-        video.addEventListener('touchend', (e) => {
-          const now = new Date().getTime();
-          if (now - lastTap < 300) {
-            showHeart(wrapper);
-          }
-          lastTap = now;
+        video.addEventListener("dblclick", () => {
+          heart.classList.add("show");
+          setTimeout(() => heart.classList.remove("show"), 800);
         });
 
-        // Heart animation
-        const heart = document.createElement('div');
-        heart.className = 'heart';
-        heart.innerHTML = '❤';
-        wrapper.appendChild(heart);
+        // Pause videos out of view
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              video.play();
+            } else {
+              video.pause();
+            }
+          });
+        }, { threshold: 0.8 });
+        observer.observe(container);
 
-        function showHeart(container) {
-          heart.style.animation = 'none';
-          heart.offsetHeight;
-          heart.style.animation = '';
-          heart.style.animation = 'heart-pop 0.6s ease-out';
-        }
-
-        const overlay = document.createElement('div');
-        overlay.className = 'overlay';
+        const overlay = document.createElement("div");
+        overlay.className = "overlay";
         overlay.innerHTML = `
-          <div>
-            <span class="username">@${data.username || 'anon'}</span>
-            <button class="follow">Follow</button>
-          </div>
-          <div class="caption">${data.caption || ''}</div>
+          <strong>@${data.username || 'unknown'}</strong><br>
+          <span>${data.caption || ''}</span>
         `;
 
-        const buttons = document.createElement('div');
-        buttons.className = 'buttons';
-        const likeBtn = document.createElement('button');
-        likeBtn.innerHTML = '❤️';
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        actions.innerHTML = `
+          <button title="Like">❤️</button>
+          <button title="Comment">💬</button>
+          <button title="Share">🔗</button>
+        `;
 
-        const commentBtn = document.createElement('button');
-        commentBtn.innerHTML = '💬';
-        commentBtn.onclick = () => openComments(id);
-
-        const shareBtn = document.createElement('button');
-        shareBtn.innerHTML = '🔗';
-        shareBtn.onclick = () => navigator.clipboard.writeText(window.location.href);
-
-        buttons.append(likeBtn, commentBtn, shareBtn);
-
-        wrapper.append(video, overlay, buttons);
-        feed.appendChild(wrapper);
+        container.appendChild(video);
+        container.appendChild(overlay);
+        container.appendChild(actions);
+        feed.appendChild(container);
       });
     });
-
-    function openComments(postId) {
-      commentModal.classList.add('active');
-      const commentRef = collection(db, 'posts', postId, 'comments');
-      const commentQ = query(commentRef, orderBy('createdAt', 'asc'));
-      onSnapshot(commentQ, snap => {
-        commentsDiv.innerHTML = '';
-        snap.forEach(doc => {
-          const data = doc.data();
-          const p = document.createElement('p');
-          p.innerHTML = `<b>@${data.username || 'anon'}</b>: ${data.text}`;
-          commentsDiv.appendChild(p);
-        });
-      });
-
-      commentInput.onkeypress = async e => {
-        if (e.key === 'Enter') {
-          const text = commentInput.value.trim();
-          if (text && currentUser) {
-            await addDoc(collection(db, 'posts', postId, 'comments'), {
-              text,
-              username: currentUser.displayName || 'anon',
-              createdAt: serverTimestamp()
-            });
-            commentInput.value = '';
-          }
-        }
-      };
-    }
   </script>
 </body>
 </html>
