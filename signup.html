@@ -1,86 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clixly - Sign Up</title>
-  <style>
-    body {
-      background-color: #000000;
-      color: #ffffff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .container {
-      width: 100%;
-      max-width: 400px;
-      padding: 20px;
-      background-color: #1a1a1a;
-      border-radius: 5px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #333;
-      border-radius: 4px;
-      background-color: #2a2a2a;
-      color: #ffffff;
-      font-size: 1em;
-    }
-    input:focus {
-      outline: none;
-      border-color: #555;
-      background-color: #333;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 4px;
-      background-color: #444;
-      color: #ffffff;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #555;
-    }
-    #auth-msg {
-      text-align: center;
-      margin-top: 10px;
-      color: #ccc;
-    }
-    @media (max-width: 400px) {
-      .container { padding: 15px; }
-      input, button { padding: 8px; }
-    }
-  </style>
-</head>
+<html>
+<head><title>Sign Up</title></head>
 <body>
-  <div class="container">
-    <h2>Sign Up</h2>
-    <input type="text" id="username" placeholder="Username">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="signup()">Sign Up</button>
-    <p id="auth-msg"></p>
-  </div>
+  <h2>Sign Up</h2>
+  <input type="text" id="username" placeholder="Username">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="signup()">Sign Up</button>
+
   <script type="module">
-    // Firebase Setup
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -88,43 +19,61 @@
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getDatabase(app);
+    const db = getFirestore(app);
 
-    window.signup = function() {
-      const username = document.getElementById("username").value;
-      const email = document.getElementById("email").value;
+    window.signup = async function() {
+      const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
-      const authMsg = document.getElementById("auth-msg");
+      const usernameInput = document.getElementById("username");
+      const username = usernameInput.value.trim().toLowerCase();
 
-      if (!username || !email || !password) {
-        authMsg.innerText = "Please fill all fields.";
+      if (!username) {
+        alert("Please enter a username");
+        usernameInput.focus();
+        return;
+      }
+      if (!email) {
+        alert("Please enter an email");
+        return;
+      }
+      if (!password) {
+        alert("Please enter a password");
         return;
       }
 
-      createUserWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          const user = userCredential.user;
-          // Store username in Realtime Database
-          set(ref(db, `users/${user.uid}`), {
-            username: username,
-            email: email
-          }).then(() => {
-            authMsg.innerText = "Signup successful! Redirecting...";
-            setTimeout(() => (window.location.href = "index.html"), 2000);
-          }).catch((error) => {
-            authMsg.innerText = "Database error: " + error.message;
-          });
-        })
-        .catch((error) => {
-          authMsg.innerText = "Signup failed: " + error.message;
+      try {
+        // Check if username already exists
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("username", "==", username));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          alert("Username already taken! Please choose another.");
+          usernameInput.focus();
+          return;
+        }
+
+        // Create user with email and password
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Save username in Firestore under users collection
+        await setDoc(doc(db, "users", user.uid), {
+          username: username,
+          email: email,
+          createdAt: new Date()
         });
-    };
+
+        alert("Signup successful!");
+      } catch (err) {
+        alert("Signup failed: " + err.message);
+      }
+    }
   </script>
 </body>
 </html>
