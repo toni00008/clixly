@@ -1,296 +1,362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Clix • Short Videos</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f2f5f9;
-      margin: 0; padding: 20px;
-      display: flex; flex-direction: column; align-items: center;
-      min-height: 100vh;
-    }
-    .clix-container {
-      max-width: 600px;
-      width: 100%;
-      background: white;
-      padding: 20px;
-      margin-bottom: 30px;
-      border-radius: 12px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    video {
-      width: 100%;
-      border-radius: 10px;
-      background: black;
-      cursor: pointer;
-    }
-    .info {
-      margin-top: 8px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .username {
-      font-weight: 700;
-      color: #0077ff;
-    }
-    .caption {
-      margin-top: 6px;
-      font-size: 0.9em;
-      color: #333;
-    }
-    button {
-      cursor: pointer;
-      background: #0077ff;
-      border: none;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      margin-left: 8px;
-    }
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .comment-section {
-      margin-top: 15px;
-    }
-    .comments-list {
-      max-height: 150px;
-      overflow-y: auto;
-      background: #f9f9f9;
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 0.9em;
-      color: #555;
-    }
-    .comment-item {
-      border-bottom: 1px solid #ddd;
-      padding: 6px 0;
-    }
-    .comment-author {
-      font-weight: 700;
-      color: #0077ff;
-    }
-    .comment-text {
-      margin-left: 5px;
-      color: #333;
-    }
-    .comment-input {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px;
-    }
-    .comment-input input {
-      flex: 1;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1em;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clix • Short Videos</title>
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body, html {
+    margin: 0; padding: 0;
+    height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000;
+    color: #fff;
+    overflow-x: hidden;
+  }
+  #clixList {
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    height: 100vh;
+  }
+  .clix-container {
+    position: relative;
+    height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: #000;
+  }
+  video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+  }
+  .overlay {
+    position: relative;
+    z-index: 2;
+    padding: 20px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .user-caption {
+    max-width: 75%;
+  }
+  .username {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #00acee; /* Twitter blue, or #0077ff */
+    margin-bottom: 5px;
+    text-shadow: 0 0 5px rgba(0,0,0,0.8);
+  }
+  .caption {
+    font-size: 1rem;
+    line-height: 1.2;
+    color: #eee;
+    text-shadow: 0 0 5px rgba(0,0,0,0.8);
+  }
+  .controls {
+    position: absolute;
+    right: 15px;
+    bottom: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 3;
+    align-items: center;
+  }
+  button {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    width: 48px;
+    height: 48px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: background 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  button:hover:not(:disabled) {
+    background: rgba(0,0,0,0.8);
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+  /* Comment section: fixed at bottom on active video */
+  .comment-section {
+    position: relative;
+    max-height: 180px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.6);
+    border-radius: 15px 15px 0 0;
+    padding: 12px 16px 8px;
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: #ddd;
+  }
+  .comments-list {
+    max-height: 110px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+  }
+  .comment-item {
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .comment-author {
+    font-weight: 700;
+    color: #00acee;
+  }
+  .comment-text {
+    margin-left: 5px;
+    color: #fff;
+  }
+  .comment-input {
+    display: flex;
+    gap: 8px;
+  }
+  .comment-input input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: none;
+    font-size: 1rem;
+  }
+  .comment-input input:focus {
+    outline: none;
+  }
+  /* Hide scrollbar on WebKit browsers */
+  .comments-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .comments-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+  }
+</style>
 </head>
 <body>
 
-  <h1>🔥 Clix - Short Videos</h1>
-  <div id="clixList"></div>
+<h1 style="position: fixed; top: 10px; left: 20px; z-index: 10; color: white; font-weight: 800; font-size: 1.5rem; user-select:none;">🔥 Clix</h1>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+<div id="clixList"></div>
 
-    // Your Firebase config here:
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+  };
 
-    let currentUser = null;
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-    onAuthStateChanged(auth, user => {
-      currentUser = user;
-      // You might want to re-render comment inputs or other UI parts here if needed
-    });
+  let currentUser = null;
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    // Re-render comments input for logged-in user
+    // For simplicity, reload the page to reflect auth state or implement dynamic rendering
+  });
 
-    const clixList = document.getElementById('clixList');
+  const clixList = document.getElementById('clixList');
 
-    // Query posts of type 'clix' ordered by newest first, limit 20
-    const postsRef = collection(db, 'posts');
-    const clixQuery = query(postsRef, where('type', '==', 'clix'), orderBy('createdAt', 'desc'), limit(20));
+  const postsRef = collection(db, 'posts');
+  const clixQuery = query(postsRef, where('type', '==', 'clix'), orderBy('createdAt', 'desc'), limit(20));
 
-    onSnapshot(clixQuery, snapshot => {
-      clixList.innerHTML = ''; // Clear existing
+  onSnapshot(clixQuery, snapshot => {
+    clixList.innerHTML = '';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const id = doc.id;
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const id = doc.id;
+      const container = document.createElement('div');
+      container.classList.add('clix-container');
 
-        const container = document.createElement('div');
-        container.classList.add('clix-container');
+      const video = document.createElement('video');
+      video.src = data.mediaURL;
+      video.loop = true;
+      video.playsInline = true;
+      video.muted = true;
+      video.autoplay = true;
+      video.controls = false;
+      video.style.cursor = 'pointer';
 
-        // Video element
-        const video = document.createElement('video');
-        video.src = data.mediaURL;
-        video.loop = true;
-        video.playsInline = true;
-        video.controls = false;
-        video.muted = true;
+      // Toggle mute/unmute on click
+      video.addEventListener('click', () => {
+        video.muted = !video.muted;
+        muteBtn.textContent = video.muted ? '🔇' : '🔊';
+      });
 
-        // Toggle mute/unmute on video click
-        video.addEventListener('click', () => {
-          video.muted = !video.muted;
-          muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
-        });
+      const overlay = document.createElement('div');
+      overlay.classList.add('overlay');
 
-        // Info bar with username, mute and share buttons
-        const infoDiv = document.createElement('div');
-        infoDiv.classList.add('info');
+      // Username and caption container
+      const userCaptionDiv = document.createElement('div');
+      userCaptionDiv.classList.add('user-caption');
 
-        const usernameSpan = document.createElement('span');
-        usernameSpan.classList.add('username');
-        usernameSpan.textContent = '@' + (data.username || 'unknown');
+      const usernameSpan = document.createElement('span');
+      usernameSpan.classList.add('username');
+      usernameSpan.textContent = '@' + (data.username || 'unknown');
 
-        const muteBtn = document.createElement('button');
-        muteBtn.textContent = '🔇 Unmute';
-        muteBtn.addEventListener('click', () => {
-          video.muted = !video.muted;
-          muteBtn.textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
-        });
+      const captionP = document.createElement('p');
+      captionP.classList.add('caption');
+      captionP.textContent = data.caption || '';
 
-        const shareBtn = document.createElement('button');
-        shareBtn.textContent = 'Share';
-        shareBtn.addEventListener('click', async () => {
-          const shareData = {
-            title: 'Clix by ' + (data.username || 'unknown'),
-            text: data.caption || '',
-            url: window.location.origin + '/clix.html?video=' + encodeURIComponent(data.mediaURL),
-          };
-          try {
-            if (navigator.share) {
-              await navigator.share(shareData);
-            } else {
-              await navigator.clipboard.writeText(shareData.url);
-              alert('Link copied to clipboard!');
-            }
-          } catch (err) {
-            alert('Error sharing: ' + err.message);
+      userCaptionDiv.appendChild(usernameSpan);
+      userCaptionDiv.appendChild(captionP);
+
+      overlay.appendChild(userCaptionDiv);
+
+      // Controls (mute, share)
+      const controlsDiv = document.createElement('div');
+      controlsDiv.classList.add('controls');
+
+      const muteBtn = document.createElement('button');
+      muteBtn.textContent = '🔇';
+      muteBtn.title = 'Mute / Unmute';
+      muteBtn.addEventListener('click', () => {
+        video.muted = !video.muted;
+        muteBtn.textContent = video.muted ? '🔇' : '🔊';
+      });
+
+      const shareBtn = document.createElement('button');
+      shareBtn.textContent = '⤴️';
+      shareBtn.title = 'Share';
+      shareBtn.addEventListener('click', async () => {
+        const shareData = {
+          title: 'Clix by ' + (data.username || 'unknown'),
+          text: data.caption || '',
+          url: window.location.origin + '/clix.html?video=' + encodeURIComponent(data.mediaURL),
+        };
+        try {
+          if (navigator.share) {
+            await navigator.share(shareData);
+          } else {
+            await navigator.clipboard.writeText(shareData.url);
+            alert('Link copied to clipboard!');
           }
-        });
-
-        infoDiv.appendChild(usernameSpan);
-        infoDiv.appendChild(muteBtn);
-        infoDiv.appendChild(shareBtn);
-
-        // Caption text
-        const captionP = document.createElement('p');
-        captionP.classList.add('caption');
-        captionP.textContent = data.caption || '';
-
-        // Comment section
-        const commentSection = document.createElement('div');
-        commentSection.classList.add('comment-section');
-
-        const commentsList = document.createElement('div');
-        commentsList.classList.add('comments-list');
-        commentsList.textContent = 'Loading comments...';
-
-        // Comment input if user logged in
-        const commentInputDiv = document.createElement('div');
-        commentInputDiv.classList.add('comment-input');
-
-        const commentInput = document.createElement('input');
-        commentInput.type = 'text';
-        commentInput.placeholder = 'Write a comment...';
-
-        const commentBtn = document.createElement('button');
-        commentBtn.textContent = 'Send';
-        commentBtn.disabled = true;
-
-        commentInput.addEventListener('input', () => {
-          commentBtn.disabled = commentInput.value.trim().length === 0;
-        });
-
-        commentBtn.addEventListener('click', async () => {
-          if (!currentUser) {
-            alert('Please login to comment.');
-            return;
-          }
-          const text = commentInput.value.trim();
-          if (text.length === 0) return;
-
-          try {
-            await addDoc(collection(db, 'posts', id, 'comments'), {
-              text,
-              userId: currentUser.uid,
-              username: currentUser.displayName || currentUser.email || 'Anonymous',
-              createdAt: serverTimestamp()
-            });
-            commentInput.value = '';
-            commentBtn.disabled = true;
-          } catch (error) {
-            alert('Error adding comment: ' + error.message);
-          }
-        });
-
-        commentInputDiv.appendChild(commentInput);
-        commentInputDiv.appendChild(commentBtn);
-
-        commentSection.appendChild(commentsList);
-        if (currentUser) {
-          commentSection.appendChild(commentInputDiv);
+        } catch (err) {
+          alert('Error sharing: ' + err.message);
         }
+      });
 
-        // Append elements to container
-        container.appendChild(video);
-        container.appendChild(infoDiv);
-        container.appendChild(captionP);
-        container.appendChild(commentSection);
+      controlsDiv.appendChild(muteBtn);
+      controlsDiv.appendChild(shareBtn);
+      overlay.appendChild(controlsDiv);
 
-        clixList.appendChild(container);
+      // Comments section
+      const commentSection = document.createElement('div');
+      commentSection.classList.add('comment-section');
 
-        // Load comments live
-        const commentsRef = collection(db, 'posts', id, 'comments');
-        const commentsQuery = query(commentsRef, orderBy('createdAt', 'asc'));
+      const commentsList = document.createElement('div');
+      commentsList.classList.add('comments-list');
+      commentsList.textContent = 'Loading comments...';
 
-        onSnapshot(commentsQuery, commentsSnap => {
-          commentsList.innerHTML = '';
-          if (commentsSnap.empty) {
-            commentsList.textContent = 'No comments yet. Be the first!';
-            return;
-          }
-          commentsSnap.forEach(cdoc => {
-            const cdata = cdoc.data();
-            const cDiv = document.createElement('div');
-            cDiv.classList.add('comment-item');
-            cDiv.innerHTML = `<span class="comment-author">@${cdata.username || 'anon'}</span>: <span class="comment-text">${escapeHtml(cdata.text)}</span>`;
-            commentsList.appendChild(cDiv);
+      // Comment input if logged in
+      const commentInputDiv = document.createElement('div');
+      commentInputDiv.classList.add('comment-input');
+
+      const commentInput = document.createElement('input');
+      commentInput.type = 'text';
+      commentInput.placeholder = 'Write a comment...';
+
+      const commentBtn = document.createElement('button');
+      commentBtn.textContent = 'Send';
+      commentBtn.disabled = true;
+
+      commentInput.addEventListener('input', () => {
+        commentBtn.disabled = commentInput.value.trim().length === 0;
+      });
+
+      commentBtn.addEventListener('click', async () => {
+        if (!currentUser) {
+          alert('Please login to comment.');
+          return;
+        }
+        const text = commentInput.value.trim();
+        if (text.length === 0) return;
+
+        try {
+          await addDoc(collection(db, 'posts', id, 'comments'), {
+            text,
+            userId: currentUser.uid,
+            username: currentUser.displayName || currentUser.email || 'Anonymous',
+            createdAt: serverTimestamp()
           });
+          commentInput.value = '';
+          commentBtn.disabled = true;
+        } catch (error) {
+          alert('Error adding comment: ' + error.message);
+        }
+      });
+
+      commentInputDiv.appendChild(commentInput);
+      commentInputDiv.appendChild(commentBtn);
+
+      commentSection.appendChild(commentsList);
+      if (currentUser) {
+        commentSection.appendChild(commentInputDiv);
+      }
+
+      overlay.appendChild(commentSection);
+
+      container.appendChild(video);
+      container.appendChild(overlay);
+      clixList.appendChild(container);
+
+      // Load comments live
+      const commentsRef = collection(db, 'posts', id, 'comments');
+      const commentsQuery = query(commentsRef, orderBy('createdAt', 'asc'));
+
+      onSnapshot(commentsQuery, commentsSnap => {
+        commentsList.innerHTML = '';
+        if (commentsSnap.empty) {
+          commentsList.textContent = 'No comments yet. Be the first!';
+          return;
+        }
+        commentsSnap.forEach(cdoc => {
+          const cdata = cdoc.data();
+          const cDiv = document.createElement('div');
+          cDiv.classList.add('comment-item');
+          cDiv.innerHTML = `<span class="comment-author">@${cdata.username || 'anon'}</span>: <span class="comment-text">${escapeHtml(cdata.text)}</span>`;
+          commentsList.appendChild(cDiv);
         });
       });
     });
+  });
 
-    // Escape HTML for safe comment display
-    function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, m => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      })[m]);
-    }
-  </script>
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, m => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[m]);
+  }
+</script>
 
 </body>
 </html>
-
