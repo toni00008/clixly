@@ -63,6 +63,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .logo {
@@ -76,6 +77,7 @@
       border-radius: 8px;
       border: none;
       width: 200px;
+      margin: 10px 0;
     }
 
     .dark-toggle {
@@ -85,6 +87,41 @@
       padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .notification-wrapper {
+      position: relative;
+    }
+
+    .notif-btn {
+      font-size: 1.4em;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+    }
+
+    .notif-box {
+      position: absolute;
+      top: 35px;
+      right: 0;
+      background: #2a2a35;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 10px;
+      width: 240px;
+      z-index: 100;
+      color: white;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+      display: none;
+    }
+
+    .notif-box p {
+      margin: 0 0 8px;
+      font-size: 0.9em;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
     }
 
     .post {
@@ -125,14 +162,15 @@
 
       .search-bar {
         width: 100%;
-        margin: 10px 0;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Sidebar -->
     <div class="sidebar">
+      <a href="index.html">🏠 Home</a>
       <a href="clix.html">📹 Clix</a>
       <a href="upload.html">📤 Upload</a>
       <a href="abc.html">🔤 Abc</a>
@@ -140,13 +178,24 @@
       <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
     </div>
 
+    <!-- Main Content -->
     <div class="main">
       <div class="top-bar">
         <div class="logo">Clixly</div>
-        <input type="text" placeholder="Search..." class="search-bar">
+        <input type="text" placeholder="Search..." class="search-bar" />
+
+        <!-- 🔔 Notifications -->
+        <div class="notification-wrapper">
+          <button class="notif-btn" onclick="toggleNotifications()">🔔</button>
+          <div id="notif-box" class="notif-box">
+            <p><b>New Follower:</b> sarah_j followed you</p>
+            <p><b>New Like:</b> alex123 liked your post</p>
+            <p><b>New Comment:</b> "🔥🔥🔥" on your Clix</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Sample Post -->
+      <!-- Posts -->
       <div class="post">
         <b>alex123</b> • 2h ago
         <img src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80" alt="Post" />
@@ -161,6 +210,7 @@
     </div>
   </div>
 
+  <!-- JS -->
   <script>
     function toggleDarkMode() {
       const html = document.documentElement;
@@ -173,13 +223,26 @@
       }
     }
 
-    // Auto-load theme
     window.onload = () => {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') {
         document.documentElement.setAttribute('data-theme', 'light');
       }
     };
+
+    function toggleNotifications() {
+      const box = document.getElementById('notif-box');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    window.addEventListener('click', (e) => {
+      const notifBox = document.getElementById('notif-box');
+      const notifBtn = document.querySelector('.notif-btn');
+      if (!notifBox.contains(e.target) && !notifBtn.contains(e.target)) {
+        notifBox.style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
+
