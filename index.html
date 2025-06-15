@@ -3,146 +3,209 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly</title>
+  <title>Clixly • Home</title>
   <style>
     :root {
-      --bg: #000;
-      --text: #fff;
-      --nav: #111;
-      --accent: #0095f6;
-    }
-    [data-theme="light"] {
-      --bg: #fafafa;
-      --text: #111;
-      --nav: #fff;
-      --accent: #0095f6;
+      --bg-color: #0d0d10;
+      --text-color: #ffffff;
+      --accent-color: #8a2be2;
     }
 
-    *, *::before, *::after { box-sizing: border-box; }
+    [data-theme='light'] {
+      --bg-color: #f9f9f9;
+      --text-color: #111;
+      --accent-color: #8a2be2;
+    }
+
     body {
       margin: 0;
+      padding: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
     }
 
-    main {
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 220px;
+      padding: 20px;
+      background-color: #15151c;
+      border-right: 1px solid #2a2a35;
+    }
+
+    .sidebar a {
+      display: block;
+      color: #aaa;
+      text-decoration: none;
+      margin: 15px 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+
+    .sidebar a:hover {
+      background: #222;
+      color: var(--accent-color);
+    }
+
+    .main {
       flex: 1;
-      padding-bottom: 60px; /* for bottom nav */
+      padding: 20px;
       overflow-y: auto;
     }
 
-    .post {
-      margin: 16px;
-      background: var(--nav);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .post img {
-      width: 100%;
-      display: block;
-    }
-    .icons {
+    .top-bar {
       display: flex;
-      gap: 16px;
-      padding: 8px;
-    }
-    .icons svg {
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      fill: var(--text);
+      justify-content: space-between;
+      align-items: center;
     }
 
-    /* — Bottom Navigation */
-    .bottom-nav {
+    .logo {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+
+    .auth-buttons {
       display: flex;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: var(--nav);
-      border-top: 1px solid #222;
-      padding: 8px 0;
-      justify-content: space-around;
-      z-index: 10;
+      gap: 10px;
     }
-    .bottom-nav button {
-      background: none;
+
+    .auth-buttons button {
+      background: var(--accent-color);
+      color: #fff;
       border: none;
-      padding: 0;
-      margin: 0;
+      padding: 6px 12px;
+      border-radius: 8px;
       cursor: pointer;
+      font-weight: bold;
     }
-    .bottom-nav svg {
-      width: 28px;
-      height: 28px;
-      fill: var(--text);
+
+    .search-bar {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      width: 200px;
     }
 
     .dark-toggle {
-      position: fixed;
-      top: 10px;
-      right: 16px;
       background: none;
-      border: none;
+      border: 1px solid #666;
+      color: var(--text-color);
+      padding: 6px 12px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 20px;
-      color: var(--text);
+    }
+
+    .post {
+      background: #1c1c26;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 20px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .post img {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .likes {
+      margin-top: 10px;
+      color: #ccc;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+        border-right: none;
+        border-bottom: 1px solid #333;
+      }
+
+      .main {
+        padding: 10px;
+      }
+
+      .search-bar {
+        width: 100%;
+        margin: 10px 0;
+      }
+
+      .auth-buttons {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
-
-  <button class="dark-toggle" onclick="toggleDark()">🌓</button>
-
-  <main>
-    <!-- Sample Post -->
-    <div class="post">
-      <img src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80" alt="Post image">
-      <div class="icons">
-        <!-- Like (heart) -->
-        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5c0-2.13 1.71-3.86 3.86-3.86 1.42 0 2.78.72 3.59 1.86h1.1c.81-1.14 2.17-1.86 3.59-1.86 2.15 0 3.86 1.73 3.86 3.86 0 3.78-3.4 6.86-8.55 11.53L12 21.35z"/></svg>
-        <!-- Comment -->
-        <svg viewBox="0 0 24 24"><path d="M21 6h-2V4H5v2H3v12h2v2h14v-2h2V6zm-4 8H7v-2h10v2zm0-4H7V8h10v2z"/></svg>
-        <!-- Share -->
-        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44..."/></svg>
-      </div>
+  <div class="container">
+    <div class="sidebar">
+      <a href="clix.html">📹 Clix</a>
+      <a href="upload.html">📤 Upload</a>
+      <a href="abc.html">🔤 Abc</a>
+      <a href="explore.html">🧭 Explore</a>
+      <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
     </div>
 
-    <!-- Add more .post items as needed -->
-  </main>
+    <div class="main">
+      <div class="top-bar">
+        <div class="logo">Clixly</div>
+        <input type="text" placeholder="Search..." class="search-bar">
+        <div class="auth-buttons">
+          <button onclick="window.location.href='signup.html'">Sign Up</button>
+          <button onclick="window.location.href='login.html'">Login</button>
+        </div>
+      </div>
 
-  <nav class="bottom-nav">
-    <button onclick="location.href='index.html'">
-      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-    </button>
-    <button onclick="location.href='explore.html'">
-      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm3.43 12.57l-4.08 1.7a1 1 0 0 1-1.27-1.27l1.7-4.08 4.08-1.7 1.7 4.08z"/></svg>
-    </button>
-    <button onclick="location.href='upload.html'">
-      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
-    <button onclick="location.href='notifications.html'">
-      <svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 ..."/></svg>
-    </button>
-    <button onclick="location.href='profile.html'">
-      <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 ..."/></svg>
-    </button>
-  </nav>
+      <!-- Sample Post -->
+      <div class="post">
+        <b>alex123</b> • 2h ago
+        <img src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80" alt="Post" />
+        <div class="likes">❤️ 1,290 &nbsp; 💬 90</div>
+      </div>
+
+      <div class="post">
+        <b>sarah_j</b> • 4h ago
+        <img src="https://images.unsplash.com/photo-1604079628044-cac508bb11f4?auto=format&fit=crop&w=800&q=80" alt="Post" />
+        <div class="likes">❤️ 1,200 &nbsp; 💬 90</div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    function toggleDark() {
+    function toggleDarkMode() {
       const html = document.documentElement;
-      if (html.hasAttribute('data-theme')) html.removeAttribute('data-theme');
-      else html.setAttribute('data-theme', 'light');
+      if (html.getAttribute('data-theme') === 'light') {
+        html.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        html.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+      }
     }
+
+    // Auto-load theme
+    window.onload = () => {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    };
   </script>
 </body>
 </html>
+
 
 
