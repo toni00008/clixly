@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clixly • Shorts</title>
   <style>
@@ -11,16 +11,14 @@
       background: #000;
       overflow-y: scroll;
       height: 100vh;
+      scroll-snap-type: y mandatory;
     }
     .video-container {
       position: relative;
       height: 100vh;
       width: 100vw;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       scroll-snap-align: start;
+      overflow: hidden;
     }
     video {
       width: 100%;
@@ -29,46 +27,71 @@
     }
     .overlay {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
+      bottom: 100px;
+      left: 15px;
       color: white;
+      z-index: 2;
     }
     .actions {
       position: absolute;
-      right: 20px;
-      bottom: 100px;
+      right: 15px;
+      bottom: 120px;
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 20px;
+      z-index: 2;
     }
     .actions button {
-      background: none;
+      background: rgba(0,0,0,0.4);
       border: none;
       color: white;
       font-size: 24px;
+      padding: 8px;
+      border-radius: 50%;
       cursor: pointer;
     }
     .heart {
       position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       font-size: 100px;
       color: red;
       opacity: 0;
       transition: opacity 0.3s ease-out;
+      pointer-events: none;
+      z-index: 3;
     }
     .heart.show {
       opacity: 1;
       animation: pop 0.6s forwards;
     }
     @keyframes pop {
-      0% { transform: scale(0.5); opacity: 0; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 0; }
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    }
+    .comment-popup {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 50%;
+      background: #111;
+      color: white;
+      padding: 10px;
+      overflow-y: auto;
+      z-index: 10;
+    }
+    .comment {
+      padding: 6px 0;
+      border-bottom: 1px solid #333;
     }
   </style>
 </head>
 <body>
   <div id="feed"></div>
+  <div id="commentPopup" class="comment-popup" style="display:none"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -85,16 +108,19 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     const feed = document.getElementById("feed");
-    feed.style.scrollSnapType = "y mandatory";
+    const popup = document.getElementById("commentPopup");
 
     const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
+
+    let currentPlaying = null;
 
     onSnapshot(q, (snapshot) => {
       feed.innerHTML = "";
       snapshot.forEach(doc => {
         const data = doc.data();
+        const postId = doc.id;
+
         const container = document.createElement("div");
         container.className = "video-container";
 
@@ -105,47 +131,79 @@
         video.muted = true;
         video.playsInline = true;
 
-        // Heart effect
+        video.addEventListener("click", () => {
+          video.muted = !video.muted;
+        });
+
         const heart = document.createElement("div");
         heart.className = "heart";
         heart.innerHTML = "❤️";
         container.appendChild(heart);
-
-        video.addEventListener("click", () => {
-          video.muted = !video.muted;
-        });
 
         video.addEventListener("dblclick", () => {
           heart.classList.add("show");
           setTimeout(() => heart.classList.remove("show"), 800);
         });
 
-        // Pause videos out of view
         const observer = new IntersectionObserver(entries => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
               video.play();
+              if (currentPlaying && currentPlaying !== video) {
+                currentPlaying.pause();
+              }
+              currentPlaying = video;
             } else {
               video.pause();
             }
           });
-        }, { threshold: 0.8 });
+        }, { threshold: 0.6 });
         observer.observe(container);
 
         const overlay = document.createElement("div");
         overlay.className = "overlay";
-        overlay.innerHTML = `
-          <strong>@${data.username || 'unknown'}</strong><br>
-          <span>${data.caption || ''}</span>
-        `;
+        overlay.innerHTML = `<strong>@${data.username || 'unknown'}</strong><br><span>${data.caption || ''}</span>`;
 
         const actions = document.createElement("div");
         actions.className = "actions";
-        actions.innerHTML = `
-          <button title="Like">❤️</button>
-          <button title="Comment">💬</button>
-          <button title="Share">🔗</button>
-        `;
+
+        const likeBtn = document.createElement("button");
+        likeBtn.innerHTML = "❤️";
+        likeBtn.onclick = () => {
+          heart.classList.add("show");
+          setTimeout(() => heart.classList.remove("show"), 800);
+        };
+
+        const commentBtn = document.createElement("button");
+        commentBtn.innerHTML = "💬";
+        commentBtn.onclick = () => {
+          popup.style.display = "block";
+          popup.innerHTML = `<strong>Comments:</strong><br>Loading...`;
+
+          const commentRef = collection(db, "posts", postId, "comments");
+          const commentQ = query(commentRef, orderBy("createdAt", "asc"));
+
+          onSnapshot(commentQ, snap => {
+            popup.innerHTML = `<strong>Comments:</strong><br>`;
+            if (snap.empty) popup.innerHTML += "No comments yet.";
+            snap.forEach(c => {
+              const cdata = c.data();
+              popup.innerHTML += `<div class="comment"><b>@${cdata.username || 'anon'}</b>: ${cdata.text}</div>`;
+            });
+          });
+        };
+
+        const shareBtn = document.createElement("button");
+        shareBtn.innerHTML = "🔗";
+        shareBtn.onclick = async () => {
+          const url = window.location.origin + "/clix.html?video=" + encodeURIComponent(data.mediaURL);
+          await navigator.clipboard.writeText(url);
+          alert("Link copied!");
+        };
+
+        actions.appendChild(likeBtn);
+        actions.appendChild(commentBtn);
+        actions.appendChild(shareBtn);
 
         container.appendChild(video);
         container.appendChild(overlay);
@@ -153,7 +211,11 @@
         feed.appendChild(container);
       });
     });
+
+    // Close comments popup on background click
+    popup.addEventListener("click", () => popup.style.display = "none");
   </script>
 </body>
 </html>
+
 
