@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Clixly Feed</title>
+  <meta charset="UTF-8" />
+  <title>Clixly • Feed</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -9,19 +10,6 @@
       margin: auto;
       background: #f9f9f9;
       padding: 20px;
-    }
-    .search-bar {
-      margin-bottom: 20px;
-    }
-    .search-bar input {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-    }
-    h2 {
-      margin-top: 20px;
     }
     .post {
       background: white;
@@ -37,53 +25,37 @@
     .post img {
       max-width: 100%;
       border-radius: 8px;
+      margin-top: 10px;
     }
     .user {
-      color: #555;
-      font-size: 0.9em;
-      margin-bottom: 6px;
+      color: #0077ff;
+      font-weight: bold;
       cursor: pointer;
     }
     .caption {
       margin-top: 10px;
       font-size: 1em;
     }
-    .likes, .comments {
+    button.follow-btn {
       margin-top: 10px;
-      font-size: 0.9em;
-      color: #333;
-    }
-    button {
-      cursor: pointer;
       padding: 6px 12px;
       background: #0077ff;
       color: white;
       border: none;
       border-radius: 4px;
-      margin-top: 6px;
-    }
-    input.comment-input {
-      margin-top: 10px;
-      width: 100%;
-      padding: 8px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-
-  <!-- 🔍 Smart Live Search Bar (Explore Style) -->
-  <div class="search-bar">
-    <input id="searchInput" type="text" placeholder="🔍 Search posts / hashtags...">
-  </div>
-
-  <h2>📸 Clixly Feed</h2>
+  <h2>Clixly Feed</h2>
   <div id="posts">Loading posts...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, onSnapshot, doc,
-      updateDoc, arrayUnion, setDoc, getDoc
+      getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc,
+      updateDoc, arrayUnion, arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import {
       getAuth, onAuthStateChanged
@@ -102,111 +74,104 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const postsDiv = document.getElementById("posts");
-    const searchInput = document.getElementById("searchInput");
+    const postsDiv = document.getElementById('posts');
+    let currentUser = null;
+    let usersCache = {}; // userId -> userData
 
-    let allPosts = [];
-
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
       if (!user) {
         postsDiv.innerHTML = 'Please <a href="login.html">login</a> to view posts.';
         return;
       }
-
-      const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-
-      onSnapshot(q, async snapshot => {
-        postsDiv.innerHTML = "";
-        allPosts = [];
-
-        for (const docSnap of snapshot.docs) {
-          const post = docSnap.data();
-          const postId = docSnap.id;
-          const likesDoc = await getDoc(doc(db, "posts", postId));
-          const likes = likesDoc.data().likes || [];
-
-          allPosts.push({
-            ...post,
-            id: postId,
-            likes
-          });
-        }
-
-        renderPosts();
-      });
+      currentUser = user;
+      loadUsersCache().then(() => loadPosts());
     });
 
-    function renderPosts(filter = '') {
-      postsDiv.innerHTML = '';
-      const lower = filter.toLowerCase();
-
-      const filtered = allPosts.filter(p =>
-        p.caption?.toLowerCase().includes(lower) ||
-        (p.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower))
-      );
-
-      (filtered.length ? filtered : allPosts).forEach(post => {
-        const postEl = document.createElement("div");
-        postEl.className = "post";
-        const hashtags = post.caption.match(/#\w+/g) || [];
-
-        postEl.innerHTML = `
-          <div class="user" onclick="viewUser('${post.userId}')"><b>${post.userEmail}</b></div>
-          <img src="${post.imageURL}" alt="Post image">
-          <div class="caption">${post.caption || ""}</div>
-          <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
-          <button onclick="likePost('${post.id}', '${auth.currentUser.uid}')">❤️ Like</button>
-          <div class="comments" id="comments-${post.id}">💬 Comments loading...</div>
-          <input type="text" placeholder="Add a comment..." class="comment-input" id="comment-input-${post.id}">
-          <button onclick="addComment('${post.id}', '${auth.currentUser.uid}', '${auth.currentUser.email}')">➕ Comment</button>
-        `;
-
-        postsDiv.appendChild(postEl);
-
-        const commentsRef = collection(db, "posts", post.id, "comments");
-        onSnapshot(commentsRef, snapshot => {
-          const commentsDiv = document.getElementById(`comments-${post.id}`);
-          commentsDiv.innerHTML = "";
-          snapshot.forEach(commentDoc => {
-            const c = commentDoc.data();
-            const cEl = document.createElement("div");
-            cEl.innerHTML = `<b>${c.userEmail}:</b> ${c.text}`;
-            commentsDiv.appendChild(cEl);
-          });
-        });
+    // Preload all users to cache username and followers info
+    async function loadUsersCache() {
+      const usersCol = collection(db, 'users');
+      const usersSnap = await getDocs(usersCol);
+      usersSnap.forEach(doc => {
+        usersCache[doc.id] = doc.data();
       });
     }
 
-    searchInput.addEventListener('input', e => {
-      renderPosts(e.target.value.trim());
-    });
+    function loadPosts() {
+      const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
 
-    window.likePost = async function(postId, userId) {
-      const postRef = doc(db, "posts", postId);
-      await updateDoc(postRef, {
-        likes: arrayUnion(userId)
+      onSnapshot(postsQuery, async snapshot => {
+        postsDiv.innerHTML = '';
+        for (const postDoc of snapshot.docs) {
+          const post = postDoc.data();
+          const postId = postDoc.id;
+          const userId = post.userId;
+
+          const userData = usersCache[userId] || { username: 'Unknown' };
+
+          // Check if current user follows post author
+          const currentUserData = usersCache[currentUser.uid] || { following: [] };
+          const isFollowing = (currentUserData.following || []).includes(userId);
+
+          const postEl = document.createElement('div');
+          postEl.className = 'post';
+
+          postEl.innerHTML = `
+            <div>
+              <a href="profile.html?id=${userId}" class="user">${userData.username}</a>
+            </div>
+            <img src="${post.imageURL}" alt="Post image" />
+            <div class="caption">${post.caption || ''}</div>
+            <button class="follow-btn">${isFollowing ? 'Unfollow' : 'Follow'}</button>
+          `;
+
+          const followBtn = postEl.querySelector('.follow-btn');
+          followBtn.onclick = () => toggleFollow(userId);
+
+          postsDiv.appendChild(postEl);
+        }
       });
-    };
+    }
 
-    window.addComment = async function(postId, userId, userEmail) {
-      const input = document.getElementById(`comment-input-${postId}`);
-      const text = input.value.trim();
-      if (!text) return;
+    async function toggleFollow(targetUserId) {
+      if (!currentUser) return;
 
-      const commentRef = doc(collection(db, "posts", postId, "comments"));
-      await setDoc(commentRef, {
-        userId,
-        userEmail,
-        text,
-        createdAt: new Date()
-      });
+      const currentUserRef = doc(db, 'users', currentUser.uid);
+      const targetUserRef = doc(db, 'users', targetUserId);
 
-      input.value = "";
-    };
+      const currentUserData = usersCache[currentUser.uid] || { following: [] };
+      const targetUserData = usersCache[targetUserId] || { followers: [] };
 
-    window.viewUser = function(userId) {
-      window.location.href = `user.html?id=${userId}`;
-    };
+      const isFollowing = (currentUserData.following || []).includes(targetUserId);
+
+      if (isFollowing) {
+        // Unfollow: remove from current user's following and target's followers
+        await updateDoc(currentUserRef, {
+          following: arrayRemove(targetUserId)
+        });
+        await updateDoc(targetUserRef, {
+          followers: arrayRemove(currentUser.uid)
+        });
+
+        // Update cache locally
+        usersCache[currentUser.uid].following = usersCache[currentUser.uid].following.filter(uid => uid !== targetUserId);
+        usersCache[targetUserId].followers = usersCache[targetUserId].followers.filter(uid => uid !== currentUser.uid);
+      } else {
+        // Follow: add to current user's following and target's followers
+        await updateDoc(currentUserRef, {
+          following: arrayUnion(targetUserId)
+        });
+        await updateDoc(targetUserRef, {
+          followers: arrayUnion(currentUser.uid)
+        });
+
+        // Update cache locally
+        usersCache[currentUser.uid].following = [...(usersCache[currentUser.uid].following || []), targetUserId];
+        usersCache[targetUserId].followers = [...(usersCache[targetUserId].followers || []), currentUser.uid];
+      }
+
+      loadPosts(); // Refresh posts to update buttons
+    }
+
   </script>
 </body>
 </html>
