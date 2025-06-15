@@ -1,117 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
   <title>Clixly • Explore</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
-      max-width: 700px;
+      max-width: 600px;
       margin: auto;
-      background: #f5f5f8;
+      background: #f9f9f9;
+      padding: 20px;
     }
-    nav a {
-      margin-right: 15px;
-      color: #0077ff;
-      text-decoration: none;
+    .search-bar {
+      margin-bottom: 20px;
     }
-    input[type="text"], textarea {
+    .search-bar input {
       width: 100%;
       padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 8px;
+      font-size: 1em;
       border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+    h2 {
+      margin-top: 20px;
+    }
+    .post {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      padding: 16px;
+      transition: transform 0.2s;
+    }
+    .post:hover {
+      transform: translateY(-3px);
+    }
+    .post img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    .user {
+      color: #555;
+      font-size: 0.9em;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+    .caption {
+      margin-top: 10px;
       font-size: 1em;
     }
-    .post-card {
-      background: white;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 30px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-    .post-card img {
-      width: 100%;
-      border-radius: 8px;
+    .likes, .comments {
       margin-top: 10px;
+      font-size: 0.9em;
+      color: #333;
     }
-    .hashtag {
-      display: inline-block;
-      background: #e0f2ff;
-      color: #0077ff;
-      padding: 4px 8px;
-      margin-right: 6px;
-      margin-bottom: 6px;
-      border-radius: 6px;
+    button {
       cursor: pointer;
-    }
-    .comments-section {
-      margin-top: 15px;
-      border-top: 1px solid #ddd;
-      padding-top: 10px;
-    }
-    .comment {
-      padding: 6px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .comment b {
-      margin-right: 6px;
-    }
-    .like-btn {
-      cursor: pointer;
-      border: none;
-      background: none;
-      color: gray;
-      font-weight: bold;
-      margin-left: 10px;
-    }
-    .like-btn.liked {
-      color: red;
-    }
-    .add-comment {
-      margin-top: 10px;
-    }
-    .add-comment textarea {
-      resize: vertical;
-      height: 60px;
-    }
-    .add-comment button {
-      background-color: #0077ff;
+      padding: 6px 12px;
+      background: #0077ff;
       color: white;
       border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      margin-top: 5px;
+      border-radius: 4px;
+      margin-top: 6px;
     }
-    .add-comment button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
+    input.comment-input {
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <nav>
-    <a href="feed.html">Feed</a>
-    <a href="explore.html">Explore</a>
-    <a href="profile.html">Profile</a>
-  </nav>
-  <h2>Explore</h2>
-  <input type="text" id="searchInput" placeholder="Search posts / hashtags..." />
 
+  <div class="search-bar">
+    <input id="searchInput" type="text" placeholder="🔍 Search posts / hashtags...">
+  </div>
+
+  <h2>🔍 Explore Posts</h2>
   <div id="posts">Loading posts...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, onSnapshot,
-      doc, getDoc, addDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove
+      getFirestore, collection, query, orderBy, onSnapshot, doc,
+      updateDoc, arrayUnion, arrayRemove, setDoc, getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // Your Firebase config here
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -125,180 +104,158 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const postsEl = document.getElementById('posts');
-    const searchInput = document.getElementById('searchInput');
+    const postsDiv = document.getElementById("posts");
+    const searchInput = document.getElementById("searchInput");
 
-    let posts = [];
-    const userCache = {}; // email => username
-    let currentUserEmail = null;
+    let allPosts = [];
+    const userCache = {}; // cache userId → username/email
 
-    onAuthStateChanged(auth, user => {
-      currentUserEmail = user ? user.email : null;
-      renderPosts(searchInput.value.toLowerCase());
-    });
+    let currentUser = null;
 
-    const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-
-    onSnapshot(postsQuery, async snapshot => {
-      posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Fetch usernames for all posts
-      await Promise.all(posts.map(async post => {
-        if (!userCache[post.userEmail]) {
-          const userDoc = await getDoc(doc(db, 'users', post.userEmail));
-          userCache[post.userEmail] = userDoc.exists() ? userDoc.data().username : post.userEmail;
-        }
-        post.username = userCache[post.userEmail];
-      }));
-
-      renderPosts(searchInput.value.toLowerCase());
-    });
-
-    searchInput.oninput = e => renderPosts(e.target.value.toLowerCase());
-
-    function renderPosts(filter = '') {
-      postsEl.innerHTML = '';
-
-      const filtered = posts.filter(p => {
-        const captionLower = p.caption.toLowerCase();
-        const hashtags = p.caption.match(/#\w+/g) || [];
-        return captionLower.includes(filter) ||
-          hashtags.some(tag => tag.toLowerCase().includes(filter)) ||
-          (filter.startsWith('#') && hashtags.includes(filter));
-      });
-
-      (filtered.length ? filtered : posts).forEach(post => {
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post-card';
-
-        // Hashtags
-        const hashtags = post.caption.match(/#\w+/g) || [];
-
-        postDiv.innerHTML = `
-          <div><b>${post.username}</b></div>
-          <img src="${post.imageURL}" alt="Post image" />
-          <div>${post.caption}</div>
-          <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}</div>
-          <div class="comments-section" id="comments-${post.id}">
-            <b>Comments:</b>
-            <div class="comments-list" id="comments-list-${post.id}">Loading comments...</div>
-            <div class="add-comment" id="add-comment-${post.id}">
-              <textarea placeholder="Add a comment..." rows="2"></textarea><br>
-              <button disabled>Add Comment</button>
-            </div>
-          </div>
-        `;
-
-        postsEl.appendChild(postDiv);
-
-        setupCommentsSection(post.id);
-      });
-    }
-
-    // Setup comments listener and add comment handler
-    function setupCommentsSection(postId) {
-      const commentsListEl = document.getElementById(`comments-list-${postId}`);
-      const addCommentEl = document.getElementById(`add-comment-${postId}`);
-      const textarea = addCommentEl.querySelector('textarea');
-      const btn = addCommentEl.querySelector('button');
-
-      if (!currentUserEmail) {
-        addCommentEl.style.display = 'none'; // Hide comment input if not logged in
-      } else {
-        addCommentEl.style.display = 'block';
+    onAuthStateChanged(auth, async user => {
+      currentUser = user;
+      if (!user) {
+        postsDiv.innerHTML = 'Please <a href="login.html">login</a> to explore posts.';
+        return;
       }
 
-      textarea.oninput = () => {
-        btn.disabled = textarea.value.trim() === '';
-      };
+      const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
-      btn.onclick = async () => {
-        if (!currentUserEmail) {
-          alert('Please log in to comment.');
-          return;
-        }
-        const text = textarea.value.trim();
-        if (!text) return;
+      onSnapshot(q, async snapshot => {
+        allPosts = [];
+        postsDiv.innerHTML = 'Loading posts...';
 
-        btn.disabled = true;
+        for (const docSnap of snapshot.docs) {
+          const postData = docSnap.data();
+          const postId = docSnap.id;
 
-        // Get username for current user from cache or Firestore
-        let username = userCache[currentUserEmail];
-        if (!username) {
-          const userDoc = await getDoc(doc(db, 'users', currentUserEmail));
-          username = userDoc.exists() ? userDoc.data().username : currentUserEmail;
-          userCache[currentUserEmail] = username;
-        }
-
-        try {
-          await addDoc(collection(db, 'posts', postId, 'comments'), {
-            userEmail: currentUserEmail,
-            username: username,
-            text: text,
-            likes: 0,
-            likedBy: [],
-            createdAt: serverTimestamp()
-          });
-          textarea.value = '';
-          btn.disabled = true;
-        } catch (e) {
-          alert('Could not add comment. Please try again.');
-          btn.disabled = false;
-        }
-      };
-
-      // Listen to comments for this post
-      const commentsQuery = query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc'));
-      onSnapshot(commentsQuery, snapshot => {
-        commentsListEl.innerHTML = '';
-        snapshot.forEach(docSnap => {
-          const comment = docSnap.data();
-          const commentId = docSnap.id;
-
-          const likes = comment.likes || 0;
-          const likedBy = comment.likedBy || [];
-          const liked = currentUserEmail && likedBy.includes(currentUserEmail);
-
-          const commentEl = document.createElement('div');
-          commentEl.className = 'comment';
-
-          commentEl.innerHTML = `
-            <b>${comment.username}</b>: ${comment.text}
-            <button class="like-btn ${liked ? 'liked' : ''}" title="Like/Unlike comment">
-              ❤️ ${likes}
-            </button>
-          `;
-
-          // Like button handler
-          commentEl.querySelector('button').addEventListener('click', async () => {
-            if (!currentUserEmail) {
-              alert('Please log in to like comments.');
-              return;
+          // Get username or email from users collection, cache to avoid repeated fetches
+          if (!userCache[postData.userId]) {
+            const userDoc = await getDoc(doc(db, "users", postData.userId));
+            if (userDoc.exists()) {
+              userCache[postData.userId] = userDoc.data().username || userDoc.data().email || "Unknown";
+            } else {
+              userCache[postData.userId] = "Unknown";
             }
-            const commentRef = doc(db, 'posts', postId, 'comments', commentId);
-            if (liked) {
+          }
+
+          allPosts.push({
+            id: postId,
+            ...postData,
+            username: userCache[postData.userId],
+            likes: postData.likes || []
+          });
+        }
+
+        renderPosts();
+      });
+    });
+
+    searchInput.addEventListener('input', e => {
+      renderPosts(e.target.value.trim());
+    });
+
+    function renderPosts(filter = '') {
+      postsDiv.innerHTML = '';
+      const lower = filter.toLowerCase();
+
+      const filtered = allPosts.filter(post =>
+        (post.caption?.toLowerCase().includes(lower)) ||
+        ((post.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower)))
+      );
+
+      (filtered.length ? filtered : allPosts).forEach(post => {
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+
+        const hashtags = post.caption?.match(/#\w+/g) || [];
+        const likedByUser = currentUser && post.likes.includes(currentUser.uid);
+        const likeBtnText = likedByUser ? "💙 Unlike" : "❤️ Like";
+
+        postEl.innerHTML = `
+          <div class="user" onclick="viewUser('${post.userId}')"><b>${post.username}</b></div>
+          <img src="${post.imageURL}" alt="Post image">
+          <div class="caption">${post.caption || ""}</div>
+          <div class="likes">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
+          <button id="like-btn-${post.id}">${likeBtnText}</button>
+          <div class="comments" id="comments-${post.id}">💬 Comments loading...</div>
+          <input type="text" placeholder="Add a comment..." class="comment-input" id="comment-input-${post.id}">
+          <button id="comment-btn-${post.id}">➕ Comment</button>
+        `;
+
+        postsDiv.appendChild(postEl);
+
+        // Like button handler
+        const likeBtn = document.getElementById(`like-btn-${post.id}`);
+        likeBtn.addEventListener('click', async () => {
+          if (!currentUser) {
+            alert("Please login to like posts.");
+            return;
+          }
+          const postRef = doc(db, "posts", post.id);
+          try {
+            if (likedByUser) {
               // Unlike
-              await updateDoc(commentRef, {
-                likes: likes - 1,
-                likedBy: arrayRemove(currentUserEmail)
+              await updateDoc(postRef, {
+                likes: arrayRemove(currentUser.uid)
               });
             } else {
               // Like
-              await updateDoc(commentRef, {
-                likes: likes + 1,
-                likedBy: arrayUnion(currentUserEmail)
+              await updateDoc(postRef, {
+                likes: arrayUnion(currentUser.uid)
               });
             }
-          });
-
-          commentsListEl.appendChild(commentEl);
+          } catch (e) {
+            console.error("Error updating like:", e);
+            alert("Could not update like. Please try again.");
+          }
         });
 
-        if (snapshot.empty) {
-          commentsListEl.innerHTML = '<i>No comments yet</i>';
-        }
+        // Comments realtime listener
+        const commentsRef = collection(db, "posts", post.id, "comments");
+        onSnapshot(commentsRef, snapshot => {
+          const commentsDiv = document.getElementById(`comments-${post.id}`);
+          commentsDiv.innerHTML = "";
+          snapshot.forEach(commentDoc => {
+            const c = commentDoc.data();
+            const cEl = document.createElement("div");
+            cEl.innerHTML = `<b>${c.userEmail || "Unknown"}:</b> ${c.text}`;
+            commentsDiv.appendChild(cEl);
+          });
+        });
+
+        // Add comment button handler
+        const commentBtn = document.getElementById(`comment-btn-${post.id}`);
+        commentBtn.addEventListener('click', async () => {
+          if (!currentUser) {
+            alert("Please login to comment.");
+            return;
+          }
+          const input = document.getElementById(`comment-input-${post.id}`);
+          const text = input.value.trim();
+          if (!text) return;
+
+          try {
+            const commentRef = doc(collection(db, "posts", post.id, "comments"));
+            await setDoc(commentRef, {
+              userId: currentUser.uid,
+              userEmail: currentUser.email,
+              text,
+              createdAt: new Date()
+            });
+            input.value = "";
+          } catch (e) {
+            console.error("Error adding comment:", e);
+            alert("Could not add comment. Please try again.");
+          }
+        });
       });
     }
+
+    window.viewUser = function(userId) {
+      window.location.href = `user.html?id=${userId}`;
+    };
   </script>
 </body>
 </html>
+
