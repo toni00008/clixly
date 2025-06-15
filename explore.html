@@ -3,8 +3,25 @@
 <head>
   <title>Clixly • Explore</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: auto; background: #f5f5f8; padding: 20px; }
-    nav a { margin-right: 15px; color: #0077ff; text-decoration: none; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+      background: #f5f5f8;
+    }
+    nav a {
+      margin-right: 15px;
+      color: #0077ff;
+      text-decoration: none;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
     .post-card {
       background: white;
       border-radius: 10px;
@@ -12,11 +29,21 @@
       margin-bottom: 20px;
       box-shadow: 0 3px 8px rgba(0,0,0,0.1);
     }
-    .post-card img { width: 100%; border-radius: 8px; margin-top: 10px; }
-    .comment-input { margin-top: 10px; padding: 8px; width: 100%; border-radius: 8px; }
-    button { margin-top: 6px; padding: 6px 10px; background: #0077ff; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    .comment { font-size: 0.9em; margin-top: 6px; }
-    .likes-count { margin-top: 8px; font-size: 0.9em; color: #333; }
+    .post-card img {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .hashtag {
+      display: inline-block;
+      background: #e0f2ff;
+      color: #0077ff;
+      padding: 4px 8px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -27,126 +54,94 @@
   </nav>
 
   <h2>Explore</h2>
-  <input type="text" id="searchInput" placeholder="Search posts / hashtags..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
+  <input type="text" id="searchInput" placeholder="Search posts / hashtags..." />
 
   <div id="posts">Loading...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, onSnapshot, doc,
-      getDoc, setDoc, updateDoc, arrayUnion, arrayRemove
+      getFirestore,
+      collection,
+      query,
+      orderBy,
+      onSnapshot,
+      doc,
+      getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    const firebaseConfig = {
+    const app = initializeApp({
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const postsEl = document.getElementById('posts');
-    const userCache = {};
-
-    let currentUser;
-
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        postsEl.innerHTML = 'Please <a href="login.html">login</a> to view posts.';
-        return;
-      }
-      currentUser = user;
-
-      const postsQ = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-
-      onSnapshot(postsQ, async snap => {
-        const posts = await Promise.all(snap.docs.map(async docSnap => {
-          const post = docSnap.data();
-          const id = docSnap.id;
-          if (!userCache[post.userEmail]) {
-            const userDoc = await getDoc(doc(db, 'users', post.userEmail));
-            userCache[post.userEmail] = userDoc.exists() ? userDoc.data().username : post.userEmail;
-          }
-          const likes = post.likes || [];
-          return { id, ...post, username: userCache[post.userEmail], likes };
-        }));
-
-        renderPosts(posts);
-      });
     });
 
-    function renderPosts(posts) {
+    const db = getFirestore(app);
+    const postsEl = document.getElementById('posts');
+    const searchInput = document.getElementById('searchInput');
+    const userCache = {};
+
+    const postsQ = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+
+    let allPosts = [];
+
+    onSnapshot(postsQ, async snap => {
+      const posts = await Promise.all(snap.docs.map(async docSnap => {
+        const post = docSnap.data();
+        const id = docSnap.id;
+
+        const userEmail = post.userEmail || 'unknown@clixly.com';
+        let username = userEmail;
+
+        if (!userCache[userEmail] && userEmail.includes("@")) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', userEmail));
+            userCache[userEmail] = userDoc.exists() ? userDoc.data().username : userEmail;
+          } catch (e) {
+            userCache[userEmail] = userEmail;
+          }
+        }
+        username = userCache[userEmail] || userEmail;
+
+        return { id, ...post, username };
+      }));
+
+      allPosts = posts;
+      renderPosts();
+    });
+
+    function renderPosts(filter = '') {
       postsEl.innerHTML = '';
-      posts.forEach(post => {
-        const postEl = document.createElement('div');
-        postEl.className = 'post-card';
+      const lower = filter.toLowerCase();
 
-        postEl.innerHTML = `
-          <div><b>${post.username}</b></div>
-          <img src="${post.imageURL}" alt="Post image">
-          <div>${post.caption}</div>
-          <div class="likes-count">❤️ Likes: <span id="likes-${post.id}">${post.likes.length}</span></div>
-          <button onclick="likePost('${post.id}')">❤️ Like</button>
-          <div id="comments-${post.id}" class="comments">Loading comments...</div>
-          <input type="text" id="comment-${post.id}" class="comment-input" placeholder="Add a comment...">
-          <button onclick="addComment('${post.id}')">➕ Comment</button>
+      const filtered = allPosts.filter(p =>
+        p.caption?.toLowerCase().includes(lower) ||
+        (p.caption?.match(/#\w+/g) || []).some(tag => tag.toLowerCase().includes(lower))
+      );
+
+      (filtered.length ? filtered : allPosts).forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'post-card';
+
+        const hashtags = p.caption?.match(/#\w+/g) || [];
+
+        div.innerHTML = `
+          <div><b>${p.username}</b></div>
+          <img src="${p.imageURL}" alt="">
+          <div>${p.caption || ""}</div>
+          <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join(' ')}</div>
         `;
-        postsEl.appendChild(postEl);
 
-        const commentsRef = collection(db, 'posts', post.id, 'comments');
-        onSnapshot(commentsRef, snapshot => {
-          const commentsDiv = document.getElementById(`comments-${post.id}`);
-          commentsDiv.innerHTML = '';
-          snapshot.forEach(doc => {
-            const c = doc.data();
-            const cEl = document.createElement('div');
-            const time = c.createdAt?.toDate?.().toLocaleString?.() || '';
-            cEl.className = 'comment';
-            cEl.innerHTML = `<b>${c.username}:</b> ${c.text} <small>(${time})</small>`;
-            commentsDiv.appendChild(cEl);
-          });
-        });
+        postsEl.append(div);
       });
     }
 
-    window.likePost = async (postId) => {
-      const postRef = doc(db, 'posts', postId);
-      const postSnap = await getDoc(postRef);
-      const likes = postSnap.data().likes || [];
-      const isLiked = likes.includes(currentUser.uid);
-
-      await updateDoc(postRef, {
-        likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-      });
-    };
-
-    window.addComment = async (postId) => {
-      const input = document.getElementById(`comment-${postId}`);
-      const text = input.value.trim();
-      if (!text) return;
-
-      const commentRef = doc(collection(db, 'posts', postId, 'comments'));
-      const userDoc = await getDoc(doc(db, 'users', currentUser.email));
-      const username = userDoc.exists() ? userDoc.data().username : currentUser.email;
-
-      await setDoc(commentRef, {
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
-        username,
-        text,
-        createdAt: new Date()
-      });
-
-      input.value = '';
-    };
+    searchInput.addEventListener('input', e => {
+      renderPosts(e.target.value.trim());
+    });
   </script>
 </body>
 </html>
