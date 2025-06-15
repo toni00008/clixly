@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Profile • Clixly</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 500px;
+      margin: auto;
+      background: #f9f9f9;
+      padding: 30px;
+    }
+    h2 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 1em;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background-color: #0077ff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    img {
+      width: 100px;
+      border-radius: 50%;
+      display: block;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Edit Your Profile</h2>
+  <div id="form-container">
+    <img id="profilePicPreview" src="" alt="Profile Picture">
+    <label>New Profile Picture (URL)</label>
+    <input type="text" id="profilePic">
+
+    <label>Username</label>
+    <input type="text" id="username">
+
+    <label>Bio</label>
+    <textarea id="bio" rows="4"></textarea>
+
+    <button onclick="updateProfile()">💾 Save Changes</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        const userDoc = await getDoc(doc(db, "users", currentUserId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          document.getElementById("username").value = data.username || "";
+          document.getElementById("bio").value = data.bio || "";
+          document.getElementById("profilePic").value = data.profilePic || "";
+          document.getElementById("profilePicPreview").src = data.profilePic || "";
+        }
+      } else {
+        document.body.innerHTML = '<p>Please <a href="login.html">log in</a> to edit your profile.</p>';
+      }
+    });
+
+    window.updateProfile = async function () {
+      const username = document.getElementById("username").value.trim();
+      const bio = document.getElementById("bio").value.trim();
+      const profilePic = document.getElementById("profilePic").value.trim();
+
+      if (!username || !profilePic) {
+        alert("Username and Profile Picture URL are required.");
+        return;
+      }
+
+      await updateDoc(doc(db, "users", currentUserId), {
+        username,
+        bio,
+        profilePic
+      });
+
+      alert("✅ Profile updated!");
+      document.getElementById("profilePicPreview").src = profilePic;
+    };
+
+    // Live preview for profile picture
+    document.getElementById("profilePic").addEventListener("input", (e) => {
+      document.getElementById("profilePicPreview").src = e.target.value.trim();
+    });
+  </script>
+</body>
+</html>
