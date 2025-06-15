@@ -1,120 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Profile – Clixly</title>
+  <title>Clixly Profile</title>
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
-    }
-    .profile-pic {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    .upload-btn {
-      background: #0077ff;
-      color: white;
-      padding: 8px 14px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 1em;
-    }
-    nav {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    nav a {
-      text-decoration: none;
-      font-weight: bold;
-      color: #0077ff;
-    }
-    .post-card {
-      background: white;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-    .post-card img {
-      width: 100%;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    .hashtag {
-      display: inline-block;
-      background: #e0f2ff;
-      color: #0077ff;
-      padding: 4px 8px;
-      margin-right: 6px;
-      margin-bottom: 6px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+    body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; }
+    #followBtn { background: #0077ff; color: white; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer; font-size: 1em; }
+    #followBtn.unfollow { background: #ccc; color: black; }
   </style>
 </head>
 <body>
-  <nav>
-    <a href="feed.html">🏠 Feed</a>
-    <a href="upload.html">⬆️ Upload</a>
-    <a href="profile.html">👤 Profile</a>
-  </nav>
 
-  <h2 id="profile-title">My Profile</h2>
-
-  <!-- 🔍 Clixly Search Bar -->
-  <input type="text" id="searchInput" placeholder="Search posts / hashtags..." 
-    style="width: 100%; padding: 10px; margin: 15px 0; border-radius: 8px; border: 1px solid #ccc; font-family: 'Segoe UI', sans-serif;" />
-
-  <img id="profilePic" class="profile-pic" src="https://via.placeholder.com/100"><br>
-  <span id="emailDisplay">Email: loading...</span><br>
-  <span id="nameDisplay">Name: loading...</span><br><br>
-
-  <label class="upload-btn">
-    Upload New Pic <input type="file" id="picInput" style="display: none;">
-  </label><br><br>
-
-  <input type="text" id="displayName" placeholder="New display name">
-  <input type="text" id="bio" placeholder="Your bio">
-  <input type="text" id="website" placeholder="Your website (https://...)">
-  <button onclick="updateProfileData()">Update Profile</button>
-
-  <hr>
-
-  <input type="password" id="newPassword" placeholder="New Password (min 6 chars)">
-  <button onclick="changePassword()">Change Password</button>
-
-  <hr>
-
-  <h3>👥 Social</h3>
-  <p>Followers: <span id="followers-count">0</span></p>
-  <p>Following: <span id="following-count">0</span></p>
-
-  <hr>
-  <button onclick="logout()">Logout</button>
-
-  <!-- Optional: Your own posts container if needed -->
-  <div id="posts" style="margin-top: 40px;"></div>
+  <h2 id="username">Loading...</h2>
+  <p>👥 Followers: <span id="followersCount">0</span> • Following: <span id="followingCount">0</span></p>
+  <button id="followBtn" style="display:none;">Follow</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getAuth, onAuthStateChanged, signOut, updateProfile, updatePassword
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, doc, setDoc, getDoc, collection, query, orderBy, onSnapshot
+      getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -126,153 +31,97 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const profileUserId = urlParams.get('id'); // Profile user id from URL param: ?id=USER_ID
+
+    const usernameEl = document.getElementById('username');
+    const followersCountEl = document.getElementById('followersCount');
+    const followingCountEl = document.getElementById('followingCount');
+    const followBtn = document.getElementById('followBtn');
+
     let currentUser = null;
+    let isFollowing = false;
 
-    const uidFromUrl = new URLSearchParams(window.location.search).get('uid');
-    const postsEl = document.getElementById('posts');
-    let posts = [];
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user && !uidFromUrl) {
-        alert("Please log in.");
-        window.location.href = "login.html";
-      } else {
-        setupProfile(user || { uid: uidFromUrl });
-
-        // Load only current user’s posts (optional)
-        const targetUID = uidFromUrl || user.uid;
-        const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-        onSnapshot(q, snap => {
-          posts = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .filter(p => p.userId === targetUID);
-          renderPosts();
-        });
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        usernameEl.textContent = 'Please log in to view profiles';
+        followBtn.style.display = 'none';
+        return;
       }
+
+      currentUser = user;
+
+      if (!profileUserId) {
+        usernameEl.textContent = 'No profile specified';
+        return;
+      }
+
+      await loadProfile();
     });
 
-    function renderPosts(filter = '') {
-      postsEl.innerHTML = '';
-      const filtered = posts.filter(p =>
-        p.caption.toLowerCase().includes(filter) ||
-        p.caption.match(/#\w+/g)?.some(tag => tag.toLowerCase().includes(filter)) ||
-        filter.startsWith('#') && p.caption.match(/#\w+/g)?.includes(filter)
-      );
-      (filtered.length ? filtered : posts).forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'post-card';
-        const hashtags = p.caption.match(/#\w+/g) || [];
-        div.innerHTML = `
-          <div><b>${p.userEmail}</b></div>
-          <img src="${p.imageURL}" alt="">
-          <div>${p.caption}</div>
-          <div>${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}</div>
-        `;
-        postsEl.appendChild(div);
-      });
-    }
+    async function loadProfile() {
+      const profileDocRef = doc(db, 'users', profileUserId);
+      const profileSnap = await getDoc(profileDocRef);
 
-    document.getElementById('searchInput').oninput = e => renderPosts(e.target.value.toLowerCase());
-
-    async function setupProfile(user) {
-      const isOwnProfile = !uidFromUrl || uidFromUrl === user.uid;
-      currentUser = user;
-      document.getElementById("profile-title").innerText = isOwnProfile ? "My Profile" : "Public Profile";
-
-      const uidToLoad = uidFromUrl || user.uid;
-      const userDocRef = doc(db, "users", uidToLoad);
-      const userDoc = await getDoc(userDocRef);
-      const data = userDoc.exists() ? userDoc.data() : {};
-
-      document.getElementById("emailDisplay").innerText = `Email: ${user.email}`;
-      document.getElementById("nameDisplay").innerText = `Name: ${user.displayName || 'Not set'}`;
-
-      if (user.photoURL) {
-        document.getElementById("profilePic").src = user.photoURL;
+      if (!profileSnap.exists()) {
+        usernameEl.textContent = 'User not found';
+        return;
       }
 
-      if (isOwnProfile) {
-        document.getElementById("bio").value = data.bio || '';
-        document.getElementById("website").value = data.website || '';
-        setupSocialCounts(user.uid);
+      const profileData = profileSnap.data();
+      usernameEl.textContent = profileData.username || 'Unknown User';
+
+      // Get followers and following arrays (store as arrays in user doc for simplicity)
+      const followers = profileData.followers || [];
+      const following = profileData.following || [];
+
+      followersCountEl.textContent = followers.length;
+      followingCountEl.textContent = following.length;
+
+      // Check if current user is following this profile user
+      isFollowing = followers.includes(currentUser.uid);
+
+      updateFollowButton();
+    }
+
+    function updateFollowButton() {
+      followBtn.style.display = (profileUserId === currentUser.uid) ? 'none' : 'inline-block';
+      if (isFollowing) {
+        followBtn.textContent = 'Unfollow';
+        followBtn.classList.add('unfollow');
       } else {
-        document.getElementById("bio").outerHTML = `<p>Bio: ${data.bio || ''}</p>`;
-        document.getElementById("website").outerHTML = `<p>Website: <a href="${data.website || '#'}" target="_blank">${data.website || 'Not set'}</a></p>`;
-        document.getElementById("displayName").style.display = 'none';
-        document.getElementById("picInput").style.display = 'none';
-        document.querySelector(".upload-btn").style.display = 'none';
-        document.querySelector("button[onclick='updateProfileData()']").style.display = 'none';
-        document.getElementById("newPassword").style.display = 'none';
-        document.querySelector("button[onclick='changePassword()']").style.display = 'none';
-        document.querySelector("button[onclick='logout()']").style.display = 'none';
-        setupSocialCounts(uidToLoad);
+        followBtn.textContent = 'Follow';
+        followBtn.classList.remove('unfollow');
       }
     }
 
-    function setupSocialCounts(userId) {
-      const followersRef = collection(db, 'users', userId, 'followers');
-      const followingRef = collection(db, 'users', userId, 'following');
-
-      onSnapshot(followersRef, (snap) => {
-        document.getElementById("followers-count").textContent = snap.size;
-      });
-
-      onSnapshot(followingRef, (snap) => {
-        document.getElementById("following-count").textContent = snap.size;
-      });
-    }
-
-    window.updateProfileData = async function () {
-      const newName = document.getElementById("displayName").value;
-      const newBio = document.getElementById("bio").value;
-      const website = document.getElementById("website").value;
-      const fileInput = document.getElementById("picInput");
-      let newPhotoURL = currentUser.photoURL;
-
-      try {
-        if (fileInput.files.length > 0) {
-          const formData = new FormData();
-          formData.append("file", fileInput.files[0]);
-          formData.append("upload_preset", "clixly_upload");
-          const res = await fetch("https://api.cloudinary.com/v1_1/dd1xg9duv/image/upload", {
-            method: "POST",
-            body: formData
-          });
-          const data = await res.json();
-          newPhotoURL = data.secure_url;
-        }
-
-        await updateProfile(currentUser, {
-          displayName: newName || currentUser.displayName,
-          photoURL: newPhotoURL
+    followBtn.addEventListener('click', async () => {
+      if (isFollowing) {
+        // Unfollow: remove currentUser.uid from profileUserId followers
+        // Remove profileUserId from currentUser following
+        await updateDoc(doc(db, 'users', profileUserId), {
+          followers: arrayRemove(currentUser.uid)
         });
-
-        await setDoc(doc(db, "users", currentUser.uid), {
-          bio: newBio,
-          website: website
-        }, { merge: true });
-
-        alert("Profile updated!");
-        location.reload();
-      } catch (err) {
-        alert("Update failed: " + err.message);
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          following: arrayRemove(profileUserId)
+        });
+        isFollowing = false;
+      } else {
+        // Follow: add currentUser.uid to profileUserId followers
+        // Add profileUserId to currentUser following
+        await updateDoc(doc(db, 'users', profileUserId), {
+          followers: arrayUnion(currentUser.uid)
+        });
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          following: arrayUnion(profileUserId)
+        });
+        isFollowing = true;
       }
-    };
-
-    window.changePassword = async function () {
-      const newPass = document.getElementById("newPassword").value;
-      if (newPass.length < 6) return alert("Password too short");
-      try {
-        await updatePassword(currentUser, newPass);
-        alert("Password updated!");
-      } catch (err) {
-        alert("Error: " + err.message);
-      }
-    };
-
-    window.logout = () => signOut(auth).then(() => location.href = "login.html");
+      await loadProfile(); // Refresh counts and button state
+    });
   </script>
 </body>
 </html>
