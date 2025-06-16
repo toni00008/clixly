@@ -2,64 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Upload - Clixly</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clixly • Upload</title>
   <style>
-    :root {
-      --bg: #ffffff;
-      --text: #111;
-      --accent: #0077ff;
-    }
-
-    [data-theme='dark'] {
-      --bg: #0e0e0e;
-      --text: #fff;
-      --accent: #1e90ff;
-    }
-
     body {
       margin: 0;
-      padding: 0;
       font-family: 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      padding: 20px;
+      padding: 2rem;
+      transition: background 0.3s, color 0.3s;
     }
 
-    .container {
+    :root {
+      --bg: #f2f5f9;
+      --text: #222;
+      --card: #fff;
+    }
+
+    .dark {
+      --bg: #121212;
+      --text: #f0f0f0;
+      --card: #1e1e1e;
+    }
+
+    .upload-container {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
       width: 100%;
       max-width: 500px;
-      background: var(--bg);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      padding: 20px;
     }
 
     h2 {
       text-align: center;
     }
 
-    .preview {
-      display: none;
+    #previewImg {
       width: 100%;
-      max-height: 300px;
-      margin: 10px 0;
       border-radius: 10px;
-      object-fit: cover;
+      margin: 10px 0;
+      display: none;
     }
 
-    textarea, input[type="file"], input[type="text"], button {
+    input[type="file"], textarea, button {
       width: 100%;
-      padding: 12px;
       margin: 10px 0;
+      padding: 12px;
       border-radius: 8px;
-      font-size: 1em;
       border: 1px solid #ccc;
-      background: var(--bg);
-      color: var(--text);
+      font-size: 1em;
+      box-sizing: border-box;
     }
 
     textarea {
@@ -67,48 +63,70 @@
       height: 100px;
     }
 
-    button {
-      background-color: var(--accent);
-      color: white;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-    }
-
-    button:hover:enabled {
-      background-color: #0056c7;
-    }
-
     #charCount {
       text-align: right;
       font-size: 0.85em;
     }
 
+    button {
+      background-color: #0077ff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover:enabled {
+      background-color: #005dc1;
+    }
+
+    button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
     #status {
-      text-align: center;
-      font-size: 0.9em;
       margin-top: 10px;
+      text-align: center;
+      font-size: 0.95em;
     }
 
     .theme-toggle {
-      text-align: right;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .theme-toggle button {
+      background: none;
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+      border-radius: 20px;
       font-size: 0.9em;
-      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    @media screen and (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+
+      .upload-container {
+        border-radius: 0;
+        box-shadow: none;
+      }
     }
   </style>
 </head>
-<body data-theme="light">
-  <div class="container">
+<body>
+  <div class="upload-container">
     <div class="theme-toggle">
-      <button onclick="toggleTheme()">🌓 Toggle Theme</button>
+      <button id="toggleTheme">🌓 Toggle Theme</button>
     </div>
-    <h2>📤 Upload to Clixly</h2>
-    <video id="previewVideo" class="preview" controls></video>
-    <img id="previewImg" class="preview" alt="Preview" />
-
-    <input type="file" id="fileInput" accept="image/*,video/*" />
-    <textarea id="caption" placeholder="Write your caption (max 300 chars)..."></textarea>
-    <input type="text" id="tags" placeholder="Add tags or filters (e.g. #fun #travel)" />
+    <h2>📤 Upload to Clix</h2>
+    <img id="previewImg" src="#" alt="Preview" />
+    <input type="file" id="imageInput" accept="image/*" />
+    <textarea id="caption" placeholder="Write a caption... (Max 300 characters)"></textarea>
     <div id="charCount">0 / 300</div>
     <button id="uploadBtn">🚀 Upload Now</button>
     <div id="status"></div>
@@ -128,98 +146,98 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
-    const CLOUDINARY_BASE = "https://api.cloudinary.com/v1_1/dd1xg9duv/";
-    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const fileInput = document.getElementById('fileInput');
-    const captionInput = document.getElementById('caption');
-    const tagsInput = document.getElementById('tags');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const statusDiv = document.getElementById('status');
-    const previewImg = document.getElementById('previewImg');
-    const previewVideo = document.getElementById('previewVideo');
-    const charCount = document.getElementById('charCount');
+    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/image/upload";
+    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+
+    const previewImg = document.getElementById("previewImg");
+    const imageInput = document.getElementById("imageInput");
+    const captionInput = document.getElementById("caption");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const charCount = document.getElementById("charCount");
+    const statusDiv = document.getElementById("status");
 
     let currentUser = null;
 
-    onAuthStateChanged(auth, user => {
+    // Auth check
+    onAuthStateChanged(auth, (user) => {
       if (!user) {
-        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload.';
+        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload posts.';
         uploadBtn.disabled = true;
       } else {
         currentUser = user;
+        uploadBtn.disabled = false;
       }
     });
 
-    captionInput.addEventListener('input', () => {
-      const len = captionInput.value.length;
-      charCount.textContent = `${len} / 300`;
-      uploadBtn.disabled = len > 300;
-      captionInput.style.borderColor = len > 300 ? "red" : "#ccc";
-    });
-
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      previewImg.style.display = "none";
-      previewVideo.style.display = "none";
-      if (file && file.type.startsWith("image/")) {
+    // Live preview
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files[0];
+      if (file) {
         const reader = new FileReader();
-        reader.onload = e => {
+        reader.onload = (e) => {
           previewImg.src = e.target.result;
           previewImg.style.display = "block";
         };
         reader.readAsDataURL(file);
-      } else if (file && file.type.startsWith("video/")) {
-        const url = URL.createObjectURL(file);
-        previewVideo.src = url;
-        previewVideo.style.display = "block";
+      } else {
+        previewImg.style.display = "none";
       }
     });
 
-    uploadBtn.addEventListener('click', async () => {
-      const file = fileInput.files[0];
+    // Char count
+    captionInput.addEventListener("input", () => {
+      const len = captionInput.value.length;
+      charCount.textContent = `${len} / 300`;
+      if (len > 300) {
+        captionInput.style.borderColor = "red";
+        uploadBtn.disabled = true;
+      } else {
+        captionInput.style.borderColor = "#ccc";
+        uploadBtn.disabled = false;
+      }
+    });
+
+    // Upload action
+    uploadBtn.addEventListener("click", async () => {
+      const file = imageInput.files[0];
       const caption = captionInput.value.trim();
-      const tags = tagsInput.value.trim();
 
-      if (!file) return alert("Please select a file.");
-      if (!currentUser) return alert("User not authenticated.");
-
-      const endpoint = CLOUDINARY_BASE + (file.type.startsWith("image/") ? "image/upload" : "video/upload");
-
+      if (!file) return alert("Please select an image to upload.");
       uploadBtn.disabled = true;
-      statusDiv.textContent = "⏫ Uploading to Cloudinary...";
+      statusDiv.textContent = "📡 Uploading image to Cloudinary...";
 
       try {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-        const res = await fetch(endpoint, { method: "POST", body: formData });
+        const res = await fetch(CLOUDINARY_URL, {
+          method: "POST",
+          body: formData
+        });
+
         if (!res.ok) throw new Error("Cloudinary upload failed");
+
         const data = await res.json();
+        const imageURL = data.secure_url;
 
-        const mediaUrl = data.secure_url;
+        statusDiv.textContent = "📝 Saving to Firestore...";
 
-        statusDiv.textContent = "📥 Saving post to Firestore...";
-
-        await addDoc(collection(db, "posts"), {
-          mediaUrl,
+        await addDoc(collection(db, "clix"), {
+          imageURL,
           caption,
-          tags,
           userEmail: currentUser.email,
           createdAt: serverTimestamp()
         });
 
-        statusDiv.textContent = "✅ Upload successful!";
-        fileInput.value = '';
-        captionInput.value = '';
-        tagsInput.value = '';
+        statusDiv.textContent = "✅ Upload complete!";
+        imageInput.value = "";
+        captionInput.value = "";
         previewImg.style.display = "none";
-        previewVideo.style.display = "none";
         charCount.textContent = "0 / 300";
       } catch (err) {
         statusDiv.textContent = "❌ Upload failed: " + err.message;
@@ -228,14 +246,15 @@
       }
     });
 
-    function toggleTheme() {
-      const body = document.body;
-      const theme = body.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      body.setAttribute("data-theme", theme);
-    }
+    // Theme toggle
+    const toggleBtn = document.getElementById("toggleTheme");
+    toggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+    });
   </script>
 </body>
 </html>
+
 
 
 
