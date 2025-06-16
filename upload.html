@@ -1,101 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upload Clix</title>
+  <meta charset="UTF-8">
+  <title>Upload - Clixly</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --bg: #f2f5f9;
+      --card: white;
+      --text: #111;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --text: #f2f2f2;
+    }
+
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #111;
-      color: white;
       margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 400px;
-      margin: 60px auto;
       padding: 20px;
-      background-color: #1a1a1a;
-      border-radius: 15px;
-      box-shadow: 0 0 20px #000;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
     }
+
+    .upload-container {
+      width: 100%;
+      max-width: 500px;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
     h2 {
       text-align: center;
       margin-bottom: 20px;
     }
+
     input, textarea, select, button {
       width: 100%;
-      margin-top: 10px;
-      padding: 10px;
+      margin: 10px 0;
+      padding: 14px;
+      border: 1px solid #ccc;
       border-radius: 10px;
-      border: none;
-      font-size: 14px;
+      font-size: 1em;
+      background: transparent;
+      color: var(--text);
     }
+
     input[type="file"] {
-      background: #222;
-      color: white;
+      border: none;
     }
-    button {
+
+    textarea {
+      resize: none;
+      height: 100px;
+    }
+
+    .preview {
+      display: none;
+      margin-top: 10px;
+      border-radius: 10px;
+      max-height: 300px;
+      object-fit: cover;
+      width: 100%;
+    }
+
+    .toggle-theme {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 14px;
+      background: #0077ff;
+      color: white;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    button.upload {
       background-color: #ff2d55;
       color: white;
       font-weight: bold;
+      border: none;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #ff4e75;
+
+    button.upload:hover {
+      background-color: #d91b41;
     }
-    video {
-      width: 100%;
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .upload-container {
+        padding: 20px;
+      }
+    }
+
+    #status {
       margin-top: 10px;
-      border-radius: 10px;
-    }
-    .theme-toggle {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      padding: 8px 14px;
-      background: #333;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .light {
-      background-color: #f0f0f0;
-      color: black;
-    }
-    .light .container {
-      background-color: white;
-    }
-    .light input[type="file"] {
-      background: #ddd;
-      color: black;
-    }
-    .light button {
-      background-color: #333;
-      color: white;
+      text-align: center;
+      font-size: 0.9em;
     }
   </style>
 </head>
 <body>
-  <div class="theme-toggle" onclick="toggleTheme()">🌙</div>
+  <button class="toggle-theme" onclick="toggleTheme()">🌙 Theme</button>
 
-  <div class="container">
-    <h2>Upload Your Clix</h2>
-    <input type="file" id="videoFile" accept="video/*" />
-    <video id="videoPreview" controls style="display:none;"></video>
-    <textarea id="caption" placeholder="Write a caption..."></textarea>
-    <input type="text" id="tags" placeholder="#tags #filters" />
-    <button onclick="uploadClix()">Upload Now</button>
+  <div class="upload-container">
+    <h2>📤 Upload Your Clix</h2>
+    <input type="file" id="fileInput" accept="image/*,video/*">
+    <img id="previewImg" class="preview" src="#" alt="Preview" />
+    <video id="previewVid" class="preview" controls muted></video>
+
+    <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
+    <input type="text" id="tags" placeholder="#tags #vibe #trending" />
+    <select id="userType">
+      <option value="creator">👩‍🎨 Creator</option>
+      <option value="brand">🏢 Brand</option>
+      <option value="viewer">👀 Viewer</option>
+    </select>
+    <input type="text" id="audioInput" placeholder="🔊 Trending audio URL (optional)" />
+
+    <button class="upload" id="uploadBtn">🚀 Upload Now</button>
+    <div id="status"></div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ✅ Clixly Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -106,67 +148,103 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const storage = getStorage(app);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload";
+    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+
+    const fileInput = document.getElementById('fileInput');
+    const caption = document.getElementById('caption');
+    const tags = document.getElementById('tags');
+    const audioInput = document.getElementById('audioInput');
+    const userType = document.getElementById('userType');
+    const previewImg = document.getElementById('previewImg');
+    const previewVid = document.getElementById('previewVid');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const statusDiv = document.getElementById('status');
 
     let currentUser = null;
 
     onAuthStateChanged(auth, user => {
-      if (user) {
-        currentUser = user.uid;
-        console.log("Signed in:", currentUser);
-      } else {
-        alert("You must be signed in to upload.");
+      if (!user) {
+        statusDiv.innerHTML = 'Please <a href="login.html">login</a> to upload.';
+        uploadBtn.disabled = true;
+        return;
+      }
+      currentUser = user;
+      uploadBtn.disabled = false;
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const type = file.type;
+      if (type.startsWith('image/')) {
+        previewVid.style.display = 'none';
+        previewImg.style.display = 'block';
+        previewImg.src = URL.createObjectURL(file);
+      } else if (type.startsWith('video/')) {
+        previewImg.style.display = 'none';
+        previewVid.style.display = 'block';
+        previewVid.src = URL.createObjectURL(file);
       }
     });
 
-    // ✅ Preview video on file select
-    document.getElementById("videoFile").addEventListener("change", e => {
-      const file = e.target.files[0];
-      const preview = document.getElementById("videoPreview");
-      if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "block";
-      } else {
-        preview.style.display = "none";
+    uploadBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      const captionVal = caption.value.trim();
+      const tagsVal = tags.value.trim();
+      const audio = audioInput.value.trim();
+      const userRole = userType.value;
+
+      if (!file || !currentUser) return alert('Missing file or not logged in.');
+
+      uploadBtn.disabled = true;
+      statusDiv.textContent = 'Uploading to Cloudinary...';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+        const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+        const data = await res.json();
+        const mediaURL = data.secure_url;
+
+        statusDiv.textContent = 'Saving to Firestore...';
+
+        await addDoc(collection(db, 'posts'), {
+          mediaURL,
+          caption: captionVal,
+          tags: tagsVal,
+          audio,
+          userType: userRole,
+          userEmail: currentUser.email,
+          createdAt: serverTimestamp()
+        });
+
+        statusDiv.textContent = '✅ Upload complete!';
+        fileInput.value = '';
+        caption.value = '';
+        tags.value = '';
+        audioInput.value = '';
+        previewImg.style.display = 'none';
+        previewVid.style.display = 'none';
+      } catch (err) {
+        console.error(err);
+        statusDiv.textContent = '❌ Upload failed.';
+      } finally {
+        uploadBtn.disabled = false;
       }
     });
 
-    // ✅ Upload Clix
-    window.uploadClix = async () => {
-      const file = document.getElementById("videoFile").files[0];
-      const caption = document.getElementById("caption").value;
-      const tags = document.getElementById("tags").value;
-
-      if (!file || !currentUser) return alert("Missing file or user");
-
-      const storageRef = ref(storage, `clix/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const mediaURL = await getDownloadURL(storageRef);
-
-      await addDoc(collection(db, "posts"), {
-        username: currentUser,
-        mediaURL,
-        caption,
-        tags,
-        type: "clix",
-        likeCount: 0,
-        likes: [],
-        createdAt: serverTimestamp()
-      });
-
-      alert("Upload complete!");
-      window.location.href = "clix.html"; // 👈 go back to feed
-    };
-
-    // ✅ Theme toggle
     window.toggleTheme = () => {
-      document.body.classList.toggle("light");
-      const isLight = document.body.classList.contains("light");
-      document.querySelector(".theme-toggle").innerText = isLight ? "☀️" : "🌙";
+      document.body.classList.toggle('dark');
     };
   </script>
 </body>
 </html>
+
 
