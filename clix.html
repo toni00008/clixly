@@ -1,600 +1,180 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Clixly TikTok Style</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clixly • Shorts</title>
   <style>
-    /* Reset */
-    * {
-      margin: 0; padding: 0; box-sizing: border-box;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: black;
+      color: white;
+      overflow-x: hidden;
     }
 
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #000;
-      color: #fff;
-    }
-
-    #app {
+    #feed {
       height: 100vh;
       overflow-y: scroll;
       scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch;
     }
 
     .video-container {
-      scroll-snap-align: start;
       position: relative;
       height: 100vh;
-      width: 100vw;
-      background: black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      scroll-snap-align: start;
     }
 
     video {
-      max-height: 100vh;
-      max-width: 100vw;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      filter: brightness(0.9);
     }
 
-    /* UI overlay */
-    .ui-overlay {
+    .overlay {
       position: absolute;
       bottom: 60px;
-      left: 15px;
-      right: 80px;
+      left: 10px;
       color: white;
-      text-shadow: 0 0 8px rgba(0,0,0,0.8);
-      z-index: 20;
-      font-size: 16px;
-      line-height: 1.3;
+      z-index: 2;
     }
 
     .actions {
       position: absolute;
-      right: 15px;
+      right: 10px;
       bottom: 80px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 25px;
-      z-index: 30;
+      gap: 12px;
+      z-index: 2;
     }
 
-    .action-btn {
-      cursor: pointer;
-      user-select: none;
-      width: 48px;
-      height: 48px;
-      border-radius: 24px;
-      background: rgba(255 255 255 / 0.15);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: background-color 0.3s;
-      position: relative;
-    }
-
-    .action-btn:hover {
-      background: rgba(255 255 255 / 0.3);
-    }
-
-    .action-btn svg {
-      fill: white;
-      width: 26px;
-      height: 26px;
-    }
-
-    /* Like count bubble */
-    .count-bubble {
-      position: absolute;
-      bottom: -8px;
-      right: -8px;
-      background: #e33;
-      font-size: 12px;
-      padding: 2px 6px;
-      border-radius: 12px;
+    .actions button {
+      background: rgba(255, 255, 255, 0.2);
       color: white;
-      font-weight: bold;
-      box-shadow: 0 0 6px #e33;
-    }
-
-    /* Comments popup overlay */
-    #commentsOverlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.9);
-      color: white;
-      display: none;
-      flex-direction: column;
-      justify-content: flex-end;
-      z-index: 1000;
-    }
-
-    #commentsContent {
-      max-height: 70vh;
-      overflow-y: auto;
-      padding: 15px;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      background: #111;
-    }
-
-    #commentsContent::-webkit-scrollbar {
-      width: 6px;
-    }
-    #commentsContent::-webkit-scrollbar-thumb {
-      background-color: #555;
-      border-radius: 3px;
-    }
-
-    .comment {
-      margin-bottom: 12px;
-      font-size: 14px;
-      word-break: break-word;
-    }
-    .comment .username {
-      font-weight: bold;
-      margin-right: 6px;
-    }
-
-    #commentInputWrapper {
-      display: flex;
-      padding: 10px 15px;
-      background: #222;
-      border-top: 1px solid #333;
-      align-items: center;
-    }
-
-    #commentInput {
-      flex-grow: 1;
-      padding: 8px 12px;
-      font-size: 16px;
-      border-radius: 20px;
-      border: none;
-      outline: none;
-      background: #333;
-      color: white;
-    }
-
-    #commentSendBtn {
-      margin-left: 10px;
-      background: #e33;
-      border: none;
-      border-radius: 20px;
-      padding: 8px 16px;
-      font-weight: bold;
-      color: white;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    #commentSendBtn:disabled {
-      background: #900;
-      cursor: not-allowed;
-    }
-    #commentSendBtn:hover:not(:disabled) {
-      background: #ff4444;
-    }
-
-    /* Upload button */
-    #uploadBtn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 50;
-      background: #e33;
       border: none;
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      font-size: 30px;
-      color: white;
+      padding: 12px;
+      font-size: 18px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(255,0,0,0.5);
-      transition: background-color 0.3s;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      user-select: none;
-    }
-    #uploadBtn:hover {
-      background: #ff4444;
-    }
-    #uploadInput {
-      display: none;
     }
 
-    /* Dark/light toggle */
-    #themeToggle {
+    .upload-btn {
       position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 50;
-      background: rgba(255 255 255 / 0.1);
-      border-radius: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 14px;
-      user-select: none;
+      bottom: 20px;
+      left: 20px;
+      background: #ff2a68;
       color: white;
-      border: 1px solid rgba(255 255 255 / 0.3);
-      transition: background-color 0.3s;
-    }
-    #themeToggle:hover {
-      background: rgba(255 255 255 / 0.3);
-    }
-
-    /* Scrollbar for main feed on desktop */
-    #app::-webkit-scrollbar {
-      width: 8px;
-    }
-    #app::-webkit-scrollbar-thumb {
-      background-color: #444;
-      border-radius: 4px;
+      border: none;
+      border-radius: 30px;
+      padding: 12px 20px;
+      font-size: 16px;
+      z-index: 99;
+      cursor: pointer;
     }
 
+    @media (max-width: 600px) {
+      .overlay {
+        font-size: 14px;
+      }
+
+      .actions button {
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      .upload-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
+  <div id="feed"></div>
+  <button class="upload-btn" id="uploadBtn">📲 Upload</button>
 
-<div id="app"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, collection, query, where, orderBy, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-<!-- Comments Overlay -->
-<div id="commentsOverlay">
-  <div id="commentsContent"></div>
-  <div id="commentInputWrapper">
-    <input id="commentInput" placeholder="Add a comment..." />
-    <button id="commentSendBtn" disabled>Send</button>
-  </div>
-</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
 
-<!-- Upload -->
-<button id="uploadBtn" title="Upload Video">+</button>
-<input type="file" id="uploadInput" accept="video/*" />
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-<!-- Theme Toggle -->
-<div id="themeToggle" title="Toggle Light/Dark Mode">Dark Mode</div>
+    let currentUser = null;
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-<script>
-  // Your Firebase config here from old code (replace with your own!)
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-    authDomain: "clixly-bc284.firebaseapp.com",
-    projectId: "clixly-bc284",
-    storageBucket: "clixly-bc284.appspot.com",
-    messagingSenderId: "33343695899",
-    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-    measurementId: "YOUR_MEASUREMENT_ID"
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const storage = firebase.storage();
-  const auth = firebase.auth();
-
-  // Basic anonymous auth so user can comment and like without signup
-  auth.signInAnonymously().catch(console.error);
-
-  // DOM refs
-  const app = document.getElementById('app');
-  const commentsOverlay = document.getElementById('commentsOverlay');
-  const commentsContent = document.getElementById('commentsContent');
-  const commentInput = document.getElementById('commentInput');
-  const commentSendBtn = document.getElementById('commentSendBtn');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const uploadInput = document.getElementById('uploadInput');
-  const themeToggle = document.getElementById('themeToggle');
-
-  // Global state
-  let posts = [];
-  let currentVideoElements = [];
-  let currentCommentsPostId = null;
-  let commentListenerUnsub = null;
-
-  // Load posts from Firestore
-  async function loadPosts() {
-    const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
-    posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderPosts();
-  }
-
-  // Render posts feed
-  function renderPosts() {
-    app.innerHTML = '';
-    currentVideoElements = [];
-
-    posts.forEach(post => {
-      const container = document.createElement('div');
-      container.classList.add('video-container');
-
-      const video = document.createElement('video');
-      video.src = post.videoUrl;
-      video.loop = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
-      video.setAttribute('data-postid', post.id);
-
-      container.appendChild(video);
-
-      // UI overlay text
-      const uiOverlay = document.createElement('div');
-      uiOverlay.className = 'ui-overlay';
-      uiOverlay.innerHTML = `
-        <div>@${post.username || 'anon'}</div>
-        <div>${post.description || ''}</div>
-      `;
-      container.appendChild(uiOverlay);
-
-      // Actions buttons
-      const actions = document.createElement('div');
-      actions.className = 'actions';
-
-      // Like button
-      const likeBtn = document.createElement('div');
-      likeBtn.className = 'action-btn';
-      likeBtn.title = 'Like';
-      likeBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.54 0 3.04.99 3.57 2.36h1.87C14.46 4.99 15.96 4 17.5 4 20 4 22 6 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-        </svg>
-        <div class="count-bubble">${post.likes || 0}</div>
-      `;
-      actions.appendChild(likeBtn);
-
-      // Comment button
-      const commentBtn = document.createElement('div');
-      commentBtn.className = 'action-btn';
-      commentBtn.title = 'Comments';
-      commentBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v14l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-        </svg>
-      `;
-      actions.appendChild(commentBtn);
-
-      // Share button
-      const shareBtn = document.createElement('div');
-      shareBtn.className = 'action-btn';
-      shareBtn.title = 'Share';
-      shareBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <path d="M18 8c-1.1 0-2 .9-2 2 0 .35.11.68.29.96l-6.17 3.16c-.16-.08-.33-.14-.52-.14-1.1 0-2 .9-2 2 0 .35.11.68.29.96L6 18v2l3-1.5 3 1.5v-2l-1.06-.54c.31-.37.56-.79.72-1.27l6.06-3.1c.38.31.86.5 1.41.5 1.1 0 2-.9 2-2s-.9-2-2-2z"/>
-        </svg>
-      `;
-      actions.appendChild(shareBtn);
-
-      container.appendChild(actions);
-
-      app.appendChild(container);
-
-      // Store video element for autoplay logic
-      currentVideoElements.push({ video, postId: post.id, likeBtn, commentBtn, shareBtn, likes: post.likes || 0 });
-
-      // Event: toggle mute on tap
-      video.addEventListener('click', () => {
-        video.muted = !video.muted;
-      });
-
-      // Like button logic
-      likeBtn.addEventListener('click', async () => {
-        const postRef = db.collection('posts').doc(post.id);
-        // Optimistic UI update
-        let currentLikes = likeBtn.querySelector('.count-bubble').textContent;
-        currentLikes = parseInt(currentLikes) + 1;
-        likeBtn.querySelector('.count-bubble').textContent = currentLikes;
-
-        // Update in Firestore
-        try {
-          await postRef.update({
-            likes: firebase.firestore.FieldValue.increment(1)
-          });
-        } catch (err) {
-          console.error('Error liking post:', err);
-          // Revert UI if error
-          likeBtn.querySelector('.count-bubble').textContent = currentLikes - 1;
-        }
-      });
-
-      // Comment button opens comments overlay
-      commentBtn.addEventListener('click', () => openComments(post.id));
-      
-      // Share button copies URL (simplified)
-      shareBtn.addEventListener('click', () => {
-        const url = `${window.location.origin}?post=${post.id}`;
-        navigator.clipboard.writeText(url).then(() => {
-          alert('Post link copied to clipboard!');
-        });
-      });
-
+    onAuthStateChanged(auth, user => {
+      currentUser = user ? user.uid : "guest";
     });
 
-    // After render, start autoplay observer
-    initAutoplayObserver();
-  }
+    const feed = document.getElementById("feed");
 
-  // Autoplay videos when visible
-  let observer;
-  function initAutoplayObserver() {
-    if(observer) observer.disconnect();
+    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
 
-    observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const video = entry.target;
-        if(entry.intersectionRatio > 0.75) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
+    onSnapshot(q, snapshot => {
+      feed.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+
+        const container = document.createElement("div");
+        container.className = "video-container";
+
+        const video = document.createElement("video");
+        video.src = data.mediaURL;
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+
+        const overlay = document.createElement("div");
+        overlay.className = "overlay";
+        overlay.innerHTML = `<strong>@${data.username || "unknown"}</strong><br>${data.caption || ""}`;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        actions.innerHTML = `
+          <button title="Like">❤️</button>
+          <button title="Comment">💬</button>
+          <button title="Share">🔗</button>
+          <button title="Audio">🎵</button>
+        `;
+
+        container.appendChild(video);
+        container.appendChild(overlay);
+        container.appendChild(actions);
+        feed.appendChild(container);
+
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) video.play();
+            else video.pause();
+          });
+        }, { threshold: 0.75 });
+
+        observer.observe(container);
       });
-    }, { threshold: [0.75] });
+    });
 
-    currentVideoElements.forEach(({ video }) => observer.observe(video));
-  }
-
-  // Comments overlay logic
-  function openComments(postId) {
-    currentCommentsPostId = postId;
-    commentsOverlay.style.display = 'flex';
-    commentsContent.innerHTML = '<i>Loading comments...</i>';
-    commentInput.value = '';
-    commentSendBtn.disabled = true;
-
-    // Unsubscribe previous listener if any
-    if(commentListenerUnsub) commentListenerUnsub();
-
-    // Subscribe to comments for this post realtime
-    commentListenerUnsub = db.collection('posts').doc(postId).collection('comments')
-      .orderBy('createdAt', 'asc')
-      .onSnapshot(snapshot => {
-        commentsContent.innerHTML = '';
-        if(snapshot.empty) {
-          commentsContent.innerHTML = '<i>No comments yet. Be the first!</i>';
-          return;
-        }
-        snapshot.forEach(doc => {
-          const c = doc.data();
-          const commentDiv = document.createElement('div');
-          commentDiv.className = 'comment';
-          commentDiv.innerHTML = `<span class="username">@${c.username || 'anon'}</span>${c.text}`;
-          commentsContent.appendChild(commentDiv);
-        });
-        commentsContent.scrollTop = commentsContent.scrollHeight;
-      });
-  }
-
-  // Close comments on click outside input or Esc key
-  commentsOverlay.addEventListener('click', (e) => {
-    if(e.target === commentsOverlay) {
-      closeComments();
-    }
-  });
-
-  window.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape' && commentsOverlay.style.display === 'flex') {
-      closeComments();
-    }
-  });
-
-  function closeComments() {
-    commentsOverlay.style.display = 'none';
-    currentCommentsPostId = null;
-    if(commentListenerUnsub) commentListenerUnsub();
-  }
-
-  // Enable send button only if input not empty
-  commentInput.addEventListener('input', () => {
-    commentSendBtn.disabled = !commentInput.value.trim();
-  });
-
-  // Send comment
-  commentSendBtn.addEventListener('click', async () => {
-    if(!currentCommentsPostId) return;
-    const text = commentInput.value.trim();
-    if(!text) return;
-
-    const postRef = db.collection('posts').doc(currentCommentsPostId);
-    const commentsRef = postRef.collection('comments');
-
-    try {
-      await commentsRef.add({
-        text,
-        username: 'anon', // You can replace with auth user displayName if you want
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      commentInput.value = '';
-      commentSendBtn.disabled = true;
-    } catch(err) {
-      console.error('Error adding comment:', err);
-      alert('Error sending comment');
-    }
-  });
-
-  // Upload new video
-  uploadBtn.addEventListener('click', () => {
-    uploadInput.click();
-  });
-
-  uploadInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-
-    if(file.size > 50 * 1024 * 1024) {
-      alert('Max file size is 50MB');
-      return;
-    }
-
-    // Show uploading message
-    uploadBtn.disabled = true;
-    uploadBtn.textContent = 'Uploading...';
-
-    // Upload to Firebase Storage
-    const storageRef = storage.ref();
-    const videoRef = storageRef.child(`videos/${Date.now()}_${file.name}`);
-
-    try {
-      const uploadTaskSnapshot = await videoRef.put(file);
-      const videoUrl = await uploadTaskSnapshot.ref.getDownloadURL();
-
-      // Save post metadata
-      await db.collection('posts').add({
-        videoUrl,
-        description: 'New video',
-        username: 'anon',
-        likes: 0,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      alert('Upload successful!');
-      await loadPosts(); // Refresh feed
-    } catch(err) {
-      console.error('Upload failed:', err);
-      alert('Upload failed');
-    } finally {
-      uploadBtn.disabled = false;
-      uploadBtn.textContent = '+';
-      uploadInput.value = ''; // reset
-    }
-  });
-
-  // Dark/light mode toggle
-  themeToggle.addEventListener('click', () => {
-    if(document.body.style.backgroundColor === 'black' || !document.body.style.backgroundColor) {
-      // Switch to light
-      document.body.style.backgroundColor = '#f9f9f9';
-      document.body.style.color = '#222';
-      themeToggle.textContent = 'Light Mode';
-      themeToggle.style.color = '#222';
-    } else {
-      // Switch to dark
-      document.body.style.backgroundColor = '#000';
-      document.body.style.color = '#fff';
-      themeToggle.textContent = 'Dark Mode';
-      themeToggle.style.color = '#fff';
-    }
-  });
-
-  // Initial load
-  loadPosts();
-
-</script>
+    // ✅ Upload button → redirect
+    document.getElementById("uploadBtn").addEventListener("click", () => {
+      window.location.href = "upload.html";
+    });
+  </script>
 </body>
 </html>
-
 
