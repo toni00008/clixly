@@ -1,242 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Upload - Clixly</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    :root {
-      --bg-light: #f2f5f9;
-      --bg-dark: #121212;
-      --text-light: #000;
-      --text-dark: #fff;
-      --primary: #0077ff;
-    }
+<meta charset="UTF-8" />
+<title>Clix • Upload</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--bg-light);
-      color: var(--text-light);
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      transition: 0.3s;
-    }
+  .upload-container {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    max-width: 500px;
+    width: 100%;
+  }
 
-    body.dark {
-      background: var(--bg-dark);
-      color: var(--text-dark);
-    }
+  h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+  }
 
-    .upload-container {
-      background: white;
-      padding: 25px;
-      border-radius: 14px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 500px;
-    }
+  video, img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: none;
+    object-fit: contain;
+  }
 
-    body.dark .upload-container {
-      background: #1f1f1f;
-    }
+  input[type="file"], textarea, button {
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1em;
+  }
 
-    h2 {
-      text-align: center;
-    }
+  textarea {
+    resize: none;
+    height: 100px;
+  }
 
-    #previewContainer img,
-    #previewContainer video {
-      width: 100%;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      display: none;
-    }
+  #charCount {
+    text-align: right;
+    font-size: 0.85em;
+    color: #555;
+  }
 
-    input[type="file"], textarea, button, select {
-      width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1em;
-    }
+  button {
+    background-color: #ff0050;
+    color: white;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
 
-    textarea {
-      resize: none;
-      height: 100px;
-    }
+  button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
 
-    #charCount {
-      text-align: right;
-      font-size: 0.85em;
-    }
+  button:hover:enabled {
+    background-color: #e60044;
+  }
 
-    button {
-      background-color: var(--primary);
-      color: white;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    button:hover {
-      background-color: #005dc1;
-    }
-
-    #status {
-      margin-top: 10px;
-      text-align: center;
-    }
-
-    .theme-toggle {
-      text-align: right;
-      font-size: 0.85em;
-      cursor: pointer;
-      margin-bottom: 10px;
-    }
-
-    @media (max-width: 600px) {
-      .upload-container {
-        padding: 18px;
-        border-radius: 10px;
-      }
-    }
-  </style>
+  #status {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 0.95em;
+    color: #333;
+  }
+</style>
 </head>
 <body>
-  <div class="upload-container">
-    <div class="theme-toggle" onclick="toggleTheme()">🌗 Toggle Theme</div>
-    <h2>📤 Upload Post</h2>
-    <div id="previewContainer">
-      <img id="previewImg" />
-      <video id="previewVideo" controls></video>
-    </div>
-    <input type="file" id="mediaInput" accept="image/*,video/*" />
-    <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
-    <div id="charCount">0 / 300</div>
-    <button id="uploadBtn">🚀 Upload Now</button>
-    <div id="status"></div>
-  </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<div class="upload-container">
+  <h2>📤 Upload Post</h2>
+  <video id="previewVideo" controls muted></video>
+  <img id="previewImage" alt="Preview Image" />
+  <input type="file" id="mediaInput" accept="video/*,image/*" />
+  <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
+  <div id="charCount">0 / 300</div>
+  <button id="uploadBtn" disabled>🚀 Upload</button>
+  <div id="status"></div>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload";
-    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-    const mediaInput = document.getElementById("mediaInput");
-    const captionInput = document.getElementById("caption");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const statusDiv = document.getElementById("status");
-    const charCount = document.getElementById("charCount");
-    const previewImg = document.getElementById("previewImg");
-    const previewVideo = document.getElementById("previewVideo");
+  const mediaInput = document.getElementById("mediaInput");
+  const captionInput = document.getElementById("caption");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const statusDiv = document.getElementById("status");
+  const previewImage = document.getElementById("previewImage");
+  const previewVideo = document.getElementById("previewVideo");
+  const charCount = document.getElementById("charCount");
 
-    let currentUser = null;
+  let currentUser = null;
+  let selectedFile = null;
+  let selectedType = null;
 
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload.';
-        uploadBtn.disabled = true;
-        return;
-      }
-      currentUser = user;
-      uploadBtn.disabled = false;
-      statusDiv.textContent = '';
-    });
+  // Cloudinary info
+  const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/upload";
+  const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
 
-    mediaInput.addEventListener("change", () => {
-      const file = mediaInput.files[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      if (file.type.startsWith("image/")) {
-        previewImg.src = url;
-        previewImg.style.display = "block";
-        previewVideo.style.display = "none";
-      } else if (file.type.startsWith("video/")) {
-        previewVideo.src = url;
-        previewVideo.style.display = "block";
-        previewImg.style.display = "none";
-      }
-    });
-
-    captionInput.addEventListener("input", () => {
-      const len = captionInput.value.length;
-      charCount.textContent = `${len} / 300`;
-      uploadBtn.disabled = len > 300;
-    });
-
-    uploadBtn.addEventListener("click", async () => {
-      const file = mediaInput.files[0];
-      const caption = captionInput.value.trim();
-      if (!file) return alert("Select a file to upload.");
-
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      statusDiv.innerHTML = 'Please <a href="login.html">login</a> to upload posts.';
       uploadBtn.disabled = true;
-      statusDiv.textContent = "📡 Uploading to Cloudinary...";
+      return;
+    }
+    currentUser = user;
+    uploadBtn.disabled = false;
+    statusDiv.textContent = '';
+  });
 
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  mediaInput.addEventListener("change", () => {
+    const file = mediaInput.files[0];
+    if (!file) {
+      previewImage.style.display = "none";
+      previewVideo.style.display = "none";
+      uploadBtn.disabled = true;
+      selectedFile = null;
+      return;
+    }
 
-        const uploadURL = file.type.startsWith("image/") 
-          ? "https://api.cloudinary.com/v1_1/dd1xg9duv/image/upload"
-          : "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload";
+    selectedFile = file;
+    selectedType = file.type.startsWith("video/") ? "video" : "image";
 
-        const res = await fetch(uploadURL, {
-          method: "POST",
-          body: formData,
-        });
+    if(selectedType === "video") {
+      previewImage.style.display = "none";
+      previewVideo.style.display = "block";
+      previewVideo.src = URL.createObjectURL(file);
+      previewVideo.load();
+      previewVideo.play();
+    } else {
+      previewVideo.style.display = "none";
+      previewImage.style.display = "block";
+      previewImage.src = URL.createObjectURL(file);
+    }
 
-        const data = await res.json();
-        const mediaURL = data.secure_url;
+    uploadBtn.disabled = false;
+  });
 
-        await addDoc(collection(db, "posts"), {
-          mediaURL,
-          caption,
-          type: file.type.startsWith("image/") ? "image" : "video",
-          userEmail: currentUser.email,
-          createdAt: serverTimestamp(),
-        });
+  captionInput.addEventListener("input", () => {
+    const len = captionInput.value.length;
+    charCount.textContent = `${len} / 300`;
+    if (len > 300) {
+      captionInput.style.borderColor = "red";
+      uploadBtn.disabled = true;
+    } else {
+      captionInput.style.borderColor = "#ccc";
+      if(selectedFile) uploadBtn.disabled = false;
+    }
+  });
 
-        statusDiv.textContent = "✅ Post uploaded!";
-        mediaInput.value = '';
-        captionInput.value = '';
-        previewImg.style.display = 'none';
-        previewVideo.style.display = 'none';
-        charCount.textContent = '0 / 300';
-      } catch (err) {
-        console.error(err);
-        statusDiv.textContent = "❌ Upload failed. Check permissions.";
-      } finally {
-        uploadBtn.disabled = false;
-      }
-    });
+  uploadBtn.addEventListener("click", async () => {
+    if (!selectedFile) {
+      alert("Select a media file before uploading.");
+      return;
+    }
+    if (captionInput.value.length > 300) {
+      alert("Caption too long. Max 300 characters.");
+      return;
+    }
+    uploadBtn.disabled = true;
+    statusDiv.textContent = "Uploading...";
 
-    window.toggleTheme = () => {
-      document.body.classList.toggle("dark");
-    };
-  </script>
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed.");
+
+      const data = await response.json();
+      const mediaURL = data.secure_url;
+
+      await addDoc(collection(db, "clixPosts"), {
+        mediaURL,
+        caption: captionInput.value.trim(),
+        type: selectedType,
+        userEmail: currentUser.email,
+        createdAt: serverTimestamp(),
+      });
+
+      statusDiv.textContent = "✅ Upload successful!";
+      mediaInput.value = "";
+      captionInput.value = "";
+      previewImage.style.display = "none";
+      previewVideo.style.display = "none";
+      charCount.textContent = "0 / 300";
+      uploadBtn.disabled = true;
+
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+      statusDiv.textContent = "";
+      uploadBtn.disabled = false;
+    }
+  });
+</script>
 </body>
 </html>
-
 
 
