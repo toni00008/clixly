@@ -2,130 +2,299 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Clixly • Shorts</title>
   <style>
-    :root {
-      --bg-color: #000;
-      --text-color: #fff;
-      --accent-color: #ff0050;
-    }
-
-    body[data-theme='light'] {
-      --bg-color: #fff;
-      --text-color: #000;
-      --accent-color: #6200ea;
-    }
-
+    /* Reset & basics */
     * {
-      margin: 0;
-      padding: 0;
       box-sizing: border-box;
+      margin: 0; padding: 0;
+      user-select: none;
     }
-
     body {
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
       overflow: hidden;
+      --bg-light: #f0f0f0;
+      --text-light: #222;
+      --bg-dark: #121212;
+      --text-dark: #eee;
+      --primary: #ff0050;
+      --btn-bg: #ffffff22;
+      --btn-hover: #ffffff44;
+      --like-color: #ff0050;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.light {
+      --bg: var(--bg-light);
+      --text: var(--text-light);
+    }
+    body.dark {
+      --bg: var(--bg-dark);
+      --text: var(--text-dark);
     }
 
+    /* Container */
+    #feed {
+      height: 100vh;
+      width: 100vw;
+      overflow-y: hidden;
+      scroll-snap-type: y mandatory;
+    }
+
+    /* Each video container */
+    .video-container {
+      position: relative;
+      height: 100vh;
+      width: 100vw;
+      scroll-snap-align: start;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      height: 100%;
+      width: auto;
+      max-width: 100vw;
+      object-fit: cover;
+      cursor: pointer;
+    }
+
+    /* Overlay UI */
+    .overlay {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: white;
+      text-shadow: 0 0 6px rgba(0,0,0,0.7);
+      font-size: 16px;
+      max-width: 70vw;
+      line-height: 1.2;
+    }
+
+    /* Actions (like, comment, share) */
+    .actions {
+      position: absolute;
+      right: 10px;
+      bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+      color: white;
+      text-shadow: 0 0 6px rgba(0,0,0,0.7);
+      font-size: 24px;
+      user-select: none;
+    }
+    .actions button {
+      background: var(--btn-bg);
+      border: none;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+    }
+    .actions button:hover {
+      background: var(--btn-hover);
+    }
+    .like-count {
+      font-size: 14px;
+      color: var(--like-color);
+      font-weight: bold;
+    }
+
+    /* Follow Button */
+    .follow-btn {
+      margin-top: 8px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid white;
+      background: transparent;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      user-select: none;
+    }
+    .follow-btn:hover {
+      background: white;
+      color: var(--primary);
+    }
+
+    /* Upload Button */
+    .upload-btn {
+      position: fixed;
+      bottom: 15px;
+      left: 15px;
+      z-index: 9999;
+      padding: 12px 20px;
+      background: var(--primary);
+      color: white;
+      border-radius: 25px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--primary);
+      user-select: none;
+      border: none;
+    }
+
+    /* Comment Popup */
+    #commentPopup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(5px);
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      z-index: 9998;
+      padding: 10px;
+    }
+    #commentList {
+      max-height: 40vh;
+      overflow-y: auto;
+      background: #222;
+      border-radius: 10px 10px 0 0;
+      padding: 12px;
+      color: white;
+      font-size: 14px;
+    }
+    #commentList .comment {
+      margin-bottom: 8px;
+    }
+    .comment-input {
+      display: flex;
+      background: #333;
+      padding: 10px;
+      border-radius: 0 0 10px 10px;
+    }
+    .comment-input input {
+      flex-grow: 1;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 16px;
+      outline: none;
+      color: #eee;
+      background: #444;
+    }
+    .comment-input button {
+      margin-left: 10px;
+      padding: 0 16px;
+      background: var(--primary);
+      border: none;
+      border-radius: 20px;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Theme Toggle */
     #themeToggle {
       position: fixed;
       top: 15px;
       right: 15px;
-      background: var(--accent-color);
-      color: #fff;
+      z-index: 9999;
+      background: var(--btn-bg);
       border: none;
       padding: 8px 12px;
-      border-radius: 20px;
+      border-radius: 25px;
+      color: white;
       cursor: pointer;
-      z-index: 1000;
+      font-weight: 600;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    #themeToggle:hover {
+      background: var(--btn-hover);
     }
 
-    #loader {
+    /* Loader */
+    .loader {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      border: 8px solid #ccc;
-      border-top: 8px solid var(--accent-color);
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid var(--primary);
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
+      width: 48px;
+      height: 48px;
       animation: spin 1s linear infinite;
-      z-index: 1000;
+      z-index: 10000;
+      display: none;
     }
-
     @keyframes spin {
       0% { transform: translate(-50%, -50%) rotate(0deg); }
       100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
-    .video-feed {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    .video-slide {
-      flex: 0 0 100vh;
-      position: relative;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .video-actions {
-      position: absolute;
-      bottom: 80px;
-      right: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .video-actions button {
-      background: rgba(0,0,0,0.6);
-      border: none;
-      color: white;
-      font-size: 20px;
-      padding: 8px;
-      border-radius: 10px;
-    }
-
-    .caption {
-      position: absolute;
-      bottom: 20px;
-      left: 15px;
-      color: white;
-      font-size: 16px;
-      max-width: 70%;
-    }
-
+    /* Trending audio preview */
     .audio-preview {
       position: absolute;
-      top: 15px;
-      left: 15px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 6px 10px;
+      bottom: 100px;
+      left: 20px;
+      background: rgba(0,0,0,0.6);
       border-radius: 20px;
+      padding: 6px 12px;
+      color: white;
       font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 70vw;
+      user-select: none;
+    }
+    .audio-preview audio {
+      width: 120px;
+      outline: none;
+      border-radius: 10px;
+      background: black;
     }
   </style>
 </head>
-<body>
-  <div id="loader"></div>
-  <button id="themeToggle">🌙</button>
-  <div class="video-feed" id="videoFeed"></div>
+<body class="light">
+
+  <button id="themeToggle" aria-label="Toggle light/dark theme">🌙 Dark Mode</button>
+  <input type="file" id="uploadInput" accept="video/*" style="display:none" />
+  <button class="upload-btn" aria-label="Upload Clix Video">📲 Upload Clix</button>
+
+  <div id="feed" tabindex="0"></div>
+
+  <div id="commentPopup" role="dialog" aria-modal="true" aria-labelledby="commentsTitle">
+    <div id="commentList"></div>
+    <div class="comment-input">
+      <input type="text" id="commentInput" placeholder="Add a comment..." aria-label="Add comment" />
+      <button id="sendComment" aria-label="Send comment">➤</button>
+    </div>
+  </div>
+
+  <div class="loader" id="loader"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, collection, doc, getDoc, setDoc,
+      query, where, orderBy, onSnapshot, addDoc, serverTimestamp,
+      updateDoc, arrayUnion, arrayRemove, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    import {
+      getStorage, ref, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+    import {
+      getAuth, onAuthStateChanged, signInAnonymously
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -138,84 +307,274 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
 
-    const loader = document.getElementById("loader");
-    const videoFeed = document.getElementById("videoFeed");
+    let currentUser = null;
+    const loader = document.getElementById('loader');
 
-    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
-
-    onSnapshot(q, (snapshot) => {
-      videoFeed.innerHTML = "";
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const slide = document.createElement("div");
-        slide.className = "video-slide";
-
-        const video = document.createElement("video");
-        video.src = data.mediaURL;
-        video.autoplay = true;
-        video.loop = true;
-        video.muted = true;
-
-        const caption = document.createElement("div");
-        caption.className = "caption";
-        caption.textContent = `@${data.username || 'user'} • ${data.caption || ''}`;
-
-        const audio = document.createElement("div");
-        audio.className = "audio-preview";
-        audio.textContent = "🎵 Trending: " + (data.audio || "Unknown Track");
-
-        const actions = document.createElement("div");
-        actions.className = "video-actions";
-        actions.innerHTML = `
-          <button>❤️</button>
-          <button>💬</button>
-          <button>🔗</button>
-        `;
-
-        slide.appendChild(video);
-        slide.appendChild(caption);
-        slide.appendChild(audio);
-        slide.appendChild(actions);
-        videoFeed.appendChild(slide);
-      });
-      loader.style.display = "none";
+    // Anonymous sign in if no user
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user.uid;
+      } else {
+        signInAnonymously(auth).catch(console.error);
+      }
     });
 
-    // Swipe Navigation
-    let currentIndex = 0;
-    const slides = () => document.querySelectorAll('.video-slide');
-    
-    document.addEventListener("touchstart", handleTouchStart, false);
-    document.addEventListener("touchend", handleTouchEnd, false);
-    let xDown = null;
-
-    function handleTouchStart(evt) {
-      xDown = evt.touches[0].clientY;
-    }
-
-    function handleTouchEnd(evt) {
-      if (!xDown) return;
-      let xUp = evt.changedTouches[0].clientY;
-      let xDiff = xDown - xUp;
-
-      const all = slides();
-      if (xDiff > 0 && currentIndex < all.length - 1) currentIndex++;
-      else if (xDiff < 0 && currentIndex > 0) currentIndex--;
-
-      videoFeed.scrollTo({ top: currentIndex * window.innerHeight, behavior: 'smooth' });
-      xDown = null;
-    }
-
-    // Theme Toggle
+    // UI elements
+    const feed = document.getElementById("feed");
+    const uploadInput = document.getElementById("uploadInput");
+    const uploadBtn = document.querySelector(".upload-btn");
+    const commentPopup = document.getElementById("commentPopup");
+    const commentList = document.getElementById("commentList");
+    const commentInput = document.getElementById("commentInput");
+    const sendComment = document.getElementById("sendComment");
     const themeToggle = document.getElementById("themeToggle");
+
+    let activePostId = null;
+
+    // Theme toggle logic
+    function updateThemeUI() {
+      if(document.body.classList.contains("dark")){
+        themeToggle.textContent = "☀️ Light Mode";
+        themeToggle.setAttribute("aria-label", "Switch to light mode");
+      } else {
+        themeToggle.textContent = "🌙 Dark Mode";
+        themeToggle.setAttribute("aria-label", "Switch to dark mode");
+      }
+    }
     themeToggle.onclick = () => {
-      const current = document.body.getAttribute("data-theme") === "light";
-      document.body.setAttribute("data-theme", current ? "" : "light");
-      themeToggle.textContent = current ? "🌙" : "☀️";
-    };
+      document.body.classList.toggle("dark");
+      document.body.classList.toggle("light");
+      updateThemeUI();
+    }
+    updateThemeUI();
+
+    // Upload button triggers hidden file input
+    uploadBtn.onclick = () => uploadInput.click();
+
+    uploadInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file || !currentUser) return;
+      loader.style.display = "block";
+      try {
+        const storageRef = ref(storage, `clix/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const mediaURL = await getDownloadURL(storageRef);
+
+        await addDoc(collection(db, "posts"), {
+          username: currentUser,
+          mediaURL,
+          caption: "New Clix 🔥",
+          createdAt: serverTimestamp(),
+          type: "clix",
+          likes: [],
+          likeCount: 0,
+          trendingAudio: null // could add audio metadata here
+        });
+        alert("Clix uploaded!");
+      } catch(e) {
+        alert("Upload failed: " + e.message);
+      } finally {
+        loader.style.display = "none";
+      }
+      uploadInput.value = "";
+    });
+
+    // Intersection Observer to auto play/pause videos
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const video = entry.target.querySelector('video');
+        if(entry.isIntersecting){
+          video.play().catch(()=>{}); // suppress play errors
+        } else {
+          video.pause();
+          video.currentTime = 0;
+        }
+      });
+    }, { threshold: 0.75 });
+
+    // Render posts from Firestore
+    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      feed.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const postId = docSnap.id;
+
+        // Container
+        const container = document.createElement("div");
+        container.className = "video-container";
+
+        // Video element
+        const video = document.createElement("video");
+        video.src = data.mediaURL;
+        video.muted = true;
+        video.playsInline = true;
+        video.loop = true;
+        video.setAttribute('aria-label', `Video clip by user ${data.username || 'unknown'}`);
+        video.tabIndex = 0;
+
+        // Tap to toggle mute
+        video.addEventListener("click", () => {
+          video.muted = !video.muted;
+        });
+
+        // Overlay with username & caption
+        const overlay = document.createElement("div");
+        overlay.className = "overlay";
+        overlay.innerHTML = `<strong>@${data.username || 'unknown'}</strong><br>${data.caption || ''}`;
+
+        // Actions container
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        // Like button
+        const likeBtn = document.createElement("button");
+        likeBtn.innerHTML = "❤️";
+        likeBtn.title = "Like";
+        likeBtn.setAttribute('aria-label', 'Like this post');
+
+        // Like count
+        const likeCount = document.createElement("div");
+        likeCount.className = "like-count";
+        likeCount.textContent = data.likeCount || 0;
+
+        likeBtn.onclick = async () => {
+          const postRef = doc(db, "posts", postId);
+          const snap = await getDoc(postRef);
+          const post = snap.data();
+          if (!post.likes || !post.likes.includes(currentUser)) {
+            await updateDoc(postRef, {
+              likes: arrayUnion(currentUser),
+              likeCount: increment(1)
+            });
+            likeCount.textContent = (post.likeCount + 1) || 1;
+          } else {
+            await updateDoc(postRef, {
+              likes: arrayRemove(currentUser),
+              likeCount: increment(-1)
+            });
+            likeCount.textContent = (post.likeCount - 1) || 0;
+          }
+        };
+
+        // Comment button
+        const commentBtn = document.createElement("button");
+        commentBtn.innerHTML = "💬";
+        commentBtn.title = "Comments";
+        commentBtn.setAttribute('aria-label', 'Show comments');
+        commentBtn.onclick = () => {
+          commentPopup.style.display = "flex";
+          activePostId = postId;
+          loadComments(postId);
+          commentInput.focus();
+        };
+
+        // Share button
+        const shareBtn = document.createElement("button");
+        shareBtn.innerHTML = "🔗";
+        shareBtn.title = "Share";
+        shareBtn.setAttribute('aria-label', 'Share post link');
+        shareBtn.onclick = async () => {
+          const url = window.location.origin + "/clix.html?video=" + encodeURIComponent(data.mediaURL);
+          try {
+            await navigator.clipboard.writeText(url);
+            alert("Link copied!");
+          } catch {
+            alert("Copy failed.");
+          }
+        };
+
+        // Trending audio preview (if available)
+        let audioPreview = null;
+        if (data.trendingAudio) {
+          audioPreview = document.createElement("div");
+          audioPreview.className = "audio-preview";
+          audioPreview.innerHTML = `<span>🎵 Trending Audio: ${data.trendingAudio.title || "Unknown"}</span>`;
+          if(data.trendingAudio.url) {
+            const audioEl = document.createElement("audio");
+            audioEl.src = data.trendingAudio.url;
+            audioEl.controls = true;
+            audioEl.preload = "none";
+            audioPreview.appendChild(audioEl);
+          }
+          container.appendChild(audioPreview);
+        }
+
+        // Append action buttons and counts
+        actions.appendChild(likeBtn);
+        actions.appendChild(likeCount);
+        actions.appendChild(commentBtn);
+        actions.appendChild(shareBtn);
+
+        container.appendChild(video);
+        container.appendChild(overlay);
+        container.appendChild(actions);
+        feed.appendChild(container);
+
+        observer.observe(container);
+      });
+    });
+
+    // Comments
+    async function loadComments(postId) {
+      const commentsRef = collection(db, "posts", postId, "comments");
+      const commentQ = query(commentsRef, orderBy("createdAt", "asc"));
+      commentList.innerHTML = `<strong id="commentsTitle">Comments:</strong><br>Loading...`;
+      onSnapshot(commentQ, snap => {
+        commentList.innerHTML = `<strong id="commentsTitle">Comments:</strong><br>`;
+        if (snap.empty) {
+          commentList.innerHTML += "No comments yet.";
+        }
+        snap.forEach(c => {
+          const cdata = c.data();
+          const commentDiv = document.createElement("div");
+          commentDiv.className = "comment";
+          commentDiv.innerHTML = `<b>@${cdata.username || 'anon'}</b>: ${cdata.text}`;
+          commentList.appendChild(commentDiv);
+        });
+        commentList.scrollTop = commentList.scrollHeight;
+      });
+    }
+
+    async function sendCurrentComment() {
+      const text = commentInput.value.trim();
+      if (!text || !activePostId || !currentUser) return;
+      const commentsRef = collection(db, "posts", activePostId, "comments");
+      await addDoc(commentsRef, {
+        text,
+        username: currentUser,
+        createdAt: serverTimestamp()
+      });
+      commentInput.value = "";
+    }
+
+    sendComment.onclick = sendCurrentComment;
+    commentInput.addEventListener("keydown", e => {
+      if(e.key === "Enter") {
+        sendCurrentComment();
+      }
+    });
+
+    // Close comments when clicking outside input
+    commentPopup.addEventListener("click", e => {
+      if(e.target === commentPopup) {
+        commentPopup.style.display = "none";
+        activePostId = null;
+      }
+    });
+
+    // Accessibility: close comments on Escape
+    window.addEventListener("keydown", e => {
+      if(e.key === "Escape" && commentPopup.style.display === "flex") {
+        commentPopup.style.display = "none";
+        activePostId = null;
+      }
+    });
+
   </script>
 </body>
 </html>
-
 
