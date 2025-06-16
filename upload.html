@@ -3,95 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upload • Clixly</title>
+  <title>Upload Clix</title>
   <style>
     body {
-      margin: 0;
-      padding: 20px;
       font-family: 'Segoe UI', sans-serif;
       background-color: #111;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      transition: 0.3s ease all;
+      color: white;
+      margin: 0;
+      padding: 0;
     }
     .container {
-      width: 100%;
-      max-width: 500px;
+      max-width: 400px;
+      margin: 60px auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      border-radius: 15px;
+      box-shadow: 0 0 20px #000;
     }
-    video {
-      width: 100%;
-      height: auto;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      display: none;
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
     }
-    input, select, textarea, button {
+    input, textarea, select, button {
       width: 100%;
-      margin: 8px 0;
-      padding: 12px;
+      margin-top: 10px;
+      padding: 10px;
       border-radius: 10px;
       border: none;
-      font-size: 16px;
-      outline: none;
+      font-size: 14px;
     }
-    input, select, textarea {
+    input[type="file"] {
       background: #222;
       color: white;
     }
     button {
-      background: #ff0055;
+      background-color: #ff2d55;
       color: white;
       font-weight: bold;
       cursor: pointer;
     }
-    .light-mode {
-      background: #f7f7f7;
-      color: #000;
+    button:hover {
+      background-color: #ff4e75;
     }
-    .light-mode input,
-    .light-mode select,
-    .light-mode textarea {
-      background: #eaeaea;
-      color: #000;
+    video {
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 10px;
     }
     .theme-toggle {
       position: fixed;
       top: 10px;
-      right: 20px;
-      font-size: 20px;
+      right: 10px;
+      padding: 8px 14px;
+      background: #333;
+      border-radius: 10px;
       cursor: pointer;
+      font-size: 13px;
+    }
+    .light {
+      background-color: #f0f0f0;
+      color: black;
+    }
+    .light .container {
+      background-color: white;
+    }
+    .light input[type="file"] {
+      background: #ddd;
+      color: black;
+    }
+    .light button {
+      background-color: #333;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <div class="theme-toggle" onclick="toggleTheme()">🌓</div>
+  <div class="theme-toggle" onclick="toggleTheme()">🌙</div>
+
   <div class="container">
-    <h2>Upload a Clix 🎬</h2>
-    <input type="file" id="videoInput" accept="video/*" required>
-    <video id="videoPreview" controls muted autoplay loop></video>
-    <input type="text" id="caption" placeholder="Caption 🔥" required>
-    <input type="text" id="tags" placeholder="Tags (comma separated)">
-    <select id="postType">
-      <option value="clix">🎬 Clix (Short)</option>
-      <option value="long">📺 Long Form</option>
-    </select>
-    <button id="uploadBtn">Upload Now</button>
+    <h2>Upload Your Clix</h2>
+    <input type="file" id="videoFile" accept="video/*" />
+    <video id="videoPreview" controls style="display:none;"></video>
+    <textarea id="caption" placeholder="Write a caption..."></textarea>
+    <input type="text" id="tags" placeholder="#tags #filters" />
+    <button onclick="uploadClix()">Upload Now</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, addDoc, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getStorage, ref, uploadBytes, getDownloadURL
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+    // ✅ Clixly Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -102,65 +106,67 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const storage = getStorage(app);
+    const db = getFirestore(app);
     const auth = getAuth(app);
 
     let currentUser = null;
+
     onAuthStateChanged(auth, user => {
       if (user) {
-        currentUser = user;
+        currentUser = user.uid;
+        console.log("Signed in:", currentUser);
       } else {
-        alert("Please sign in to upload!");
-        window.location.href = "login.html"; // optional redirect
+        alert("You must be signed in to upload.");
       }
     });
 
-    const videoInput = document.getElementById("videoInput");
-    const videoPreview = document.getElementById("videoPreview");
-
-    videoInput.addEventListener("change", () => {
-      const file = videoInput.files[0];
+    // ✅ Preview video on file select
+    document.getElementById("videoFile").addEventListener("change", e => {
+      const file = e.target.files[0];
+      const preview = document.getElementById("videoPreview");
       if (file) {
-        const url = URL.createObjectURL(file);
-        videoPreview.src = url;
-        videoPreview.style.display = "block";
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+      } else {
+        preview.style.display = "none";
       }
     });
 
-    document.getElementById("uploadBtn").addEventListener("click", async () => {
-      const file = videoInput.files[0];
-      const caption = document.getElementById("caption").value.trim();
-      const tags = document.getElementById("tags").value.split(",").map(t => t.trim());
-      const postType = document.getElementById("postType").value;
+    // ✅ Upload Clix
+    window.uploadClix = async () => {
+      const file = document.getElementById("videoFile").files[0];
+      const caption = document.getElementById("caption").value;
+      const tags = document.getElementById("tags").value;
 
-      if (!file || !caption || !currentUser) {
-        alert("Please fill in all fields and sign in.");
-        return;
-      }
+      if (!file || !currentUser) return alert("Missing file or user");
 
-      const fileRef = ref(storage, `clix/${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      const mediaURL = await getDownloadURL(fileRef);
+      const storageRef = ref(storage, `clix/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const mediaURL = await getDownloadURL(storageRef);
 
       await addDoc(collection(db, "posts"), {
-        username: currentUser.uid,
+        username: currentUser,
+        mediaURL,
         caption,
         tags,
-        mediaURL,
-        type: postType,
-        createdAt: serverTimestamp(),
+        type: "clix",
+        likeCount: 0,
         likes: [],
-        likeCount: 0
+        createdAt: serverTimestamp()
       });
 
-      alert("Upload successful!");
-      window.location.href = "index.html";
-    });
+      alert("Upload complete!");
+      window.location.href = "clix.html"; // 👈 go back to feed
+    };
 
-    function toggleTheme() {
-      document.body.classList.toggle("light-mode");
-    }
+    // ✅ Theme toggle
+    window.toggleTheme = () => {
+      document.body.classList.toggle("light");
+      const isLight = document.body.classList.contains("light");
+      document.querySelector(".theme-toggle").innerText = isLight ? "☀️" : "🌙";
+    };
   </script>
 </body>
 </html>
+
