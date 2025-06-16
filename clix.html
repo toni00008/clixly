@@ -6,13 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 100%;
+    body, html {
       height: 100%;
       background: #000;
       font-family: 'Segoe UI', sans-serif;
-      overflow: hidden;
       color: #fff;
+      overflow: hidden;
     }
 
     .feed-container {
@@ -25,12 +24,12 @@
     .post {
       scroll-snap-align: start;
       position: relative;
-      width: 100%;
       height: 100vh;
-      background: #000;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: #000;
     }
 
     .media {
@@ -46,9 +45,9 @@
       position: absolute;
       bottom: 90px;
       left: 16px;
-      right: 100px;
+      right: 90px;
       font-size: 1em;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0,0,0,0.6);
       padding: 10px 14px;
       border-radius: 12px;
     }
@@ -59,33 +58,27 @@
       right: 16px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      z-index: 2;
+      align-items: center;
+      gap: 12px;
     }
 
     .action-btn {
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      border: none;
-      font-size: 1.4em;
       background: rgba(255,255,255,0.1);
       color: white;
-      cursor: pointer;
+      border: none;
+      font-size: 1.4em;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: 0.3s ease;
-    }
-
-    .action-btn:hover {
-      background: rgba(255,255,255,0.3);
+      cursor: pointer;
     }
 
     .like-count {
-      font-size: 0.8em;
+      font-size: 0.75em;
       text-align: center;
-      margin-top: -8px;
     }
 
     .upload-btn {
@@ -94,36 +87,13 @@
       right: 24px;
       background: #ff0050;
       color: #fff;
-      border: none;
-      border-radius: 50%;
       width: 60px;
       height: 60px;
+      border-radius: 50%;
       font-size: 2em;
-      box-shadow: 0 5px 15px rgba(255, 0, 80, 0.4);
+      border: none;
+      z-index: 10;
       cursor: pointer;
-      z-index: 3;
-    }
-
-    .upload-btn:hover {
-      background: #e60044;
-    }
-
-    @media (min-width: 768px) {
-      .caption {
-        font-size: 1.2em;
-      }
-
-      .action-btn {
-        width: 56px;
-        height: 56px;
-        font-size: 1.6em;
-      }
-
-      .upload-btn {
-        width: 70px;
-        height: 70px;
-        font-size: 2.2em;
-      }
     }
   </style>
 </head>
@@ -133,11 +103,13 @@
 <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
 <script type="module">
+  // ✅ Firebase import
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment
+    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+  // ✅ Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
     authDomain: "clixly-bc284.firebaseapp.com",
@@ -147,89 +119,93 @@
     appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
   };
 
+  // ✅ Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+
   const feedContainer = document.getElementById("feed");
 
+  // ✅ Load Feed
   async function loadFeed() {
-    const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
+    try {
+      const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-      feedContainer.innerHTML = "<p style='color:#fff;text-align:center;padding-top:2rem;'>No posts yet. Upload something!</p>";
-      return;
-    }
-
-    snapshot.forEach(docSnap => {
-      const post = docSnap.data();
-      const postId = docSnap.id;
-
-      const postEl = document.createElement("div");
-      postEl.className = "post";
-
-      const mediaEl = post.type === "video"
-        ? Object.assign(document.createElement("video"), {
-            src: post.mediaURL,
-            autoplay: true,
-            loop: true,
-            muted: true,
-            playsInline: true,
-            className: "media"
-          })
-        : Object.assign(document.createElement("img"), {
-            src: post.mediaURL,
-            alt: "Post Image",
-            className: "media"
-          });
-
-      if (post.type === "video") {
-        mediaEl.addEventListener("click", () => {
-          mediaEl.muted = !mediaEl.muted;
-        });
+      if (snapshot.empty) {
+        feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
+        return;
       }
 
-      const caption = document.createElement("div");
-      caption.className = "caption";
-      caption.textContent = post.caption || "";
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        const postId = docSnap.id;
 
-      const actions = document.createElement("div");
-      actions.className = "actions";
+        const postEl = document.createElement("div");
+        postEl.className = "post";
 
-      const likeBtn = document.createElement("button");
-      likeBtn.className = "action-btn";
-      likeBtn.innerHTML = "❤️";
-      const likeCount = document.createElement("div");
-      likeCount.className = "like-count";
-      likeCount.textContent = post.likes || 0;
+        const mediaEl = post.type === "video"
+          ? Object.assign(document.createElement("video"), {
+              src: post.mediaURL,
+              autoplay: true,
+              muted: true,
+              loop: true,
+              playsInline: true,
+              className: "media"
+            })
+          : Object.assign(document.createElement("img"), {
+              src: post.mediaURL,
+              alt: "Image Post",
+              className: "media"
+            });
 
-      likeBtn.addEventListener("click", async () => {
-        const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
-        likeCount.textContent = newLikes;
-        await updateDoc(doc(db, "clixPosts", postId), {
-          likes: increment(1)
+        // 🔇 Toggle mute
+        if (post.type === "video") {
+          mediaEl.addEventListener("click", () => {
+            mediaEl.muted = !mediaEl.muted;
+          });
+        }
+
+        const caption = document.createElement("div");
+        caption.className = "caption";
+        caption.textContent = post.caption || "";
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const likeBtn = document.createElement("button");
+        likeBtn.className = "action-btn";
+        likeBtn.innerHTML = "❤️";
+
+        const likeCount = document.createElement("div");
+        likeCount.className = "like-count";
+        likeCount.textContent = post.likes || 0;
+
+        likeBtn.addEventListener("click", async () => {
+          const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
+          likeCount.textContent = newLikes;
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
+          });
         });
+
+        actions.appendChild(likeBtn);
+        actions.appendChild(likeCount);
+
+        postEl.appendChild(mediaEl);
+        postEl.appendChild(caption);
+        postEl.appendChild(actions);
+        feedContainer.appendChild(postEl);
       });
 
-      const commentBtn = document.createElement("button");
-      commentBtn.className = "action-btn";
-      commentBtn.innerHTML = "💬";
-      commentBtn.addEventListener("click", () => {
-        alert("💬 Comments coming soon...");
-      });
-
-      actions.appendChild(likeBtn);
-      actions.appendChild(likeCount);
-      actions.appendChild(commentBtn);
-
-      postEl.appendChild(mediaEl);
-      postEl.appendChild(caption);
-      postEl.appendChild(actions);
-      feedContainer.appendChild(postEl);
-    });
+    } catch (err) {
+      console.error("❌ Feed error:", err);
+      feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>Error loading posts.</p>";
+    }
   }
 
   loadFeed();
 </script>
 </body>
 </html>
+
 
