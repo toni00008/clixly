@@ -7,78 +7,71 @@
   <style>
     :root {
       --bg-color: #000;
-      --accent: #ff2d55;
-      --text-color: white;
+      --text-color: #fff;
+      --accent-color: #ff0050;
+    }
+
+    body[data-theme='light'] {
+      --bg-color: #fff;
+      --text-color: #000;
+      --accent-color: #6200ea;
     }
 
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
 
     body {
-      background: var(--bg-color);
-      font-family: Arial, sans-serif;
+      background-color: var(--bg-color);
       color: var(--text-color);
-      overflow-x: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    #themeToggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      z-index: 1000;
     }
 
     #loader {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: var(--bg-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 8px solid #ccc;
+      border-top: 8px solid var(--accent-color);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
       z-index: 1000;
     }
 
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #444;
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
-    .upload-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      background: var(--accent);
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 50px;
-      font-weight: bold;
-      z-index: 99;
-      cursor: pointer;
-    }
-
-    #feed {
+    .video-feed {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      overflow-y: scroll;
-      scroll-snap-type: y mandatory;
       height: 100vh;
+      overflow: hidden;
     }
 
-    .video-container {
+    .video-slide {
+      flex: 0 0 100vh;
       position: relative;
-      width: 100vw;
-      height: 100vh;
-      scroll-snap-align: start;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
     video {
@@ -87,96 +80,142 @@
       object-fit: cover;
     }
 
-    .overlay {
+    .video-actions {
       position: absolute;
       bottom: 80px;
-      left: 20px;
-      color: white;
-      font-size: 16px;
-    }
-
-    .actions {
-      position: absolute;
-      bottom: 80px;
-      right: 20px;
+      right: 10px;
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 12px;
     }
 
-    .actions button {
-      background: rgba(0,0,0,0.5);
+    .video-actions button {
+      background: rgba(0,0,0,0.6);
       border: none;
-      border-radius: 50%;
       color: white;
       font-size: 20px;
-      padding: 10px;
-      cursor: pointer;
+      padding: 8px;
+      border-radius: 10px;
     }
 
-    .like-count {
-      text-align: center;
+    .caption {
+      position: absolute;
+      bottom: 20px;
+      left: 15px;
+      color: white;
+      font-size: 16px;
+      max-width: 70%;
+    }
+
+    .audio-preview {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px 10px;
+      border-radius: 20px;
       font-size: 14px;
-      margin-top: -10px;
-    }
-
-    @media (max-width: 600px) {
-      .overlay { font-size: 14px; }
-      .actions button { font-size: 16px; padding: 8px; }
-      .upload-btn { padding: 8px 12px; font-size: 14px; }
     }
   </style>
 </head>
 <body>
-  <div id="loader"><div class="spinner"></div></div>
+  <div id="loader"></div>
+  <button id="themeToggle">🌙</button>
+  <div class="video-feed" id="videoFeed"></div>
 
-  <input type="file" id="uploadInput" accept="video/*" style="display:none">
-  <button class="upload-btn" onclick="document.getElementById('uploadInput').click()">📲 Upload</button>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  <div id="feed">
-    <!-- Sample post structure -->
-    <div class="video-container">
-      <video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay loop muted playsinline></video>
-      <div class="overlay">
-        <div><strong>@creator</strong></div>
-        <div>Check out my latest video 🔥</div>
-      </div>
-      <div class="actions">
-        <button onclick="alert('Liked')">❤️</button>
-        <div class="like-count">120</div>
-        <button onclick="alert('Comment')">💬</button>
-        <button onclick="alert('Share')">🔗</button>
-        <button onclick="alert('Audio')">🎵</button>
-      </div>
-    </div>
-  </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
 
-  <script>
-    window.addEventListener("load", () => {
-      setTimeout(() => document.getElementById("loader").style.display = "none", 1000);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const loader = document.getElementById("loader");
+    const videoFeed = document.getElementById("videoFeed");
+
+    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
+
+    onSnapshot(q, (snapshot) => {
+      videoFeed.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const slide = document.createElement("div");
+        slide.className = "video-slide";
+
+        const video = document.createElement("video");
+        video.src = data.mediaURL;
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+
+        const caption = document.createElement("div");
+        caption.className = "caption";
+        caption.textContent = `@${data.username || 'user'} • ${data.caption || ''}`;
+
+        const audio = document.createElement("div");
+        audio.className = "audio-preview";
+        audio.textContent = "🎵 Trending: " + (data.audio || "Unknown Track");
+
+        const actions = document.createElement("div");
+        actions.className = "video-actions";
+        actions.innerHTML = `
+          <button>❤️</button>
+          <button>💬</button>
+          <button>🔗</button>
+        `;
+
+        slide.appendChild(video);
+        slide.appendChild(caption);
+        slide.appendChild(audio);
+        slide.appendChild(actions);
+        videoFeed.appendChild(slide);
+      });
+      loader.style.display = "none";
     });
 
-    let startY = 0;
-    document.getElementById("feed").addEventListener("touchstart", e => {
-      startY = e.touches[0].clientY;
-    });
+    // Swipe Navigation
+    let currentIndex = 0;
+    const slides = () => document.querySelectorAll('.video-slide');
+    
+    document.addEventListener("touchstart", handleTouchStart, false);
+    document.addEventListener("touchend", handleTouchEnd, false);
+    let xDown = null;
 
-    document.getElementById("feed").addEventListener("touchend", e => {
-      const endY = e.changedTouches[0].clientY;
-      const direction = endY - startY;
-      const current = document.querySelector(".video-container:in-viewport") || document.querySelector(".video-container");
-      const all = Array.from(document.querySelectorAll(".video-container"));
-      let index = all.indexOf(current);
+    function handleTouchStart(evt) {
+      xDown = evt.touches[0].clientY;
+    }
 
-      if (direction < -30 && index < all.length - 1) {
-        all[index + 1].scrollIntoView({ behavior: "smooth" });
-      } else if (direction > 30 && index > 0) {
-        all[index - 1].scrollIntoView({ behavior: "smooth" });
-      }
-    });
+    function handleTouchEnd(evt) {
+      if (!xDown) return;
+      let xUp = evt.changedTouches[0].clientY;
+      let xDiff = xDown - xUp;
+
+      const all = slides();
+      if (xDiff > 0 && currentIndex < all.length - 1) currentIndex++;
+      else if (xDiff < 0 && currentIndex > 0) currentIndex--;
+
+      videoFeed.scrollTo({ top: currentIndex * window.innerHeight, behavior: 'smooth' });
+      xDown = null;
+    }
+
+    // Theme Toggle
+    const themeToggle = document.getElementById("themeToggle");
+    themeToggle.onclick = () => {
+      const current = document.body.getAttribute("data-theme") === "light";
+      document.body.setAttribute("data-theme", current ? "" : "light");
+      themeToggle.textContent = current ? "🌙" : "☀️";
+    };
   </script>
 </body>
 </html>
-
 
 
