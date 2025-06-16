@@ -1,580 +1,600 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Clixly • Shorts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Clixly TikTok Style</title>
   <style>
-    /* Reset & basics */
+    /* Reset */
     * {
-      box-sizing: border-box;
-      margin: 0; padding: 0;
+      margin: 0; padding: 0; box-sizing: border-box;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      height: 100vh;
+
+    html, body {
+      height: 100%;
       overflow: hidden;
-      --bg-light: #f0f0f0;
-      --text-light: #222;
-      --bg-dark: #121212;
-      --text-dark: #eee;
-      --primary: #ff0050;
-      --btn-bg: #ffffff22;
-      --btn-hover: #ffffff44;
-      --like-color: #ff0050;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    body.light {
-      --bg: var(--bg-light);
-      --text: var(--text-light);
-    }
-    body.dark {
-      --bg: var(--bg-dark);
-      --text: var(--text-dark);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #000;
+      color: #fff;
     }
 
-    /* Container */
-    #feed {
+    #app {
       height: 100vh;
-      width: 100vw;
-      overflow-y: hidden;
+      overflow-y: scroll;
       scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
     }
 
-    /* Each video container */
     .video-container {
+      scroll-snap-align: start;
       position: relative;
       height: 100vh;
       width: 100vw;
-      scroll-snap-align: start;
       background: black;
       display: flex;
       justify-content: center;
       align-items: center;
     }
+
     video {
-      height: 100%;
-      width: auto;
+      max-height: 100vh;
       max-width: 100vw;
       object-fit: cover;
-      cursor: pointer;
+      filter: brightness(0.9);
     }
 
-    /* Overlay UI */
-    .overlay {
+    /* UI overlay */
+    .ui-overlay {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
+      bottom: 60px;
+      left: 15px;
+      right: 80px;
       color: white;
-      text-shadow: 0 0 6px rgba(0,0,0,0.7);
+      text-shadow: 0 0 8px rgba(0,0,0,0.8);
+      z-index: 20;
       font-size: 16px;
-      max-width: 70vw;
-      line-height: 1.2;
+      line-height: 1.3;
     }
 
-    /* Actions (like, comment, share) */
     .actions {
       position: absolute;
-      right: 10px;
-      bottom: 60px;
+      right: 15px;
+      bottom: 80px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
       align-items: center;
-      color: white;
-      text-shadow: 0 0 6px rgba(0,0,0,0.7);
-      font-size: 24px;
-      user-select: none;
+      gap: 25px;
+      z-index: 30;
     }
-    .actions button {
-      background: var(--btn-bg);
-      border: none;
-      border-radius: 50%;
+
+    .action-btn {
+      cursor: pointer;
+      user-select: none;
       width: 48px;
       height: 48px;
-      color: white;
-      cursor: pointer;
+      border-radius: 24px;
+      background: rgba(255 255 255 / 0.15);
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       transition: background-color 0.3s;
+      position: relative;
     }
-    .actions button:hover {
-      background: var(--btn-hover);
+
+    .action-btn:hover {
+      background: rgba(255 255 255 / 0.3);
     }
-    .like-count {
-      font-size: 14px;
-      color: var(--like-color);
+
+    .action-btn svg {
+      fill: white;
+      width: 26px;
+      height: 26px;
+    }
+
+    /* Like count bubble */
+    .count-bubble {
+      position: absolute;
+      bottom: -8px;
+      right: -8px;
+      background: #e33;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 12px;
+      color: white;
       font-weight: bold;
+      box-shadow: 0 0 6px #e33;
     }
 
-    /* Follow Button */
-    .follow-btn {
-      margin-top: 8px;
-      padding: 5px 14px;
-      border-radius: 20px;
-      border: 1px solid white;
-      background: transparent;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      user-select: none;
-    }
-    .follow-btn:hover {
-      background: white;
-      color: var(--primary);
-    }
-
-    /* Upload Button */
-    .upload-btn {
+    /* Comments popup overlay */
+    #commentsOverlay {
       position: fixed;
-      bottom: 15px;
-      left: 15px;
-      z-index: 9999;
-      padding: 12px 20px;
-      background: var(--primary);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
       color: white;
-      border-radius: 25px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 0 8px var(--primary);
-      user-select: none;
-      border: none;
-    }
-
-    /* Comment Popup */
-    #commentPopup {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(5px);
       display: none;
       flex-direction: column;
       justify-content: flex-end;
-      z-index: 9998;
-      padding: 10px;
+      z-index: 1000;
     }
-    #commentList {
-      max-height: 40vh;
+
+    #commentsContent {
+      max-height: 70vh;
       overflow-y: auto;
-      background: #222;
-      border-radius: 10px 10px 0 0;
-      padding: 12px;
-      color: white;
+      padding: 15px;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      background: #111;
+    }
+
+    #commentsContent::-webkit-scrollbar {
+      width: 6px;
+    }
+    #commentsContent::-webkit-scrollbar-thumb {
+      background-color: #555;
+      border-radius: 3px;
+    }
+
+    .comment {
+      margin-bottom: 12px;
       font-size: 14px;
+      word-break: break-word;
     }
-    #commentList .comment {
-      margin-bottom: 8px;
+    .comment .username {
+      font-weight: bold;
+      margin-right: 6px;
     }
-    .comment-input {
+
+    #commentInputWrapper {
       display: flex;
-      background: #333;
-      padding: 10px;
-      border-radius: 0 0 10px 10px;
+      padding: 10px 15px;
+      background: #222;
+      border-top: 1px solid #333;
+      align-items: center;
     }
-    .comment-input input {
+
+    #commentInput {
       flex-grow: 1;
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 20px;
+      border: none;
+      outline: none;
+      background: #333;
+      color: white;
+    }
+
+    #commentSendBtn {
+      margin-left: 10px;
+      background: #e33;
       border: none;
       border-radius: 20px;
       padding: 8px 16px;
-      font-size: 16px;
-      outline: none;
-      color: #eee;
-      background: #444;
-    }
-    .comment-input button {
-      margin-left: 10px;
-      padding: 0 16px;
-      background: var(--primary);
-      border: none;
-      border-radius: 20px;
+      font-weight: bold;
       color: white;
-      font-weight: 700;
       cursor: pointer;
-      user-select: none;
+      transition: background-color 0.3s;
+    }
+    #commentSendBtn:disabled {
+      background: #900;
+      cursor: not-allowed;
+    }
+    #commentSendBtn:hover:not(:disabled) {
+      background: #ff4444;
     }
 
-    /* Theme Toggle */
-    #themeToggle {
+    /* Upload button */
+    #uploadBtn {
       position: fixed;
-      top: 15px;
-      right: 15px;
-      z-index: 9999;
-      background: var(--btn-bg);
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: #e33;
       border: none;
-      padding: 8px 12px;
-      border-radius: 25px;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
       color: white;
       cursor: pointer;
-      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(255,0,0,0.5);
+      transition: background-color 0.3s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       user-select: none;
+    }
+    #uploadBtn:hover {
+      background: #ff4444;
+    }
+    #uploadInput {
+      display: none;
+    }
+
+    /* Dark/light toggle */
+    #themeToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 50;
+      background: rgba(255 255 255 / 0.1);
+      border-radius: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      user-select: none;
+      color: white;
+      border: 1px solid rgba(255 255 255 / 0.3);
       transition: background-color 0.3s;
     }
     #themeToggle:hover {
-      background: var(--btn-hover);
+      background: rgba(255 255 255 / 0.3);
     }
 
-    /* Loader */
-    .loader {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid var(--primary);
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      animation: spin 1s linear infinite;
-      z-index: 10000;
-      display: none;
+    /* Scrollbar for main feed on desktop */
+    #app::-webkit-scrollbar {
+      width: 8px;
     }
-    @keyframes spin {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    #app::-webkit-scrollbar-thumb {
+      background-color: #444;
+      border-radius: 4px;
     }
 
-    /* Trending audio preview */
-    .audio-preview {
-      position: absolute;
-      bottom: 100px;
-      left: 20px;
-      background: rgba(0,0,0,0.6);
-      border-radius: 20px;
-      padding: 6px 12px;
-      color: white;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      max-width: 70vw;
-      user-select: none;
-    }
-    .audio-preview audio {
-      width: 120px;
-      outline: none;
-      border-radius: 10px;
-      background: black;
-    }
   </style>
 </head>
-<body class="light">
+<body>
 
-  <button id="themeToggle" aria-label="Toggle light/dark theme">🌙 Dark Mode</button>
-  <input type="file" id="uploadInput" accept="video/*" style="display:none" />
-  <button class="upload-btn" aria-label="Upload Clix Video">📲 Upload Clix</button>
+<div id="app"></div>
 
-  <div id="feed" tabindex="0"></div>
-
-  <div id="commentPopup" role="dialog" aria-modal="true" aria-labelledby="commentsTitle">
-    <div id="commentList"></div>
-    <div class="comment-input">
-      <input type="text" id="commentInput" placeholder="Add a comment..." aria-label="Add comment" />
-      <button id="sendComment" aria-label="Send comment">➤</button>
-    </div>
+<!-- Comments Overlay -->
+<div id="commentsOverlay">
+  <div id="commentsContent"></div>
+  <div id="commentInputWrapper">
+    <input id="commentInput" placeholder="Add a comment..." />
+    <button id="commentSendBtn" disabled>Send</button>
   </div>
+</div>
 
-  <div class="loader" id="loader"></div>
+<!-- Upload -->
+<button id="uploadBtn" title="Upload Video">+</button>
+<input type="file" id="uploadInput" accept="video/*" />
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, doc, getDoc, setDoc,
-      query, where, orderBy, onSnapshot, addDoc, serverTimestamp,
-      updateDoc, arrayUnion, arrayRemove, increment
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- Theme Toggle -->
+<div id="themeToggle" title="Toggle Light/Dark Mode">Dark Mode</div>
 
-    import {
-      getStorage, ref, uploadBytes, getDownloadURL
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-    import {
-      getAuth, onAuthStateChanged, signInAnonymously
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+<script>
+  // Your Firebase config here from old code (replace with your own!)
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    measurementId: "YOUR_MEASUREMENT_ID"
+  };
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+  const auth = firebase.auth();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const storage = getStorage(app);
+  // Basic anonymous auth so user can comment and like without signup
+  auth.signInAnonymously().catch(console.error);
 
-    let currentUser = null;
-    const loader = document.getElementById('loader');
+  // DOM refs
+  const app = document.getElementById('app');
+  const commentsOverlay = document.getElementById('commentsOverlay');
+  const commentsContent = document.getElementById('commentsContent');
+  const commentInput = document.getElementById('commentInput');
+  const commentSendBtn = document.getElementById('commentSendBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const uploadInput = document.getElementById('uploadInput');
+  const themeToggle = document.getElementById('themeToggle');
 
-    // Anonymous sign in if no user
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        currentUser = user.uid;
-      } else {
-        signInAnonymously(auth).catch(console.error);
-      }
-    });
+  // Global state
+  let posts = [];
+  let currentVideoElements = [];
+  let currentCommentsPostId = null;
+  let commentListenerUnsub = null;
 
-    // UI elements
-    const feed = document.getElementById("feed");
-    const uploadInput = document.getElementById("uploadInput");
-    const uploadBtn = document.querySelector(".upload-btn");
-    const commentPopup = document.getElementById("commentPopup");
-    const commentList = document.getElementById("commentList");
-    const commentInput = document.getElementById("commentInput");
-    const sendComment = document.getElementById("sendComment");
-    const themeToggle = document.getElementById("themeToggle");
+  // Load posts from Firestore
+  async function loadPosts() {
+    const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
+    posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderPosts();
+  }
 
-    let activePostId = null;
+  // Render posts feed
+  function renderPosts() {
+    app.innerHTML = '';
+    currentVideoElements = [];
 
-    // Theme toggle logic
-    function updateThemeUI() {
-      if(document.body.classList.contains("dark")){
-        themeToggle.textContent = "☀️ Light Mode";
-        themeToggle.setAttribute("aria-label", "Switch to light mode");
-      } else {
-        themeToggle.textContent = "🌙 Dark Mode";
-        themeToggle.setAttribute("aria-label", "Switch to dark mode");
-      }
-    }
-    themeToggle.onclick = () => {
-      document.body.classList.toggle("dark");
-      document.body.classList.toggle("light");
-      updateThemeUI();
-    }
-    updateThemeUI();
+    posts.forEach(post => {
+      const container = document.createElement('div');
+      container.classList.add('video-container');
 
-    // Upload button triggers hidden file input
-    uploadBtn.onclick = () => uploadInput.click();
+      const video = document.createElement('video');
+      video.src = post.videoUrl;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      video.setAttribute('data-postid', post.id);
 
-    uploadInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file || !currentUser) return;
-      loader.style.display = "block";
-      try {
-        const storageRef = ref(storage, `clix/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        const mediaURL = await getDownloadURL(storageRef);
+      container.appendChild(video);
 
-        await addDoc(collection(db, "posts"), {
-          username: currentUser,
-          mediaURL,
-          caption: "New Clix 🔥",
-          createdAt: serverTimestamp(),
-          type: "clix",
-          likes: [],
-          likeCount: 0,
-          trendingAudio: null // could add audio metadata here
+      // UI overlay text
+      const uiOverlay = document.createElement('div');
+      uiOverlay.className = 'ui-overlay';
+      uiOverlay.innerHTML = `
+        <div>@${post.username || 'anon'}</div>
+        <div>${post.description || ''}</div>
+      `;
+      container.appendChild(uiOverlay);
+
+      // Actions buttons
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+
+      // Like button
+      const likeBtn = document.createElement('div');
+      likeBtn.className = 'action-btn';
+      likeBtn.title = 'Like';
+      likeBtn.innerHTML = `
+        <svg viewBox="0 0 24 24">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.54 0 3.04.99 3.57 2.36h1.87C14.46 4.99 15.96 4 17.5 4 20 4 22 6 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        <div class="count-bubble">${post.likes || 0}</div>
+      `;
+      actions.appendChild(likeBtn);
+
+      // Comment button
+      const commentBtn = document.createElement('div');
+      commentBtn.className = 'action-btn';
+      commentBtn.title = 'Comments';
+      commentBtn.innerHTML = `
+        <svg viewBox="0 0 24 24">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v14l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+        </svg>
+      `;
+      actions.appendChild(commentBtn);
+
+      // Share button
+      const shareBtn = document.createElement('div');
+      shareBtn.className = 'action-btn';
+      shareBtn.title = 'Share';
+      shareBtn.innerHTML = `
+        <svg viewBox="0 0 24 24">
+          <path d="M18 8c-1.1 0-2 .9-2 2 0 .35.11.68.29.96l-6.17 3.16c-.16-.08-.33-.14-.52-.14-1.1 0-2 .9-2 2 0 .35.11.68.29.96L6 18v2l3-1.5 3 1.5v-2l-1.06-.54c.31-.37.56-.79.72-1.27l6.06-3.1c.38.31.86.5 1.41.5 1.1 0 2-.9 2-2s-.9-2-2-2z"/>
+        </svg>
+      `;
+      actions.appendChild(shareBtn);
+
+      container.appendChild(actions);
+
+      app.appendChild(container);
+
+      // Store video element for autoplay logic
+      currentVideoElements.push({ video, postId: post.id, likeBtn, commentBtn, shareBtn, likes: post.likes || 0 });
+
+      // Event: toggle mute on tap
+      video.addEventListener('click', () => {
+        video.muted = !video.muted;
+      });
+
+      // Like button logic
+      likeBtn.addEventListener('click', async () => {
+        const postRef = db.collection('posts').doc(post.id);
+        // Optimistic UI update
+        let currentLikes = likeBtn.querySelector('.count-bubble').textContent;
+        currentLikes = parseInt(currentLikes) + 1;
+        likeBtn.querySelector('.count-bubble').textContent = currentLikes;
+
+        // Update in Firestore
+        try {
+          await postRef.update({
+            likes: firebase.firestore.FieldValue.increment(1)
+          });
+        } catch (err) {
+          console.error('Error liking post:', err);
+          // Revert UI if error
+          likeBtn.querySelector('.count-bubble').textContent = currentLikes - 1;
+        }
+      });
+
+      // Comment button opens comments overlay
+      commentBtn.addEventListener('click', () => openComments(post.id));
+      
+      // Share button copies URL (simplified)
+      shareBtn.addEventListener('click', () => {
+        const url = `${window.location.origin}?post=${post.id}`;
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Post link copied to clipboard!');
         });
-        alert("Clix uploaded!");
-      } catch(e) {
-        alert("Upload failed: " + e.message);
-      } finally {
-        loader.style.display = "none";
-      }
-      uploadInput.value = "";
+      });
+
     });
 
-    // Intersection Observer to auto play/pause videos
-    const observer = new IntersectionObserver((entries) => {
+    // After render, start autoplay observer
+    initAutoplayObserver();
+  }
+
+  // Autoplay videos when visible
+  let observer;
+  function initAutoplayObserver() {
+    if(observer) observer.disconnect();
+
+    observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        const video = entry.target.querySelector('video');
-        if(entry.isIntersecting){
-          video.play().catch(()=>{}); // suppress play errors
+        const video = entry.target;
+        if(entry.intersectionRatio > 0.75) {
+          video.play().catch(() => {});
         } else {
           video.pause();
-          video.currentTime = 0;
         }
       });
-    }, { threshold: 0.75 });
+    }, { threshold: [0.75] });
 
-    // Render posts from Firestore
-    const q = query(collection(db, "posts"), where("type", "==", "clix"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-      feed.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const postId = docSnap.id;
+    currentVideoElements.forEach(({ video }) => observer.observe(video));
+  }
 
-        // Container
-        const container = document.createElement("div");
-        container.className = "video-container";
+  // Comments overlay logic
+  function openComments(postId) {
+    currentCommentsPostId = postId;
+    commentsOverlay.style.display = 'flex';
+    commentsContent.innerHTML = '<i>Loading comments...</i>';
+    commentInput.value = '';
+    commentSendBtn.disabled = true;
 
-        // Video element
-        const video = document.createElement("video");
-        video.src = data.mediaURL;
-        video.muted = true;
-        video.playsInline = true;
-        video.loop = true;
-        video.setAttribute('aria-label', `Video clip by user ${data.username || 'unknown'}`);
-        video.tabIndex = 0;
+    // Unsubscribe previous listener if any
+    if(commentListenerUnsub) commentListenerUnsub();
 
-        // Tap to toggle mute
-        video.addEventListener("click", () => {
-          video.muted = !video.muted;
+    // Subscribe to comments for this post realtime
+    commentListenerUnsub = db.collection('posts').doc(postId).collection('comments')
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(snapshot => {
+        commentsContent.innerHTML = '';
+        if(snapshot.empty) {
+          commentsContent.innerHTML = '<i>No comments yet. Be the first!</i>';
+          return;
+        }
+        snapshot.forEach(doc => {
+          const c = doc.data();
+          const commentDiv = document.createElement('div');
+          commentDiv.className = 'comment';
+          commentDiv.innerHTML = `<span class="username">@${c.username || 'anon'}</span>${c.text}`;
+          commentsContent.appendChild(commentDiv);
         });
-
-        // Overlay with username & caption
-        const overlay = document.createElement("div");
-        overlay.className = "overlay";
-        overlay.innerHTML = `<strong>@${data.username || 'unknown'}</strong><br>${data.caption || ''}`;
-
-        // Actions container
-        const actions = document.createElement("div");
-        actions.className = "actions";
-
-        // Like button
-        const likeBtn = document.createElement("button");
-        likeBtn.innerHTML = "❤️";
-        likeBtn.title = "Like";
-        likeBtn.setAttribute('aria-label', 'Like this post');
-
-        // Like count
-        const likeCount = document.createElement("div");
-        likeCount.className = "like-count";
-        likeCount.textContent = data.likeCount || 0;
-
-        likeBtn.onclick = async () => {
-          const postRef = doc(db, "posts", postId);
-          const snap = await getDoc(postRef);
-          const post = snap.data();
-          if (!post.likes || !post.likes.includes(currentUser)) {
-            await updateDoc(postRef, {
-              likes: arrayUnion(currentUser),
-              likeCount: increment(1)
-            });
-            likeCount.textContent = (post.likeCount + 1) || 1;
-          } else {
-            await updateDoc(postRef, {
-              likes: arrayRemove(currentUser),
-              likeCount: increment(-1)
-            });
-            likeCount.textContent = (post.likeCount - 1) || 0;
-          }
-        };
-
-        // Comment button
-        const commentBtn = document.createElement("button");
-        commentBtn.innerHTML = "💬";
-        commentBtn.title = "Comments";
-        commentBtn.setAttribute('aria-label', 'Show comments');
-        commentBtn.onclick = () => {
-          commentPopup.style.display = "flex";
-          activePostId = postId;
-          loadComments(postId);
-          commentInput.focus();
-        };
-
-        // Share button
-        const shareBtn = document.createElement("button");
-        shareBtn.innerHTML = "🔗";
-        shareBtn.title = "Share";
-        shareBtn.setAttribute('aria-label', 'Share post link');
-        shareBtn.onclick = async () => {
-          const url = window.location.origin + "/clix.html?video=" + encodeURIComponent(data.mediaURL);
-          try {
-            await navigator.clipboard.writeText(url);
-            alert("Link copied!");
-          } catch {
-            alert("Copy failed.");
-          }
-        };
-
-        // Trending audio preview (if available)
-        let audioPreview = null;
-        if (data.trendingAudio) {
-          audioPreview = document.createElement("div");
-          audioPreview.className = "audio-preview";
-          audioPreview.innerHTML = `<span>🎵 Trending Audio: ${data.trendingAudio.title || "Unknown"}</span>`;
-          if(data.trendingAudio.url) {
-            const audioEl = document.createElement("audio");
-            audioEl.src = data.trendingAudio.url;
-            audioEl.controls = true;
-            audioEl.preload = "none";
-            audioPreview.appendChild(audioEl);
-          }
-          container.appendChild(audioPreview);
-        }
-
-        // Append action buttons and counts
-        actions.appendChild(likeBtn);
-        actions.appendChild(likeCount);
-        actions.appendChild(commentBtn);
-        actions.appendChild(shareBtn);
-
-        container.appendChild(video);
-        container.appendChild(overlay);
-        container.appendChild(actions);
-        feed.appendChild(container);
-
-        observer.observe(container);
+        commentsContent.scrollTop = commentsContent.scrollHeight;
       });
-    });
+  }
 
-    // Comments
-    async function loadComments(postId) {
-      const commentsRef = collection(db, "posts", postId, "comments");
-      const commentQ = query(commentsRef, orderBy("createdAt", "asc"));
-      commentList.innerHTML = `<strong id="commentsTitle">Comments:</strong><br>Loading...`;
-      onSnapshot(commentQ, snap => {
-        commentList.innerHTML = `<strong id="commentsTitle">Comments:</strong><br>`;
-        if (snap.empty) {
-          commentList.innerHTML += "No comments yet.";
-        }
-        snap.forEach(c => {
-          const cdata = c.data();
-          const commentDiv = document.createElement("div");
-          commentDiv.className = "comment";
-          commentDiv.innerHTML = `<b>@${cdata.username || 'anon'}</b>: ${cdata.text}`;
-          commentList.appendChild(commentDiv);
-        });
-        commentList.scrollTop = commentList.scrollHeight;
-      });
+  // Close comments on click outside input or Esc key
+  commentsOverlay.addEventListener('click', (e) => {
+    if(e.target === commentsOverlay) {
+      closeComments();
     }
+  });
 
-    async function sendCurrentComment() {
-      const text = commentInput.value.trim();
-      if (!text || !activePostId || !currentUser) return;
-      const commentsRef = collection(db, "posts", activePostId, "comments");
-      await addDoc(commentsRef, {
+  window.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && commentsOverlay.style.display === 'flex') {
+      closeComments();
+    }
+  });
+
+  function closeComments() {
+    commentsOverlay.style.display = 'none';
+    currentCommentsPostId = null;
+    if(commentListenerUnsub) commentListenerUnsub();
+  }
+
+  // Enable send button only if input not empty
+  commentInput.addEventListener('input', () => {
+    commentSendBtn.disabled = !commentInput.value.trim();
+  });
+
+  // Send comment
+  commentSendBtn.addEventListener('click', async () => {
+    if(!currentCommentsPostId) return;
+    const text = commentInput.value.trim();
+    if(!text) return;
+
+    const postRef = db.collection('posts').doc(currentCommentsPostId);
+    const commentsRef = postRef.collection('comments');
+
+    try {
+      await commentsRef.add({
         text,
-        username: currentUser,
-        createdAt: serverTimestamp()
+        username: 'anon', // You can replace with auth user displayName if you want
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      commentInput.value = "";
+      commentInput.value = '';
+      commentSendBtn.disabled = true;
+    } catch(err) {
+      console.error('Error adding comment:', err);
+      alert('Error sending comment');
+    }
+  });
+
+  // Upload new video
+  uploadBtn.addEventListener('click', () => {
+    uploadInput.click();
+  });
+
+  uploadInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+
+    if(file.size > 50 * 1024 * 1024) {
+      alert('Max file size is 50MB');
+      return;
     }
 
-    sendComment.onclick = sendCurrentComment;
-    commentInput.addEventListener("keydown", e => {
-      if(e.key === "Enter") {
-        sendCurrentComment();
-      }
-    });
+    // Show uploading message
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
 
-    // Close comments when clicking outside input
-    commentPopup.addEventListener("click", e => {
-      if(e.target === commentPopup) {
-        commentPopup.style.display = "none";
-        activePostId = null;
-      }
-    });
+    // Upload to Firebase Storage
+    const storageRef = storage.ref();
+    const videoRef = storageRef.child(`videos/${Date.now()}_${file.name}`);
 
-    // Accessibility: close comments on Escape
-    window.addEventListener("keydown", e => {
-      if(e.key === "Escape" && commentPopup.style.display === "flex") {
-        commentPopup.style.display = "none";
-        activePostId = null;
-      }
-    });
+    try {
+      const uploadTaskSnapshot = await videoRef.put(file);
+      const videoUrl = await uploadTaskSnapshot.ref.getDownloadURL();
 
-  </script>
+      // Save post metadata
+      await db.collection('posts').add({
+        videoUrl,
+        description: 'New video',
+        username: 'anon',
+        likes: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      alert('Upload successful!');
+      await loadPosts(); // Refresh feed
+    } catch(err) {
+      console.error('Upload failed:', err);
+      alert('Upload failed');
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = '+';
+      uploadInput.value = ''; // reset
+    }
+  });
+
+  // Dark/light mode toggle
+  themeToggle.addEventListener('click', () => {
+    if(document.body.style.backgroundColor === 'black' || !document.body.style.backgroundColor) {
+      // Switch to light
+      document.body.style.backgroundColor = '#f9f9f9';
+      document.body.style.color = '#222';
+      themeToggle.textContent = 'Light Mode';
+      themeToggle.style.color = '#222';
+    } else {
+      // Switch to dark
+      document.body.style.backgroundColor = '#000';
+      document.body.style.color = '#fff';
+      themeToggle.textContent = 'Dark Mode';
+      themeToggle.style.color = '#fff';
+    }
+  });
+
+  // Initial load
+  loadPosts();
+
+</script>
 </body>
 </html>
+
 
