@@ -1,75 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Clix • Feed</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body, html {
-    height: 100%;
-    background: #000;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
-  }
+  <meta charset="UTF-8" />
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
 
-  .feed-container {
-    height: 100vh;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-  }
+    .feed-container {
+      height: 100vh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+    }
 
-  .post {
-    position: relative;
-    height: 100vh;
-    scroll-snap-align: start;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-    flex-direction: column;
-  }
+    .post {
+      position: relative;
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      flex-direction: column;
+    }
 
-  video, img {
-    max-height: 100%;
-    max-width: 100%;
-    object-fit: cover;
-    width: 100%;
-    height: 100vh;
-  }
+    video, img {
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: cover;
+      width: 100%;
+      height: 100vh;
+    }
 
-  .caption {
-    position: absolute;
-    bottom: 70px;
-    left: 20px;
-    font-size: 1em;
-    background: rgba(0,0,0,0.5);
-    padding: 8px 12px;
-    border-radius: 8px;
-    max-width: 90%;
-    word-wrap: break-word;
-  }
+    .caption {
+      position: absolute;
+      bottom: 90px;
+      left: 20px;
+      right: 20px;
+      font-size: 1em;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 15px;
+      border-radius: 10px;
+    }
 
-  .upload-btn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #ff0050;
-    color: #fff;
-    padding: 15px 20px;
-    border-radius: 50%;
-    font-size: 2em;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 5px 15px rgba(255, 0, 80, 0.6);
-    user-select: none;
-    transition: background 0.3s ease;
-  }
-  .upload-btn:hover {
-    background: #e60044;
-  }
-</style>
+    .actions {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .action-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: white;
+      font-size: 1.5em;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.3s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .like-count {
+      font-size: 0.85em;
+      text-align: center;
+      margin-top: -8px;
+    }
+
+    .upload-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff0050;
+      color: #fff;
+      padding: 16px 20px;
+      border-radius: 50%;
+      font-size: 2em;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(255, 0, 80, 0.5);
+      transition: background 0.3s ease;
+    }
+    .upload-btn:hover {
+      background: #e60044;
+    }
+  </style>
 </head>
 <body>
 
@@ -78,7 +110,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -102,14 +134,15 @@
       return;
     }
 
-    snapshot.forEach(doc => {
-      const post = doc.data();
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const postId = docSnap.id;
 
       const postEl = document.createElement("div");
       postEl.className = "post";
 
       let mediaEl;
-      if(post.type === "video"){
+      if (post.type === "video") {
         mediaEl = document.createElement("video");
         mediaEl.src = post.mediaURL;
         mediaEl.autoplay = true;
@@ -117,11 +150,9 @@
         mediaEl.muted = true;
         mediaEl.playsInline = true;
 
-        mediaEl.style.cursor = "pointer";
         mediaEl.addEventListener("click", () => {
           mediaEl.muted = !mediaEl.muted;
         });
-
       } else {
         mediaEl = document.createElement("img");
         mediaEl.src = post.mediaURL;
@@ -132,8 +163,38 @@
       caption.className = "caption";
       caption.textContent = post.caption || "";
 
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const likeBtn = document.createElement("button");
+      likeBtn.className = "action-btn";
+      likeBtn.innerHTML = "❤️";
+      const likeCount = document.createElement("div");
+      likeCount.className = "like-count";
+      likeCount.textContent = post.likes || 0;
+
+      likeBtn.addEventListener("click", async () => {
+        const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
+        likeCount.textContent = newLikes;
+        await updateDoc(doc(db, "clixPosts", postId), {
+          likes: increment(1)
+        });
+      });
+
+      const commentBtn = document.createElement("button");
+      commentBtn.className = "action-btn";
+      commentBtn.innerHTML = "💬";
+      commentBtn.addEventListener("click", () => {
+        alert("🛠️ Comments feature coming soon!");
+      });
+
+      actions.appendChild(likeBtn);
+      actions.appendChild(likeCount);
+      actions.appendChild(commentBtn);
+
       postEl.appendChild(mediaEl);
       postEl.appendChild(caption);
+      postEl.appendChild(actions);
       feedContainer.appendChild(postEl);
     });
   }
@@ -142,4 +203,5 @@
 </script>
 </body>
 </html>
+
 
