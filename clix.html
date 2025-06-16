@@ -5,43 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clixly • Shorts</title>
   <style>
-    body {
+    :root {
+      --bg-color: #000;
+      --accent: #ff2d55;
+      --text-color: white;
+    }
+
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: #000;
-      color: #fff;
+    }
+
+    body {
+      background: var(--bg-color);
+      font-family: Arial, sans-serif;
+      color: var(--text-color);
       overflow-x: hidden;
+    }
+
+    #loader {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: var(--bg-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #444;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .upload-btn {
       position: fixed;
       bottom: 20px;
       left: 20px;
-      padding: 12px 18px;
-      background: #ff0050;
+      background: var(--accent);
       color: white;
+      padding: 10px 15px;
       border: none;
-      border-radius: 12px;
+      border-radius: 50px;
       font-weight: bold;
+      z-index: 99;
       cursor: pointer;
-      z-index: 100;
     }
 
     #feed {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 30px;
-      padding-bottom: 120px;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      height: 100vh;
     }
 
     .video-container {
       position: relative;
-      width: 100%;
+      width: 100vw;
       height: 100vh;
-      overflow: hidden;
-      background: #111;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     video {
@@ -60,136 +97,83 @@
 
     .actions {
       position: absolute;
-      right: 20px;
       bottom: 80px;
+      right: 20px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 16px;
+      gap: 15px;
     }
 
     .actions button {
-      background: transparent;
+      background: rgba(0,0,0,0.5);
       border: none;
-      font-size: 24px;
+      border-radius: 50%;
       color: white;
+      font-size: 20px;
+      padding: 10px;
       cursor: pointer;
     }
 
     .like-count {
+      text-align: center;
       font-size: 14px;
-      color: #ddd;
+      margin-top: -10px;
     }
 
-    .comment-popup {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      z-index: 999;
-      padding: 20px;
-    }
-
-    .comment-popup #commentList {
-      overflow-y: auto;
-      flex-grow: 1;
-      margin-bottom: 10px;
-    }
-
-    .comment-input {
-      display: flex;
-      gap: 10px;
-    }
-
-    .comment-input input {
-      flex-grow: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-    }
-
-    .comment-input button {
-      padding: 10px;
-      background: #ff0050;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-
-    .follow-btn {
-      margin-top: 8px;
-      padding: 6px 12px;
-      border-radius: 20px;
-      background: #fff3;
-      color: white;
-      border: 1px solid #fff;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .heart {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0);
-      font-size: 64px;
-      color: red;
-      pointer-events: none;
-      opacity: 0;
-      transition: all 0.4s ease-in-out;
-    }
-
-    .heart.show {
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 1;
+    @media (max-width: 600px) {
+      .overlay { font-size: 14px; }
+      .actions button { font-size: 16px; padding: 8px; }
+      .upload-btn { padding: 8px 12px; font-size: 14px; }
     }
   </style>
 </head>
 <body>
-  <input type="file" id="uploadInput" accept="video/*" style="display:none">
-  <button class="upload-btn" onclick="document.getElementById('uploadInput').click()">📲 Upload Clix</button>
-  <div id="feed"></div>
+  <div id="loader"><div class="spinner"></div></div>
 
-  <div id="commentPopup" class="comment-popup" style="display:none">
-    <div id="commentList"></div>
-    <div class="comment-input">
-      <input type="text" id="commentInput" placeholder="Add a comment..." />
-      <button id="sendComment">Send</button>
+  <input type="file" id="uploadInput" accept="video/*" style="display:none">
+  <button class="upload-btn" onclick="document.getElementById('uploadInput').click()">📲 Upload</button>
+
+  <div id="feed">
+    <!-- Sample post structure -->
+    <div class="video-container">
+      <video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay loop muted playsinline></video>
+      <div class="overlay">
+        <div><strong>@creator</strong></div>
+        <div>Check out my latest video 🔥</div>
+      </div>
+      <div class="actions">
+        <button onclick="alert('Liked')">❤️</button>
+        <div class="like-count">120</div>
+        <button onclick="alert('Comment')">💬</button>
+        <button onclick="alert('Share')">🔗</button>
+        <button onclick="alert('Audio')">🎵</button>
+      </div>
     </div>
   </div>
 
-  <script type="module">
-    // Firebase logic would go here.
-    // You already have working Firebase code in your existing version —
-    // Insert your Firebase initialization + video rendering logic here as before.
+  <script>
+    window.addEventListener("load", () => {
+      setTimeout(() => document.getElementById("loader").style.display = "none", 1000);
+    });
 
-    // TEMP placeholder to show design works:
-    const test = document.createElement("div");
-    test.className = "video-container";
-    test.innerHTML = `
-      <video autoplay loop muted playsinline>
-        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-      </video>
-      <div class="heart">❤️</div>
-      <div class="overlay">
-        <strong>@tester</strong><br>🔥 Sample caption<br>
-        <button class="follow-btn">+ Follow</button>
-      </div>
-      <div class="actions">
-        <button>❤️</button>
-        <div class="like-count">123</div>
-        <button>💬</button>
-        <button>🔗</button>
-        <button>🎵</button>
-      </div>
-    `;
-    document.getElementById("feed").appendChild(test);
+    let startY = 0;
+    document.getElementById("feed").addEventListener("touchstart", e => {
+      startY = e.touches[0].clientY;
+    });
+
+    document.getElementById("feed").addEventListener("touchend", e => {
+      const endY = e.changedTouches[0].clientY;
+      const direction = endY - startY;
+      const current = document.querySelector(".video-container:in-viewport") || document.querySelector(".video-container");
+      const all = Array.from(document.querySelectorAll(".video-container"));
+      let index = all.indexOf(current);
+
+      if (direction < -30 && index < all.length - 1) {
+        all[index + 1].scrollIntoView({ behavior: "smooth" });
+      } else if (direction > 30 && index > 0) {
+        all[index - 1].scrollIntoView({ behavior: "smooth" });
+      }
+    });
   </script>
 </body>
 </html>
