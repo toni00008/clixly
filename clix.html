@@ -6,72 +6,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html {
+    html, body {
+      width: 100%;
       height: 100%;
       background: #000;
-      color: #fff;
       font-family: 'Segoe UI', sans-serif;
       overflow: hidden;
+      color: #fff;
     }
 
     .feed-container {
       height: 100vh;
       overflow-y: scroll;
       scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
     }
 
     .post {
-      position: relative;
-      height: 100vh;
       scroll-snap-align: start;
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      background: #000;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000;
-      flex-direction: column;
     }
 
-    video, img {
-      max-height: 100%;
-      max-width: 100%;
-      object-fit: cover;
+    .media {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100vh;
+      height: 100%;
+      object-fit: cover;
     }
 
     .caption {
       position: absolute;
       bottom: 90px;
-      left: 20px;
-      right: 20px;
+      left: 16px;
+      right: 100px;
       font-size: 1em;
-      background: rgba(0,0,0,0.5);
-      padding: 10px 15px;
-      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 14px;
+      border-radius: 12px;
     }
 
     .actions {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
+      bottom: 90px;
+      right: 16px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
+      z-index: 2;
     }
 
     .action-btn {
-      background: rgba(255,255,255,0.1);
-      border: none;
-      color: white;
-      font-size: 1.5em;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      width: 44px;
-      height: 44px;
+      border: none;
+      font-size: 1.4em;
+      background: rgba(255,255,255,0.1);
+      color: white;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: 0.3s;
+      transition: 0.3s ease;
     }
 
     .action-btn:hover {
@@ -79,27 +83,47 @@
     }
 
     .like-count {
-      font-size: 0.85em;
+      font-size: 0.8em;
       text-align: center;
       margin-top: -8px;
     }
 
     .upload-btn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 24px;
+      right: 24px;
       background: #ff0050;
       color: #fff;
-      padding: 16px 20px;
-      border-radius: 50%;
-      font-size: 2em;
       border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 2em;
+      box-shadow: 0 5px 15px rgba(255, 0, 80, 0.4);
       cursor: pointer;
-      box-shadow: 0 5px 15px rgba(255, 0, 80, 0.5);
-      transition: background 0.3s ease;
+      z-index: 3;
     }
+
     .upload-btn:hover {
       background: #e60044;
+    }
+
+    @media (min-width: 768px) {
+      .caption {
+        font-size: 1.2em;
+      }
+
+      .action-btn {
+        width: 56px;
+        height: 56px;
+        font-size: 1.6em;
+      }
+
+      .upload-btn {
+        width: 70px;
+        height: 70px;
+        font-size: 2.2em;
+      }
     }
   </style>
 </head>
@@ -110,7 +134,9 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -130,7 +156,7 @@
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      feedContainer.innerHTML = "<p style='color:#fff;text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
+      feedContainer.innerHTML = "<p style='color:#fff;text-align:center;padding-top:2rem;'>No posts yet. Upload something!</p>";
       return;
     }
 
@@ -141,22 +167,25 @@
       const postEl = document.createElement("div");
       postEl.className = "post";
 
-      let mediaEl;
-      if (post.type === "video") {
-        mediaEl = document.createElement("video");
-        mediaEl.src = post.mediaURL;
-        mediaEl.autoplay = true;
-        mediaEl.loop = true;
-        mediaEl.muted = true;
-        mediaEl.playsInline = true;
+      const mediaEl = post.type === "video"
+        ? Object.assign(document.createElement("video"), {
+            src: post.mediaURL,
+            autoplay: true,
+            loop: true,
+            muted: true,
+            playsInline: true,
+            className: "media"
+          })
+        : Object.assign(document.createElement("img"), {
+            src: post.mediaURL,
+            alt: "Post Image",
+            className: "media"
+          });
 
+      if (post.type === "video") {
         mediaEl.addEventListener("click", () => {
           mediaEl.muted = !mediaEl.muted;
         });
-      } else {
-        mediaEl = document.createElement("img");
-        mediaEl.src = post.mediaURL;
-        mediaEl.alt = "Post Image";
       }
 
       const caption = document.createElement("div");
@@ -185,7 +214,7 @@
       commentBtn.className = "action-btn";
       commentBtn.innerHTML = "💬";
       commentBtn.addEventListener("click", () => {
-        alert("🛠️ Comments feature coming soon!");
+        alert("💬 Comments coming soon...");
       });
 
       actions.appendChild(likeBtn);
@@ -203,5 +232,4 @@
 </script>
 </body>
 </html>
-
 
