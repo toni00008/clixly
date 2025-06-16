@@ -1,59 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Upload - Clixly</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-      --bg: #f2f5f9;
-      --card: white;
+      --bg: #ffffff;
       --text: #111;
+      --accent: #0077ff;
     }
 
-    body.dark {
-      --bg: #121212;
-      --card: #1e1e1e;
-      --text: #f2f2f2;
+    [data-theme='dark'] {
+      --bg: #0e0e0e;
+      --text: #fff;
+      --accent: #1e90ff;
     }
 
     body {
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', sans-serif;
       display: flex;
       justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
     }
 
-    .upload-container {
+    .container {
       width: 100%;
       max-width: 500px;
-      background: var(--card);
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      background: var(--bg);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      padding: 20px;
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 20px;
     }
 
-    input, textarea, select, button {
+    .preview {
+      display: none;
       width: 100%;
+      max-height: 300px;
       margin: 10px 0;
-      padding: 14px;
-      border: 1px solid #ccc;
       border-radius: 10px;
-      font-size: 1em;
-      background: transparent;
-      color: var(--text);
+      object-fit: cover;
     }
 
-    input[type="file"] {
-      border: none;
+    textarea, input[type="file"], input[type="text"], button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      background: var(--bg);
+      color: var(--text);
     }
 
     textarea {
@@ -61,75 +67,50 @@
       height: 100px;
     }
 
-    .preview {
-      display: none;
-      margin-top: 10px;
-      border-radius: 10px;
-      max-height: 300px;
-      object-fit: cover;
-      width: 100%;
-    }
-
-    .toggle-theme {
-      position: absolute;
-      top: 15px;
-      right: 20px;
-      font-size: 14px;
-      background: #0077ff;
-      color: white;
-      padding: 8px 14px;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-    }
-
-    button.upload {
-      background-color: #ff2d55;
+    button {
+      background-color: var(--accent);
       color: white;
       font-weight: bold;
       border: none;
       cursor: pointer;
     }
 
-    button.upload:hover {
-      background-color: #d91b41;
+    button:hover:enabled {
+      background-color: #0056c7;
     }
 
-    @media (max-width: 600px) {
-      body {
-        padding: 10px;
-      }
-      .upload-container {
-        padding: 20px;
-      }
+    #charCount {
+      text-align: right;
+      font-size: 0.85em;
     }
 
     #status {
-      margin-top: 10px;
       text-align: center;
       font-size: 0.9em;
+      margin-top: 10px;
+    }
+
+    .theme-toggle {
+      text-align: right;
+      font-size: 0.9em;
+      margin-bottom: 10px;
     }
   </style>
 </head>
-<body>
-  <button class="toggle-theme" onclick="toggleTheme()">🌙 Theme</button>
+<body data-theme="light">
+  <div class="container">
+    <div class="theme-toggle">
+      <button onclick="toggleTheme()">🌓 Toggle Theme</button>
+    </div>
+    <h2>📤 Upload to Clixly</h2>
+    <video id="previewVideo" class="preview" controls></video>
+    <img id="previewImg" class="preview" alt="Preview" />
 
-  <div class="upload-container">
-    <h2>📤 Upload Your Clix</h2>
-    <input type="file" id="fileInput" accept="image/*,video/*">
-    <img id="previewImg" class="preview" src="#" alt="Preview" />
-    <video id="previewVid" class="preview" controls muted></video>
-
-    <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
-    <input type="text" id="tags" placeholder="#tags #vibe #trending" />
-    <select id="userType">
-      <option value="creator">👩‍🎨 Creator</option>
-      <option value="brand">🏢 Brand</option>
-      <option value="viewer">👀 Viewer</option>
-    </select>
-    <input type="text" id="audioInput" placeholder="🔊 Trending audio URL (optional)" />
-
-    <button class="upload" id="uploadBtn">🚀 Upload Now</button>
+    <input type="file" id="fileInput" accept="image/*,video/*" />
+    <textarea id="caption" placeholder="Write your caption (max 300 chars)..."></textarea>
+    <input type="text" id="tags" placeholder="Add tags or filters (e.g. #fun #travel)" />
+    <div id="charCount">0 / 300</div>
+    <button id="uploadBtn">🚀 Upload Now</button>
     <div id="status"></div>
   </div>
 
@@ -147,104 +128,114 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
+    const CLOUDINARY_BASE = "https://api.cloudinary.com/v1_1/dd1xg9duv/";
+    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload";
-    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
-
     const fileInput = document.getElementById('fileInput');
-    const caption = document.getElementById('caption');
-    const tags = document.getElementById('tags');
-    const audioInput = document.getElementById('audioInput');
-    const userType = document.getElementById('userType');
-    const previewImg = document.getElementById('previewImg');
-    const previewVid = document.getElementById('previewVid');
+    const captionInput = document.getElementById('caption');
+    const tagsInput = document.getElementById('tags');
     const uploadBtn = document.getElementById('uploadBtn');
     const statusDiv = document.getElementById('status');
+    const previewImg = document.getElementById('previewImg');
+    const previewVideo = document.getElementById('previewVideo');
+    const charCount = document.getElementById('charCount');
 
     let currentUser = null;
 
     onAuthStateChanged(auth, user => {
       if (!user) {
-        statusDiv.innerHTML = 'Please <a href="login.html">login</a> to upload.';
+        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload.';
         uploadBtn.disabled = true;
-        return;
+      } else {
+        currentUser = user;
       }
-      currentUser = user;
-      uploadBtn.disabled = false;
+    });
+
+    captionInput.addEventListener('input', () => {
+      const len = captionInput.value.length;
+      charCount.textContent = `${len} / 300`;
+      uploadBtn.disabled = len > 300;
+      captionInput.style.borderColor = len > 300 ? "red" : "#ccc";
     });
 
     fileInput.addEventListener('change', () => {
       const file = fileInput.files[0];
-      if (!file) return;
-
-      const type = file.type;
-      if (type.startsWith('image/')) {
-        previewVid.style.display = 'none';
-        previewImg.style.display = 'block';
-        previewImg.src = URL.createObjectURL(file);
-      } else if (type.startsWith('video/')) {
-        previewImg.style.display = 'none';
-        previewVid.style.display = 'block';
-        previewVid.src = URL.createObjectURL(file);
+      previewImg.style.display = "none";
+      previewVideo.style.display = "none";
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          previewImg.src = e.target.result;
+          previewImg.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      } else if (file && file.type.startsWith("video/")) {
+        const url = URL.createObjectURL(file);
+        previewVideo.src = url;
+        previewVideo.style.display = "block";
       }
     });
 
     uploadBtn.addEventListener('click', async () => {
       const file = fileInput.files[0];
-      const captionVal = caption.value.trim();
-      const tagsVal = tags.value.trim();
-      const audio = audioInput.value.trim();
-      const userRole = userType.value;
+      const caption = captionInput.value.trim();
+      const tags = tagsInput.value.trim();
 
-      if (!file || !currentUser) return alert('Missing file or not logged in.');
+      if (!file) return alert("Please select a file.");
+      if (!currentUser) return alert("User not authenticated.");
+
+      const endpoint = CLOUDINARY_BASE + (file.type.startsWith("image/") ? "image/upload" : "video/upload");
 
       uploadBtn.disabled = true;
-      statusDiv.textContent = 'Uploading to Cloudinary...';
+      statusDiv.textContent = "⏫ Uploading to Cloudinary...";
 
       try {
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        formData.append("file", file);
+        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-        const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+        const res = await fetch(endpoint, { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Cloudinary upload failed");
         const data = await res.json();
-        const mediaURL = data.secure_url;
 
-        statusDiv.textContent = 'Saving to Firestore...';
+        const mediaUrl = data.secure_url;
 
-        await addDoc(collection(db, 'posts'), {
-          mediaURL,
-          caption: captionVal,
-          tags: tagsVal,
-          audio,
-          userType: userRole,
+        statusDiv.textContent = "📥 Saving post to Firestore...";
+
+        await addDoc(collection(db, "posts"), {
+          mediaUrl,
+          caption,
+          tags,
           userEmail: currentUser.email,
           createdAt: serverTimestamp()
         });
 
-        statusDiv.textContent = '✅ Upload complete!';
+        statusDiv.textContent = "✅ Upload successful!";
         fileInput.value = '';
-        caption.value = '';
-        tags.value = '';
-        audioInput.value = '';
-        previewImg.style.display = 'none';
-        previewVid.style.display = 'none';
+        captionInput.value = '';
+        tagsInput.value = '';
+        previewImg.style.display = "none";
+        previewVideo.style.display = "none";
+        charCount.textContent = "0 / 300";
       } catch (err) {
-        console.error(err);
-        statusDiv.textContent = '❌ Upload failed.';
+        statusDiv.textContent = "❌ Upload failed: " + err.message;
       } finally {
         uploadBtn.disabled = false;
       }
     });
 
-    window.toggleTheme = () => {
-      document.body.classList.toggle('dark');
-    };
+    function toggleTheme() {
+      const body = document.body;
+      const theme = body.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      body.setAttribute("data-theme", theme);
+    }
   </script>
 </body>
 </html>
+
 
 
