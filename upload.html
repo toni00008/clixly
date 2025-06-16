@@ -3,96 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upload to Clixly</title>
+  <title>Upload • Clixly</title>
   <style>
     body {
       margin: 0;
+      padding: 20px;
       font-family: 'Segoe UI', sans-serif;
       background-color: #111;
       color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
-      transition: background 0.3s, color 0.3s;
+      transition: 0.3s ease all;
     }
     .container {
+      width: 100%;
       max-width: 500px;
-      width: 100%;
-    }
-    .preview {
-      width: 100%;
-      aspect-ratio: 9 / 16;
-      background: #222;
-      border-radius: 12px;
-      margin-bottom: 15px;
-      overflow: hidden;
     }
     video {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      height: auto;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: none;
     }
     input, select, textarea, button {
       width: 100%;
-      margin-bottom: 10px;
+      margin: 8px 0;
       padding: 12px;
-      font-size: 16px;
+      border-radius: 10px;
       border: none;
-      border-radius: 8px;
+      font-size: 16px;
       outline: none;
     }
     input, select, textarea {
       background: #222;
-      color: #fff;
+      color: white;
     }
     button {
       background: #ff0055;
-      color: #fff;
+      color: white;
       font-weight: bold;
-      cursor: pointer;
-    }
-    .theme-toggle {
-      position: fixed;
-      top: 10px;
-      right: 15px;
-      font-size: 20px;
       cursor: pointer;
     }
     .light-mode {
       background: #f7f7f7;
-      color: #111;
+      color: #000;
     }
     .light-mode input,
     .light-mode select,
     .light-mode textarea {
-      background: #ddd;
-      color: #111;
+      background: #eaeaea;
+      color: #000;
     }
-    .info {
-      font-size: 14px;
-      color: #aaa;
-      text-align: center;
-      margin-bottom: 10px;
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      font-size: 20px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <div class="theme-toggle" onclick="toggleTheme()">🌓</div>
   <div class="container">
-    <h2>Upload Your Clix</h2>
-    <div class="preview" id="previewContainer">
-      <video id="videoPreview" muted autoplay loop></video>
-    </div>
+    <h2>Upload a Clix 🎬</h2>
     <input type="file" id="videoInput" accept="video/*" required>
-    <input type="text" id="caption" placeholder="Caption... 🔥">
+    <video id="videoPreview" controls muted autoplay loop></video>
+    <input type="text" id="caption" placeholder="Caption 🔥" required>
     <input type="text" id="tags" placeholder="Tags (comma separated)">
     <select id="postType">
       <option value="clix">🎬 Clix (Short)</option>
       <option value="long">📺 Long Form</option>
     </select>
-    <div class="info">Logged in as: <span id="username">Loading...</span></div>
-    <button onclick="uploadVideo()">Upload Now</button>
+    <button id="uploadBtn">Upload Now</button>
   </div>
 
   <script type="module">
@@ -122,58 +107,56 @@
     const auth = getAuth(app);
 
     let currentUser = null;
-
-    const usernameDisplay = document.getElementById("username");
-    const videoInput = document.getElementById("videoInput");
-    const videoPreview = document.getElementById("videoPreview");
-
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, user => {
       if (user) {
         currentUser = user;
-        usernameDisplay.textContent = user.email || "User";
       } else {
-        usernameDisplay.textContent = "Guest";
+        alert("Please sign in to upload!");
+        window.location.href = "login.html"; // optional redirect
       }
     });
+
+    const videoInput = document.getElementById("videoInput");
+    const videoPreview = document.getElementById("videoPreview");
 
     videoInput.addEventListener("change", () => {
       const file = videoInput.files[0];
       if (file) {
         const url = URL.createObjectURL(file);
         videoPreview.src = url;
+        videoPreview.style.display = "block";
       }
     });
 
-    async function uploadVideo() {
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
       const file = videoInput.files[0];
       const caption = document.getElementById("caption").value.trim();
-      const tags = document.getElementById("tags").value.split(",").map(tag => tag.trim());
+      const tags = document.getElementById("tags").value.split(",").map(t => t.trim());
       const postType = document.getElementById("postType").value;
 
-      if (!file || !caption || !postType) {
-        alert("Please fill all fields.");
+      if (!file || !caption || !currentUser) {
+        alert("Please fill in all fields and sign in.");
         return;
       }
 
-      const filename = `${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, `clix/${filename}`);
-      await uploadBytes(storageRef, file);
-      const mediaURL = await getDownloadURL(storageRef);
+      const fileRef = ref(storage, `clix/${Date.now()}_${file.name}`);
+      await uploadBytes(fileRef, file);
+      const mediaURL = await getDownloadURL(fileRef);
 
       await addDoc(collection(db, "posts"), {
-        username: currentUser?.uid || "guest",
+        username: currentUser.uid,
         caption,
         tags,
         mediaURL,
-        createdAt: serverTimestamp(),
         type: postType,
+        createdAt: serverTimestamp(),
         likes: [],
         likeCount: 0
       });
 
-      alert("Uploaded successfully!");
+      alert("Upload successful!");
       window.location.href = "index.html";
-    }
+    });
 
     function toggleTheme() {
       document.body.classList.toggle("light-mode");
