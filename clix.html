@@ -2,40 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Transparent Overlay Feed</title>
+  <title>Clix • TikTok-Inspired Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     * {
-      margin: 0; padding: 0; box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #000;
+      background-color: #000;
       color: #fff;
-      overflow-x: hidden;
-    }
-    .feed-container {
-      max-width: 600px;
-      margin: 16px auto;
       display: flex;
-      flex-direction: column;
-      gap: 30px;
-      padding: 0 12px;
-    }
-    .post {
-      position: relative;
-      width: 100%;
-      border-radius: 16px;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
       overflow: hidden;
-      background: transparent;
     }
+
+    .feed-container {
+      width: 375px;
+      height: 667px;
+      background-color: #000;
+      position: relative;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+
+    .video-post {
+      width: 100%;
+      height: 667px; /* Full height of container */
+      position: relative;
+      overflow: hidden;
+    }
+
     .media-container {
-      position: relative;
       width: 100%;
-      aspect-ratio: 9 / 16;
+      height: 100%;
+      position: relative;
       overflow: hidden;
-      border-radius: 16px;
-      background: #000;
       z-index: 0; /* Base z-index for media container */
     }
     video, img.media {
@@ -50,67 +57,189 @@
       z-index: 1; /* Ensure media is behind overlays */
     }
 
-    /* Username inside video bottom-left */
-    .username-overlay {
+    .status-bar {
       position: absolute;
-      bottom: 12px;
-      left: 12px;
-      font-weight: 600;
-      font-size: 1.1em;
-      color: white;
-      text-shadow:
-        0 0 4px rgba(0,0,0,0.9),
-        0 0 6px rgba(0,0,0,0.8);
-      pointer-events: none; /* let clicks go through */
-      user-select: none;
-      background: transparent;
-      z-index: 20; /* Higher z-index to stay above media */
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 5px 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #fff;
+      background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
+      z-index: 20;
     }
 
-    /* Buttons stacked vertically on right inside video */
-    .action-overlay {
+    .overlay {
       position: absolute;
-      bottom: 12px;
-      right: 12px;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      z-index: 20; /* Higher z-index to stay above media */
-      user-select: none;
+      justify-content: space-between;
+      padding: 15px;
+      z-index: 20;
     }
-    .action-btn {
-      background: transparent;
-      border: none;
-      font-size: 1.9em;
-      color: rgba(255 255 255 / 0.85);
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
+      padding: 10px;
+      z-index: 20;
+    }
+
+    .top-bar .left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-bar .left span {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .top-bar .right .icon {
+      width: 28px;
+      height: 28px;
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
       cursor: pointer;
-      padding: 6px;
-      user-select: none;
-      transition: color 0.25s ease;
-    }
-    .action-btn:hover {
-      color: #ff0050;
     }
 
-    /* Caption below video - fully transparent background */
+    .bottom-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+      padding: 10px;
+      z-index: 20;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-info img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+
+    .user-info .username {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .user-info .follow {
+      font-size: 12px;
+      background-color: #ff2d55;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
     .caption {
-      margin-top: 8px;
-      font-size: 0.95em;
-      color: rgba(255 255 255 / 0.85);
-      text-shadow:
-        0 0 4px rgba(0,0,0,0.8);
-      background: transparent;
-      user-select: text;
+      font-size: 14px;
+      line-height: 18px;
+      max-height: 54px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* Likes count below caption */
-    .likes {
-      font-size: 0.85em;
-      color: rgba(255 255 255 / 0.6);
-      margin-top: 4px;
-      user-select: none;
-      text-shadow:
-        0 0 3px rgba(0,0,0,0.7);
+    .hashtags {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .audio-info {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+    }
+
+    .audio-info .icon {
+      width: 16px;
+      height: 16px;
+      background-color: #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+    }
+
+    .right-bar {
+      position: absolute;
+      right: 10px;
+      bottom: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      z-index: 20;
+    }
+
+    .right-bar .action {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .right-bar .action .icon {
+      width: 32px;
+      height: 32px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .right-bar .action span {
+      font-size: 12px;
+      color: #fff;
+    }
+
+    .profile-pic {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      position: relative;
+    }
+
+    .profile-pic::after {
+      content: '+';
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      background-color: #ff2d55;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 12px;
     }
 
     /* Upload Button fixed bottom right */
@@ -134,35 +263,37 @@
       background: #e60044;
     }
 
-    /* Comment Popup styles remain same */
+    /* Comment Popup styles */
     #commentModal {
-      display:none;
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      background:#000000dd;
-      z-index:9999;
-      padding:20px;
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000000dd;
+      z-index: 9999;
+      padding: 20px;
     }
     #commentModal .popup {
-      max-width:500px;
-      margin:auto;
-      background:#111;
-      border-radius:12px;
-      padding:16px;
-      height:80%;
-      display:flex;
-      flex-direction:column;
+      max-width: 500px;
+      margin: auto;
+      background: #111;
+      border-radius: 12px;
+      padding: 16px;
+      height: 80%;
+      display: flex;
+      flex-direction: column;
     }
     #commentList {
-      flex:1;
-      overflow-y:auto;
-      margin-bottom:10px;
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 10px;
     }
     #commentList div {
-      margin-bottom:8px;
-      border-bottom:1px solid #333;
-      padding-bottom:6px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 6px;
       color: white;
     }
     input, button {
@@ -171,13 +302,8 @@
 
     /* Mobile Adjustments */
     @media (max-width: 600px) {
-      .action-overlay {
-        bottom: 10px;
-        right: 10px;
-      }
-      .username-overlay {
-        bottom: 10px;
-        left: 10px;
+      .right-bar {
+        bottom: 100px;
       }
       .upload-btn {
         bottom: 15px;
@@ -187,217 +313,268 @@
   </style>
 </head>
 <body>
+  <div class="feed-container" id="feed"></div>
+  <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-<div class="feed-container" id="feed"></div>
-
-<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
-
-<!-- Comment Popup -->
-<div id="commentModal">
-  <div class="popup">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <h3>Comments</h3>
-      <button onclick="closeCommentModal()" style="background:none;border:none;font-size:1.5em;color:#fff;cursor:pointer;">✖</button>
+  <!-- Comment Popup -->
+  <div id="commentModal">
+    <div class="popup">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3>Comments</h3>
+        <button onclick="closeCommentModal()" style="background:none;border:none;font-size:1.5em;color:#fff;cursor:pointer;">✖</button>
+      </div>
+      <div id="commentList"></div>
+      <input id="commentInput" type="text" placeholder="Add a comment..." style="padding:8px; border-radius:8px; border:none; margin-bottom:10px;" />
+      <button onclick="submitComment()" style="padding:8px; background:#ff0050; color:white; border:none; border-radius:8px; cursor:pointer;">Post</button>
     </div>
-    <div id="commentList"></div>
-    <input id="commentInput" type="text" placeholder="Add a comment..." style="padding:8px; border-radius:8px; border:none; margin-bottom:10px;" />
-    <button onclick="submitComment()" style="padding:8px; background:#ff0050; color:white; border:none; border-radius:8px; cursor:pointer;">Post</button>
   </div>
-</div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment,
-    addDoc, serverTimestamp, onSnapshot, startAfter, limit
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment,
+      addDoc, serverTimestamp, onSnapshot, startAfter, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-    authDomain: "clixly-bc284.firebaseapp.com",
-    projectId: "clixly-bc284",
-    storageBucket: "clixly-bc284.appspot.com",
-    messagingSenderId: "33343695899",
-    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const feed = document.getElementById("feed");
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const feed = document.getElementById("feed");
 
-  let currentPostId = null;
-  let lastVisible = null;
-  const PAGE_SIZE = 4;
-  let loading = false;
+    let currentPostId = null;
+    let lastVisible = null;
+    const PAGE_SIZE = 4;
+    let loading = false;
 
-  // Comment modal handlers
-  window.openCommentModal = function(postId) {
-    currentPostId = postId;
-    document.getElementById('commentModal').style.display = 'block';
-    document.getElementById('commentInput').value = '';
-    loadComments(postId);
-  };
-  window.closeCommentModal = function() {
-    document.getElementById('commentModal').style.display = 'none';
-  };
-  window.submitComment = async function() {
-    const input = document.getElementById('commentInput');
-    const text = input.value.trim();
-    if (!text) return;
-    try {
-      const commentRef = collection(db, "clixPosts", currentPostId, "comments");
-      await addDoc(commentRef, {
-        text,
-        createdAt: serverTimestamp(),
-        username: localStorage.getItem("username") || "Anonymous"
-      });
-      input.value = '';
-    } catch (e) {
-      alert("Failed to add comment. Try again.");
-    }
-  };
-
-  async function loadComments(postId) {
-    const commentList = document.getElementById('commentList');
-    commentList.innerHTML = '<p style="text-align:center;">Loading...</p>';
-    const commentRef = collection(db, "clixPosts", postId, "comments");
-    const q = query(commentRef, orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-      commentList.innerHTML = '';
-      snapshot.forEach(doc => {
-        const c = doc.data();
-        const div = document.createElement('div');
-        div.innerHTML = `<strong>@${sanitize(c.username)}</strong><br>${sanitize(c.text)}`;
-        commentList.appendChild(div);
-      });
-    });
-  }
-
-  function sanitize(str) {
-    if (!str) return '';
-    return str.replace(/,uLetCRgPbSOz6Te2vTfbsF3Fh3F3,iHThDpcSvFWUXk57YLE2RJMdDfp1/g, '').trim();
-  }
-
-  function createPostElement(post, postId) {
-    const postEl = document.createElement("div");
-    postEl.className = "post";
-
-    const mediaWrapper = document.createElement("div");
-    mediaWrapper.className = "media-container";
-
-    let mediaEl;
-    if (post.type === "video") {
-      mediaEl = document.createElement("video");
-      mediaEl.src = post.mediaURL;
-      mediaEl.autoplay = true;
-      mediaEl.loop = true;
-      mediaEl.muted = true;
-      mediaEl.playsInline = true;
-      mediaEl.className = "media";
-      mediaEl.addEventListener("click", () => {
-        mediaEl.muted = !mediaEl.muted;
-      });
-    } else {
-      mediaEl = document.createElement("img");
-      mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
-      mediaEl.alt = post.caption || "Image Post";
-      mediaEl.className = "media";
-    }
-
-    // Username overlay inside video frame bottom-left
-    const usernameOverlay = document.createElement("div");
-    usernameOverlay.className = "username-overlay";
-    usernameOverlay.textContent = "@" + sanitize(post.username || "user");
-
-    // Action buttons vertical stack on bottom-right
-    const actionOverlay = document.createElement("div");
-    actionOverlay.className = "action-overlay";
-
-    const likeBtn = document.createElement("button");
-    likeBtn.className = "action-btn";
-    likeBtn.textContent = "❤️";
-
-    const commentBtn = document.createElement("button");
-    commentBtn.className = "action-btn";
-    commentBtn.textContent = "💬";
-    commentBtn.onclick = () => openCommentModal(postId);
-
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "action-btn";
-    saveBtn.textContent = "🔖";
-
-    const shareBtn = document.createElement("button");
-    shareBtn.className = "action-btn";
-    shareBtn.textContent = "📤";
-
-    likeBtn.onclick = async () => {
+    // Comment modal handlers
+    window.openCommentModal = function(postId) {
+      currentPostId = postId;
+      document.getElementById('commentModal').style.display = 'block';
+      document.getElementById('commentInput').value = '';
+      loadComments(postId);
+    };
+    window.closeCommentModal = function() {
+      document.getElementById('commentModal').style.display = 'none';
+    };
+    window.submitComment = async function() {
+      const input = document.getElementById('commentInput');
+      const text = input.value.trim();
+      if (!text) return;
       try {
-        await updateDoc(doc(db, "clixPosts", postId), {
-          likes: increment(1)
+        const commentRef = collection(db, "clixPosts", currentPostId, "comments");
+        await addDoc(commentRef, {
+          text,
+          createdAt: serverTimestamp(),
+          username: localStorage.getItem("username") || "Anonymous"
         });
-        likeCount.textContent = (parseInt(likeCount.textContent) || 0) + 1;
+        input.value = '';
       } catch (e) {
-        alert("Failed to like post");
+        alert("Failed to add comment. Try again.");
       }
     };
 
-    actionOverlay.appendChild(likeBtn);
-    actionOverlay.appendChild(commentBtn);
-    actionOverlay.appendChild(saveBtn);
-    actionOverlay.appendChild(shareBtn);
-
-    // Caption below video frame
-    const caption = document.createElement("div");
-    caption.className = "caption";
-    caption.textContent = sanitize(post.caption || "");
-
-    // Likes count below caption
-    const likeCount = document.createElement("div");
-    likeCount.className = "likes";
-    likeCount.textContent = post.likes || 0;
-
-    mediaWrapper.appendChild(mediaEl);
-    mediaWrapper.appendChild(usernameOverlay);
-    mediaWrapper.appendChild(actionOverlay);
-
-    postEl.appendChild(mediaWrapper);
-    postEl.appendChild(caption);
-    postEl.appendChild(likeCount);
-
-    return postEl;
-  }
-
-  async function loadFeedPage() {
-    if (loading) return;
-    loading = true;
-    let q;
-    if (lastVisible) {
-      q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(PAGE_SIZE));
-    } else {
-      q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(PAGE_SIZE));
-    }
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      lastVisible = snapshot.docs[snapshot.docs.length - 1];
-      snapshot.forEach(docSnap => {
-        const post = docSnap.data();
-        const postId = docSnap.id;
-        feed.appendChild(createPostElement(post, postId));
+    async function loadComments(postId) {
+      const commentList = document.getElementById('commentList');
+      commentList.innerHTML = '<p style="text-align:center;">Loading...</p>';
+      const commentRef = collection(db, "clixPosts", postId, "comments");
+      const q = query(commentRef, orderBy("createdAt", "desc"));
+      onSnapshot(q, (snapshot) => {
+        commentList.innerHTML = '';
+        snapshot.forEach(doc => {
+          const c = doc.data();
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>@${sanitize(c.username)}</strong><br>${sanitize(c.text)}`;
+          commentList.appendChild(div);
+        });
       });
     }
-    loading = false;
-  }
 
-  window.addEventListener('scroll', () => {
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
-      loadFeedPage();
+    function sanitize(str) {
+      if (!str) return '';
+      return str.replace(/,uLetCRgPbSOz6Te2vTfbsF3Fh3F3,iHThDpcSvFWUXk57YLE2RJMdDfp1/g, '').trim();
     }
-  });
 
-  loadFeedPage();
-</script>
+    function createPostElement(post, postId) {
+      const postEl = document.createElement("div");
+      postEl.className = "video-post";
 
+      const mediaWrapper = document.createElement("div");
+      mediaWrapper.className = "media-container";
+
+      let mediaEl;
+      if (post.type === "video") {
+        mediaEl = document.createElement("video");
+        mediaEl.src = post.mediaURL;
+        mediaEl.loop = true;
+        mediaEl.playsInline = true;
+        mediaEl.className = "media";
+        mediaEl.muted = true; // Start muted, user can unmute
+      } else {
+        mediaEl = document.createElement("img");
+        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+        mediaEl.alt = post.caption || "Image Post";
+        mediaEl.className = "media";
+      }
+
+      // Status Bar
+      const statusBar = document.createElement("div");
+      statusBar.className = "status-bar";
+      statusBar.innerHTML = `<span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><span>📶</span>`;
+
+      // Overlay
+      const overlay = document.createElement("div");
+      overlay.className = "overlay";
+
+      // Top Bar
+      const topBar = document.createElement("div");
+      topBar.className = "top-bar";
+      topBar.innerHTML = `
+        <div class="left"><span>For You</span></div>
+        <div class="right"><div class="icon">🔍</div></div>
+      `;
+
+      // Bottom Bar
+      const bottomBar = document.createElement("div");
+      bottomBar.className = "bottom-bar";
+      bottomBar.innerHTML = `
+        <div class="user-info">
+          <img src="https://source.unsplash.com/random/36x36" alt="Profile">
+          <span class="username">${sanitize(post.username || "user")}</span>
+          <span class="follow">Follow</span>
+        </div>
+        <div class="caption">${sanitize(post.caption || "")}</div>
+        <div class="hashtags">#TikTok #Reels #Video</div>
+        <div class="audio-info">
+          <div class="icon">🎵</div>
+          <span>Original Sound • ${sanitize(post.username || "user")}</span>
+        </div>
+      `;
+
+      // Right Bar
+      const rightBar = document.createElement("div");
+      rightBar.className = "right-bar";
+
+      const profileAction = document.createElement("div");
+      profileAction.className = "action";
+      profileAction.innerHTML = `
+        <div class="profile-pic">
+          <img src="https://source.unsplash.com/random/48x48" alt="Profile">
+        </div>
+      `;
+
+      const likeAction = document.createElement("div");
+      likeAction.className = "action";
+      likeAction.innerHTML = `
+        <div class="icon">❤️</div>
+        <span>${post.likes || 0}</span>
+      `;
+
+      const commentAction = document.createElement("div");
+      commentAction.className = "action";
+      commentAction.innerHTML = `
+        <div class="icon">💬</div>
+        <span>0</span> <!-- Placeholder, update dynamically if needed -->
+      `;
+
+      const shareAction = document.createElement("div");
+      shareAction.className = "action";
+      shareAction.innerHTML = `
+        <div class="icon">➡️</div>
+        <span>0</span> <!-- Placeholder, update dynamically if needed -->
+      `;
+
+      const moreAction = document.createElement("div");
+      moreAction.className = "action";
+      moreAction.innerHTML = `<div class="icon">⋮</div>`;
+
+      const playUnmuteBtn = document.createElement("button");
+      playUnmuteBtn.className = "play-unmute-btn";
+      playUnmuteBtn.textContent = "▶"; // Play icon
+      playUnmuteBtn.onclick = () => {
+        if (mediaEl.paused) {
+          mediaEl.play().then(() => {
+            mediaEl.muted = false; // Unmute after successful play
+            playUnmuteBtn.textContent = "🔊"; // Unmute icon
+          }).catch(error => {
+            console.warn("Play blocked, ensure user interaction:", error);
+          });
+        } else {
+          mediaEl.muted = !mediaEl.muted;
+          playUnmuteBtn.textContent = mediaEl.muted ? "▶" : "🔊"; // Toggle between play and unmute
+        }
+      };
+
+      rightBar.appendChild(profileAction);
+      rightBar.appendChild(likeAction);
+      rightBar.appendChild(commentAction);
+      rightBar.appendChild(shareAction);
+      rightBar.appendChild(moreAction);
+      rightBar.appendChild(playUnmuteBtn); // Add play/unmute button
+
+      // Add event listeners for actions
+      likeAction.querySelector(".icon").onclick = async () => {
+        try {
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
+          });
+          likeAction.querySelector("span").textContent = (parseInt(likeAction.querySelector("span").textContent) || 0) + 1;
+        } catch (e) {
+          alert("Failed to like post");
+        }
+      };
+
+      commentAction.querySelector(".icon").onclick = () => openCommentModal(postId);
+
+      overlay.appendChild(topBar);
+      overlay.appendChild(bottomBar);
+      mediaWrapper.appendChild(mediaEl);
+      mediaWrapper.appendChild(statusBar);
+      mediaWrapper.appendChild(overlay);
+      mediaWrapper.appendChild(rightBar);
+
+      postEl.appendChild(mediaWrapper);
+
+      return postEl;
+    }
+
+    async function loadFeedPage() {
+      if (loading) return;
+      loading = true;
+      let q;
+      if (lastVisible) {
+        q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(PAGE_SIZE));
+      } else {
+        q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+      }
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        lastVisible = snapshot.docs[snapshot.docs.length - 1];
+        snapshot.forEach(docSnap => {
+          const post = docSnap.data();
+          const postId = docSnap.id;
+          feed.appendChild(createPostElement(post, postId));
+        });
+      }
+      loading = false;
+    }
+
+    window.addEventListener('scroll', () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
+        loadFeedPage();
+      }
+    });
+
+    loadFeedPage();
+  </script>
 </body>
 </html>
 
