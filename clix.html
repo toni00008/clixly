@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #000;
       color: #fff;
-      overflow: hidden;
+      overflow-x: hidden;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -29,66 +29,128 @@
       position: relative;
       max-width: 500px;
       margin: 0 auto;
-      aspect-ratio: 9 / 16;
-      background: #111;
-      overflow: hidden;
       border-radius: 16px;
+      overflow: hidden;
+      background: #111;
+      aspect-ratio: 9 / 16;
       box-shadow: 0 0 15px #ff0050;
     }
 
-    .media {
+    .media-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: 16px;
+      background: #000;
+      z-index: 1;
+    }
+
+    video.media,
+    img.media {
+      position: relative;
+      z-index: 1;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      user-select: none;
       display: block;
     }
 
-    .username-overlay {
+    /* Username and follow button container inside video top-left */
+    .user-follow-container {
       position: absolute;
       top: 10px;
       left: 12px;
-      z-index: 2;
-      font-weight: 700;
-      font-size: 1em;
-      color: rgba(255,255,255,0.9);
-      text-shadow: 0 0 5px rgba(0,0,0,0.7);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 20px;
     }
 
+    .username-overlay {
+      font-weight: 700;
+      font-size: 1em;
+      color: rgba(255,255,255,0.85);
+      text-shadow: 0 0 5px rgba(0,0,0,0.7);
+      user-select: none;
+    }
+
+    .follow-btn {
+      background: #ff0050;
+      border: none;
+      color: white;
+      padding: 4px 12px;
+      font-size: 0.8em;
+      font-weight: 700;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .follow-btn.following {
+      background: #aaa;
+      color: #333;
+    }
+    .follow-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Actions bottom-right inside video */
     .actions {
       position: absolute;
       right: 12px;
       bottom: 12px;
-      z-index: 2;
+      z-index: 10;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      align-items: center;
+      gap: 14px;
     }
 
     .action-btn {
-      font-size: 1.5em;
-      background: rgba(0,0,0,0.4);
-      color: white;
+      font-size: 1.8em;
+      background: rgba(0,0,0,0.3);
       border: none;
+      color: #fff;
+      cursor: pointer;
       border-radius: 50%;
       width: 44px;
       height: 44px;
       display: flex;
       justify-content: center;
       align-items: center;
-      cursor: pointer;
+      box-shadow: 0 0 6px #ff0050;
+      transition: background 0.3s ease;
+    }
+    .action-btn:hover {
+      background: rgba(255, 0, 80, 0.8);
     }
 
     .like-count {
-      font-size: 0.85em;
-      text-align: center;
       color: #ff0050;
+      font-weight: 700;
+      font-size: 0.9em;
+      user-select: none;
+      pointer-events: none;
+      margin-top: -8px;
+      text-align: center;
+      text-shadow: 0 0 5px rgba(0,0,0,0.7);
+      width: 44px;
     }
 
+    /* Caption below video */
     .caption {
+      padding: 10px 12px;
+      font-size: 0.95em;
+      color: #eee;
+      max-width: 500px;
+      margin: 6px auto 0;
       text-align: center;
-      padding: 6px;
-      color: #ccc;
-      font-size: 0.9em;
+      user-select: none;
     }
 
     .upload-btn {
@@ -102,149 +164,168 @@
       border-radius: 50%;
       width: 60px;
       height: 60px;
-      z-index: 10;
+      z-index: 100;
       cursor: pointer;
       box-shadow: 0 0 10px #ff0050;
+      transition: background 0.3s ease;
+    }
+    .upload-btn:hover {
+      background: #e00048;
     }
 
-    .comment-popup {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      max-height: 60%;
-      background: rgba(0,0,0,0.95);
-      border-top: 2px solid #ff0050;
-      overflow-y: auto;
-      z-index: 100;
-      padding: 10px;
-      display: none;
+    /* Scrollbar style for feed container */
+    .feed-container::-webkit-scrollbar {
+      width: 8px;
     }
-
-    .comment-popup.active {
-      display: block;
-    }
-
-    .comment {
-      margin-bottom: 10px;
-      border-bottom: 1px solid #333;
-      padding-bottom: 4px;
-    }
-
-    .comment-input {
-      width: 100%;
-      display: flex;
-      margin-top: 10px;
-      gap: 6px;
-    }
-
-    .comment-input input {
-      flex: 1;
-      padding: 8px;
-      border-radius: 8px;
-      border: none;
-    }
-
-    .comment-input button {
+    .feed-container::-webkit-scrollbar-thumb {
       background: #ff0050;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 8px;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
 
 <div class="feed-container" id="feed"></div>
-<div class="comment-popup" id="commentPopup">
-  <div id="commentList"></div>
-  <div class="comment-input">
-    <input type="text" id="commentInput" placeholder="Write a comment..." />
-    <button id="submitComment">Post</button>
-  </div>
-</div>
-
 <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc,
-  updateDoc, increment, addDoc, onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import {
-  getAuth, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, orderBy, limit, startAfter, getDocs,
+    doc, updateDoc, increment, setDoc, deleteDoc,
+    onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getAuth, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-  authDomain: "clixly-bc284.firebaseapp.com",
-  projectId: "clixly-bc284",
-  storageBucket: "clixly-bc284.appspot.com",
-  messagingSenderId: "33343695899",
-  appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const feed = document.getElementById("feed");
 
-let currentUser = null;
-let currentUsername = null;
+  let currentUser = null;
+  let lastVisible = null;
+  let isLoading = false;
 
-onAuthStateChanged(auth, async user => {
-  if (user) {
+  // Keep track of follow states for posts userIds
+  const followStates = new Map();
+
+  onAuthStateChanged(auth, (user) => {
     currentUser = user;
-    const userDoc = await getDocs(query(collection(db, "users")));
-    userDoc.forEach(docSnap => {
-      if (docSnap.id === user.uid) {
-        currentUsername = docSnap.data().username || "user";
-      }
-    });
+    // Reload feed when login state changes
+    feed.innerHTML = "";
+    lastVisible = null;
+    loadFeed(true);
+  });
+
+  async function checkFollowing(targetUid) {
+    if (!currentUser) return false;
+    const followDoc = doc(db, "following", currentUser.uid, "list", targetUid);
+    let followed = false;
+    try {
+      const snap = await getDocs(query(collection(db, "following", currentUser.uid, "list"), where("id", "==", targetUid)));
+    } catch(e) {}
+    const docSnap = await doc(db, "following", currentUser.uid, "list", targetUid).get();
+    return docSnap.exists();
   }
-});
 
-const feed = document.getElementById("feed");
-const commentPopup = document.getElementById("commentPopup");
-const commentList = document.getElementById("commentList");
-const commentInput = document.getElementById("commentInput");
-const submitComment = document.getElementById("submitComment");
+  async function isFollowing(targetUid) {
+    if (!currentUser) return false;
+    const docRef = doc(db, "following", currentUser.uid, "list", targetUid);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists();
+  }
 
-let lastVisible = null;
-let currentPostId = null;
+  async function toggleFollow(targetUid, btn) {
+    if (!currentUser) {
+      alert("Please log in to follow users.");
+      return;
+    }
+    btn.disabled = true;
+    const followingRef = doc(db, "following", currentUser.uid, "list", targetUid);
+    const followersRef = doc(db, "followers", targetUid, "list", currentUser.uid);
 
-async function loadFeed(initial = false) {
-  const q = initial
-    ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
-    : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
-  const snapshot = await getDocs(q);
-  if (snapshot.empty) return;
+    const docSnap = await getDoc(followingRef);
 
-  lastVisible = snapshot.docs[snapshot.docs.length - 1];
+    try {
+      if (docSnap.exists()) {
+        // Unfollow
+        await deleteDoc(followingRef);
+        await deleteDoc(followersRef);
+        btn.textContent = "Follow";
+        btn.classList.remove("following");
+      } else {
+        // Follow
+        await setDoc(followingRef, { followedAt: new Date() });
+        await setDoc(followersRef, { followedAt: new Date() });
+        btn.textContent = "Following";
+        btn.classList.add("following");
+      }
+    } catch (err) {
+      alert("Failed to update follow status. Try again.");
+      console.error(err);
+    }
+    btn.disabled = false;
+  }
 
-  snapshot.forEach(docSnap => {
-    const post = docSnap.data();
-    const postId = docSnap.id;
-
+  // Helper to create post elements
+  function createPostElement(post, postId) {
     const postEl = document.createElement("div");
     postEl.className = "post";
 
-    const video = document.createElement("video");
-    video.src = post.mediaURL;
-    video.autoplay = true;
-    video.loop = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.className = "media";
-    video.addEventListener("click", () => {
-      video.muted = !video.muted;
-    });
+    const mediaContainer = document.createElement("div");
+    mediaContainer.className = "media-container";
+
+    let mediaEl;
+    if (post.type === "video") {
+      mediaEl = document.createElement("video");
+      mediaEl.src = post.mediaURL || "";
+      mediaEl.autoplay = true;
+      mediaEl.muted = true;
+      mediaEl.loop = true;
+      mediaEl.playsInline = true;
+      mediaEl.className = "media";
+      mediaEl.addEventListener("click", () => {
+        mediaEl.muted = !mediaEl.muted;
+      });
+    } else {
+      mediaEl = document.createElement("img");
+      mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+      mediaEl.alt = post.caption || "Image Post";
+      mediaEl.className = "media";
+    }
+    mediaContainer.appendChild(mediaEl);
+
+    // User container with username and follow button
+    const userFollowContainer = document.createElement("div");
+    userFollowContainer.className = "user-follow-container";
 
     const usernameOverlay = document.createElement("div");
     usernameOverlay.className = "username-overlay";
     usernameOverlay.textContent = `@${post.username || 'user'}`;
+    userFollowContainer.appendChild(usernameOverlay);
 
+    const followBtn = document.createElement("button");
+    followBtn.className = "follow-btn";
+    followBtn.textContent = "Follow";
+    followBtn.disabled = true; // disable until state loaded
+
+    userFollowContainer.appendChild(followBtn);
+
+    mediaContainer.appendChild(userFollowContainer);
+
+    // Actions overlay
     const actions = document.createElement("div");
     actions.className = "actions";
 
@@ -254,7 +335,7 @@ async function loadFeed(initial = false) {
 
     const commentBtn = document.createElement("button");
     commentBtn.className = "action-btn";
-    commentBtn.textContent = "💬";
+    commentBtn.textContent = "🗨️";
 
     const saveBtn = document.createElement("button");
     saveBtn.className = "action-btn";
@@ -262,69 +343,104 @@ async function loadFeed(initial = false) {
 
     const likeCount = document.createElement("div");
     likeCount.className = "like-count";
-    likeCount.textContent = post.likes || 0;
+    likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
 
-    likeBtn.onclick = async () => {
-      await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
-      likeCount.textContent = parseInt(likeCount.textContent) + 1;
-    };
+    likeBtn.addEventListener("click", async () => {
+      try {
+        await updateDoc(doc(db, "clixPosts", postId), {
+          likes: increment(1)
+        });
+        likeCount.textContent = parseInt(likeCount.textContent) + 1;
+      } catch (e) {
+        alert("Failed to like post. Try again.");
+      }
+    });
 
-    commentBtn.onclick = () => {
-      openComments(postId);
-    };
+    // TODO: Add commentBtn & saveBtn event listeners
 
-    actions.append(likeBtn, commentBtn, saveBtn, likeCount);
+    actions.appendChild(likeBtn);
+    actions.appendChild(commentBtn);
+    actions.appendChild(saveBtn);
+    actions.appendChild(likeCount);
 
+    postEl.appendChild(mediaContainer);
+    postEl.appendChild(actions);
+
+    // Caption below
     const caption = document.createElement("div");
     caption.className = "caption";
-    caption.textContent = post.caption || "";
+    caption.innerHTML = post.caption ? post.caption : '';
+    postEl.appendChild(caption);
 
-    postEl.append(video, usernameOverlay, actions, caption);
-    feed.appendChild(postEl);
-  });
-}
+    // Load follow state for current post user
+    if (currentUser && currentUser.uid !== post.userId) {
+      followBtn.disabled = true;
+      const followRef = doc(db, "following", currentUser.uid, "list", post.userId);
 
-function openComments(postId) {
-  currentPostId = postId;
-  commentPopup.classList.add("active");
-  commentList.innerHTML = "<p style='text-align:center;'>Loading comments...</p>";
+      const unsubscribe = onSnapshot(followRef, (docSnap) => {
+        if (docSnap.exists()) {
+          followBtn.textContent = "Following";
+          followBtn.classList.add("following");
+        } else {
+          followBtn.textContent = "Follow";
+          followBtn.classList.remove("following");
+        }
+        followBtn.disabled = false;
+      });
 
-  const commentsRef = collection(db, "clixPosts", postId, "comments");
-  onSnapshot(query(commentsRef, orderBy("createdAt", "desc")), (snapshot) => {
-    commentList.innerHTML = "";
-    snapshot.forEach(docSnap => {
-      const c = docSnap.data();
-      const cEl = document.createElement("div");
-      cEl.className = "comment";
-      cEl.innerHTML = `<strong>@${c.username || 'anon'}</strong>: ${c.text}`;
-      commentList.appendChild(cEl);
-    });
-  });
-}
+      // Handle follow/unfollow on click
+      followBtn.onclick = () => {
+        toggleFollow(post.userId, followBtn);
+      };
+    } else {
+      // Hide follow button if user is not logged in or own post
+      followBtn.style.display = "none";
+    }
 
-submitComment.onclick = async () => {
-  const text = commentInput.value.trim();
-  if (!text || !currentUser || !currentPostId) return;
-
-  await addDoc(collection(db, "clixPosts", currentPostId, "comments"), {
-    text,
-    username: currentUsername || "user",
-    createdAt: new Date()
-  });
-  commentInput.value = "";
-};
-
-// Initial load
-loadFeed(true);
-
-// Infinite scroll
-feed.addEventListener('scroll', () => {
-  if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
-    loadFeed();
+    return postEl;
   }
-});
+
+  async function loadFeed(initial = false) {
+    if (isLoading) return;
+    isLoading = true;
+
+    const q = initial
+      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
+      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      if (initial) {
+        feed.innerHTML = "<p style='text-align:center; color:#fff;'>No posts yet.</p>";
+      }
+      isLoading = false;
+      return;
+    }
+
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const postId = docSnap.id;
+      const postEl = createPostElement(post, postId);
+      feed.appendChild(postEl);
+    });
+
+    isLoading = false;
+  }
+
+  // Initial load
+  loadFeed(true);
+
+  // Infinite scroll handler
+  feed.addEventListener('scroll', () => {
+    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
+      loadFeed();
+    }
+  });
 </script>
 
 </body>
 </html>
+
 
