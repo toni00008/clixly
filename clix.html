@@ -2,67 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Clixly Reels Style Feed</title>
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    /* Reset */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-
-    body, html {
-      height: 100%;
+    body {
+      font-family: 'Segoe UI', sans-serif;
       background: #000;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      overflow-x: hidden;
       color: #fff;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
     }
-
-    /* Feed container - vertical scroll, 100% viewport height */
-    .feed {
-      max-width: 420px;
+    .feed-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 10px;
+      overflow-y: auto;
+      max-width: 600px;
       margin: 0 auto;
-      height: 100vh;
-      overflow-y: scroll;
-      scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch;
-      background: #000;
-      position: relative;
-      border-radius: 12px;
-      box-shadow: 0 0 20px #ff0050cc;
     }
-
-    /* Each post takes full viewport height (like reels) */
     .post {
       position: relative;
-      height: 100vh;
-      scroll-snap-align: start;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #000;
+      background: #111;
+      border-radius: 16px;
       overflow: hidden;
+      aspect-ratio: 9 / 16;
+      max-width: 100%;
       user-select: none;
     }
-
-    /* Video / image fills vertically, auto width */
+    /* Media */
     .post video,
     .post img {
-      max-height: 100vh;
-      width: auto;
-      display: block;
-      border-radius: 0;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: relative; /* make sure z-index works */
+      z-index: 1;
+      border-radius: 16px;
+      user-select: none;
     }
-
-    /* Right side vertical controls container */
+    /* Caption Overlay */
+    .caption-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 16px 20px 40px 20px;
+      background: linear-gradient(0deg, rgba(0, 0, 0, 0.85), transparent);
+      color: white;
+      font-size: 15px;
+      line-height: 1.3;
+      z-index: 10;
+      user-select: text;
+    }
+    /* Controls on the right side */
     .controls {
       position: absolute;
-      right: 15px;
+      right: 12px;
       top: 50%;
       transform: translateY(-50%);
       display: flex;
@@ -72,238 +72,171 @@
       z-index: 10;
       user-select: none;
     }
-
-    /* Each control button */
-    .control-btn {
-      background: rgba(0,0,0,0.4);
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    .controls button {
+      font-size: 1.8rem;
+      background: transparent;
+      border: none;
+      color: white;
       cursor: pointer;
-      color: white;
-      font-size: 28px;
-      transition: background-color 0.25s ease, transform 0.25s ease;
-      box-shadow: 0 4px 10px rgb(255 0 80 / 0.4);
+      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+      transition: transform 0.15s ease;
     }
-    .control-btn:hover {
-      background-color: #ff0050;
-      transform: scale(1.15);
-      color: white;
-      box-shadow: 0 6px 15px #ff0050cc;
+    .controls button:active {
+      transform: scale(0.9);
     }
-
-    /* Like count below heart */
+    /* Like count below like button */
     .like-count {
-      margin-top: 6px;
-      font-size: 14px;
-      color: #fff;
-      user-select: none;
-      text-align: center;
+      font-size: 0.9rem;
+      margin-top: 4px;
+      color: #ff3860;
       font-weight: 600;
-      letter-spacing: 0.03em;
+      user-select: none;
     }
-
-    /* Caption area overlay bottom */
-    .caption-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 16px 20px 40px 20px;
-      background: linear-gradient(0deg, rgba(0,0,0,0.8), transparent);
-      color: white;
-      font-size: 15px;
-      line-height: 1.3;
-      z-index: 9;
-      user-select: text;
-    }
-
-    .caption-overlay .username {
-      font-weight: 700;
-      color: #ff0050;
-      margin-bottom: 6px;
-      font-size: 17px;
-    }
-
-    /* Upload button bottom right fixed */
+    /* Upload button bottom right */
     .upload-btn {
       position: fixed;
-      bottom: 28px;
-      right: 24px;
+      bottom: 20px;
+      right: 20px;
       background: #ff0050;
+      color: white;
+      font-size: 2.4em;
       border: none;
-      width: 64px;
-      height: 64px;
       border-radius: 50%;
-      font-size: 36px;
-      color: #fff;
+      width: 60px;
+      height: 60px;
+      z-index: 100;
       cursor: pointer;
-      box-shadow: 0 4px 16px #ff0050cc;
-      transition: background-color 0.3s ease;
+      box-shadow: 0 4px 10px rgba(255, 0, 80, 0.7);
       user-select: none;
-      z-index: 10000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
     }
-    .upload-btn:hover {
-      background: #e60047;
-    }
-
-    /* Responsive font scaling */
-    @media (max-width: 450px) {
-      .control-btn {
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
+    /* Responsive tweaks */
+    @media (max-width: 400px) {
+      .controls button {
+        font-size: 1.5rem;
+        margin: 0;
       }
-      .upload-btn {
-        width: 56px;
-        height: 56px;
-        font-size: 32px;
+      .caption-overlay {
+        font-size: 13px;
+        padding-bottom: 30px;
       }
     }
   </style>
 </head>
 <body>
 
-  <div class="feed" id="feed"></div>
+<div class="feed-container" id="feed"></div>
+<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  <button class="upload-btn" aria-label="Upload New Post" onclick="location.href='upload.html'">＋</button>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+  };
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-    };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const feed = document.getElementById("feed");
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const feed = document.getElementById("feed");
+  async function loadFeed() {
+    const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
 
-    // Load posts ordered by createdAt descending
-    async function loadFeed() {
-      const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) {
-        feed.innerHTML = "<p style='text-align:center; margin-top: 50px;'>No posts yet.</p>";
-        return;
-      }
-      snapshot.forEach(docSnap => {
-        const post = docSnap.data();
-        const postId = docSnap.id;
-
-        // Create post container
-        const postEl = document.createElement("article");
-        postEl.classList.add("post");
-
-        // Create media element
-        let mediaEl;
-        if(post.type === "video") {
-          mediaEl = document.createElement("video");
-          mediaEl.src = post.mediaURL || "";
-          mediaEl.autoplay = true;
-          mediaEl.muted = true;
-          mediaEl.loop = true;
-          mediaEl.playsInline = true;
-          mediaEl.setAttribute("playsinline", "");
-          mediaEl.style.objectFit = "contain";
-          // Toggle mute on tap
-          mediaEl.addEventListener("click", () => {
-            mediaEl.muted = !mediaEl.muted;
-          });
-        } else {
-          mediaEl = document.createElement("img");
-          mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x700?text=No+Image";
-          mediaEl.alt = post.caption || "Image Post";
-          mediaEl.style.objectFit = "contain";
-          mediaEl.draggable = false;
-        }
-        postEl.appendChild(mediaEl);
-
-        // Controls container
-        const controls = document.createElement("div");
-        controls.classList.add("controls");
-
-        // Like button + count
-        const likeBtn = document.createElement("button");
-        likeBtn.classList.add("control-btn");
-        likeBtn.innerHTML = "❤️";
-        likeBtn.title = "Like";
-
-        const likeCount = document.createElement("div");
-        likeCount.classList.add("like-count");
-        likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
-
-        likeBtn.appendChild(likeCount);
-
-        let liked = false;
-        likeBtn.addEventListener("click", async () => {
-          if(liked) return;
-          liked = true;
-          likeCount.textContent = parseInt(likeCount.textContent) + 1;
-          likeBtn.style.backgroundColor = "#ff0050";
-          likeBtn.style.color = "#fff";
-          await updateDoc(doc(db, "clixPosts", postId), {
-            likes: increment(1)
-          });
-        });
-
-        // Comment button (placeholder)
-        const commentBtn = document.createElement("button");
-        commentBtn.classList.add("control-btn");
-        commentBtn.textContent = "🗨️";
-        commentBtn.title = "Comment (coming soon)";
-        commentBtn.disabled = true;
-
-        // Share button (placeholder)
-        const shareBtn = document.createElement("button");
-        shareBtn.classList.add("control-btn");
-        shareBtn.textContent = "↗️";
-        shareBtn.title = "Share (coming soon)";
-        shareBtn.disabled = true;
-
-        controls.appendChild(likeBtn);
-        controls.appendChild(commentBtn);
-        controls.appendChild(shareBtn);
-
-        postEl.appendChild(controls);
-
-        // Caption overlay bottom
-        const captionOverlay = document.createElement("div");
-        captionOverlay.classList.add("caption-overlay");
-
-        const usernameEl = document.createElement("div");
-        usernameEl.classList.add("username");
-        usernameEl.textContent = `@${post.username || "user"}`;
-
-        const captionText = document.createElement("div");
-        captionText.classList.add("caption-text");
-        captionText.textContent = post.caption || "";
-
-        captionOverlay.appendChild(usernameEl);
-        captionOverlay.appendChild(captionText);
-
-        postEl.appendChild(captionOverlay);
-
-        feed.appendChild(postEl);
-      });
+    if (snapshot.empty) {
+      feed.innerHTML = "<p style='text-align:center;'>No posts yet.</p>";
+      return;
     }
 
-    loadFeed();
-  </script>
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const postId = docSnap.id;
+
+      const postEl = document.createElement("div");
+      postEl.className = "post";
+
+      let mediaEl;
+      if (post.type === "video") {
+        mediaEl = document.createElement("video");
+        mediaEl.src = post.mediaURL || "";
+        mediaEl.autoplay = true;
+        mediaEl.muted = true;
+        mediaEl.loop = true;
+        mediaEl.playsInline = true;
+        mediaEl.className = "media";
+
+        // Mute/Unmute on tap
+        mediaEl.addEventListener("click", () => {
+          mediaEl.muted = !mediaEl.muted;
+        });
+
+      } else {
+        mediaEl = document.createElement("img");
+        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+        mediaEl.alt = post.caption || "Image Post";
+        mediaEl.className = "media";
+      }
+
+      // Caption overlay
+      const captionOverlay = document.createElement("div");
+      captionOverlay.className = "caption-overlay";
+      captionOverlay.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
+
+      // Controls container
+      const controls = document.createElement("div");
+      controls.className = "controls";
+
+      // Like button and count
+      const likeBtn = document.createElement("button");
+      likeBtn.title = "Like";
+      likeBtn.innerHTML = "❤️";
+
+      const likeCount = document.createElement("div");
+      likeCount.className = "like-count";
+      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
+
+      likeBtn.addEventListener("click", async () => {
+        const newLikes = parseInt(likeCount.textContent) + 1;
+        likeCount.textContent = newLikes;
+        await updateDoc(doc(db, "clixPosts", postId), {
+          likes: increment(1)
+        });
+      });
+
+      // Comment button
+      const commentBtn = document.createElement("button");
+      commentBtn.title = "Comment";
+      commentBtn.textContent = "💬";
+
+      // Share button
+      const shareBtn = document.createElement("button");
+      shareBtn.title = "Share";
+      shareBtn.textContent = "🔗";
+
+      controls.appendChild(likeBtn);
+      controls.appendChild(likeCount);
+      controls.appendChild(commentBtn);
+      controls.appendChild(shareBtn);
+
+      postEl.appendChild(mediaEl);
+      postEl.appendChild(captionOverlay);
+      postEl.appendChild(controls);
+
+      feed.appendChild(postEl);
+    });
+  }
+
+  loadFeed();
+</script>
+
 </body>
 </html>
+
