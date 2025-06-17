@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Feed with Comments</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -11,49 +11,34 @@
       background: #000;
       color: #fff;
       overflow-x: hidden;
-      min-height: 100vh;
-      padding-bottom: 80px; /* space for upload button */
     }
     .feed-container {
       display: flex;
       flex-direction: column;
       gap: 20px;
       padding: 10px;
-      overflow-y: auto;
-      max-width: 600px;
-      margin: auto;
     }
     .post {
-      position: relative;
       background: #111;
       border-radius: 16px;
       overflow: hidden;
-      max-width: 100%;
-      box-shadow: 0 0 8px #ff0050aa;
-      padding-bottom: 10px;
     }
     .media {
       width: 100%;
       height: auto;
       display: block;
-      border-radius: 16px 16px 0 0;
-      user-select: none;
-    }
-    video.media {
-      width: 100%;
-      height: auto;
-      border-radius: 16px 16px 0 0;
+      max-height: 80vh;
+      object-fit: cover;
     }
     .caption {
       padding: 10px;
       font-size: 0.95em;
-      border-bottom: 1px solid #222;
     }
     .actions {
       display: flex;
       justify-content: space-between;
-      padding: 0 10px 10px;
       align-items: center;
+      padding: 0 10px 10px;
     }
     .action-btns {
       display: flex;
@@ -65,76 +50,32 @@
       border: none;
       color: #fff;
       cursor: pointer;
-      transition: color 0.3s ease;
-    }
-    .action-btn:hover {
-      color: #ff0050;
     }
     .likes {
-      font-size: 0.8em;
-      color: #bbb;
-      user-select: none;
-    }
-    /* Comments container */
-    .comments-container {
-      max-height: 150px;
-      overflow-y: auto;
-      background: #222;
-      border-radius: 12px;
-      padding: 8px 10px;
-      margin: 8px 10px;
-      color: #ddd;
       font-size: 0.9em;
-      scrollbar-width: thin;
     }
-    .comments-container::-webkit-scrollbar {
-      width: 6px;
-    }
-    .comments-container::-webkit-scrollbar-thumb {
-      background-color: #555;
-      border-radius: 10px;
-    }
-    .comment-item {
-      border-bottom: 1px solid #333;
-      padding: 6px 0;
-    }
-    .comment-text {
-      margin-bottom: 2px;
-    }
-    .comment-time {
-      font-size: 0.75em;
-      color: #666;
-      user-select: none;
-    }
-    /* Comment input form */
-    .comment-form {
+    .comment-box {
       display: flex;
-      align-items: center;
+      gap: 8px;
       padding: 0 10px 10px;
-      gap: 10px;
     }
-    .comment-input {
-      flex-grow: 1;
+    .comment-box input {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: none;
+    }
+    .comment-box button {
       padding: 6px 12px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-      font-size: 1em;
-    }
-    .comment-submit {
-      padding: 6px 16px;
-      border-radius: 8px;
-      border: none;
       background: #ff0050;
       color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
+      border: none;
+      border-radius: 10px;
     }
-    .comment-submit:hover {
-      background: #e60047;
+    .comments-list {
+      padding: 0 10px 10px;
+      font-size: 0.9em;
     }
-    /* Upload button */
     .upload-btn {
       position: fixed;
       bottom: 20px;
@@ -147,12 +88,6 @@
       width: 60px;
       height: 60px;
       z-index: 100;
-      cursor: pointer;
-      box-shadow: 0 0 10px #ff0050aa;
-      transition: background-color 0.3s ease;
-    }
-    .upload-btn:hover {
-      background: #e60047;
     }
   </style>
 </head>
@@ -164,8 +99,12 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment, addDoc, onSnapshot
+    getFirestore, collection, query, orderBy, getDocs, doc,
+    updateDoc, increment, addDoc, serverTimestamp, getDoc, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getAuth, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -179,55 +118,27 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth();
   const feed = document.getElementById("feed");
 
-  // Load comments realtime for a post
-  function loadComments(postId, container) {
-    const commentsRef = collection(db, "clixPosts", postId, "comments");
-    const q = query(commentsRef, orderBy("createdAt", "asc"));
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      alert("You must be logged in to view and comment.");
+    } else {
+      loadFeed(user);
+    }
+  });
 
-    return onSnapshot(q, (querySnapshot) => {
-      container.innerHTML = ''; // clear previous comments
-      if (querySnapshot.empty) {
-        container.innerHTML = '<small style="color:#aaa;">No comments yet</small>';
-        return;
-      }
-
-      querySnapshot.forEach(doc => {
-        const comment = doc.data();
-        const commentEl = document.createElement('div');
-        commentEl.className = 'comment-item';
-
-        const textEl = document.createElement('div');
-        textEl.className = 'comment-text';
-        textEl.textContent = comment.text;
-
-        const date = comment.createdAt?.toDate?.() || new Date();
-        const timeStr = date.toLocaleString();
-
-        const timeEl = document.createElement('div');
-        timeEl.className = 'comment-time';
-        timeEl.textContent = timeStr;
-
-        commentEl.appendChild(textEl);
-        commentEl.appendChild(timeEl);
-        container.appendChild(commentEl);
-      });
-    });
-  }
-
-  async function loadFeed() {
+  async function loadFeed(currentUser) {
     const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
-
-    feed.innerHTML = '';
 
     if (snapshot.empty) {
       feed.innerHTML = "<p style='text-align:center;'>No posts yet.</p>";
       return;
     }
 
-    snapshot.forEach(docSnap => {
+    for (const docSnap of snapshot.docs) {
       const post = docSnap.data();
       const postId = docSnap.id;
 
@@ -237,130 +148,102 @@
       let mediaEl;
       if (post.type === "video") {
         mediaEl = document.createElement("video");
-        mediaEl.src = post.mediaURL || "";
+        mediaEl.src = post.mediaURL;
         mediaEl.autoplay = true;
         mediaEl.muted = true;
         mediaEl.loop = true;
         mediaEl.playsInline = true;
         mediaEl.className = "media";
-
-        mediaEl.addEventListener("click", () => {
-          mediaEl.muted = !mediaEl.muted;
-        });
-
+        mediaEl.addEventListener("click", () => mediaEl.muted = !mediaEl.muted);
       } else {
         mediaEl = document.createElement("img");
-        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
-        mediaEl.alt = post.caption || "Image Post";
+        mediaEl.src = post.mediaURL;
+        mediaEl.alt = "Post Image";
         mediaEl.className = "media";
       }
 
       const caption = document.createElement("div");
       caption.className = "caption";
-      caption.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
+      caption.innerHTML = `<strong>@${post.username || "user"}</strong><br>${post.caption || ""}`;
 
-      // Actions (like, comment, save)
       const actions = document.createElement("div");
       actions.className = "actions";
 
       const btns = document.createElement("div");
       btns.className = "action-btns";
 
-      // Like button
       const likeBtn = document.createElement("button");
       likeBtn.className = "action-btn";
       likeBtn.textContent = "❤️";
 
-      const likeCount = document.createElement("div");
-      likeCount.className = "likes";
-      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
-
-      likeBtn.addEventListener("click", async () => {
-        const newLikes = parseInt(likeCount.textContent) + 1;
-        likeCount.textContent = newLikes;
-        await updateDoc(doc(db, "clixPosts", postId), {
-          likes: increment(1)
-        });
-      });
-
-      // Comment button (focus input on click)
       const commentBtn = document.createElement("button");
       commentBtn.className = "action-btn";
       commentBtn.textContent = "🗨️";
-      commentBtn.title = "Focus comment input";
 
-      // Save button (placeholder)
       const saveBtn = document.createElement("button");
       saveBtn.className = "action-btn";
       saveBtn.textContent = "🔖";
 
-      btns.appendChild(likeBtn);
-      btns.appendChild(commentBtn);
-      btns.appendChild(saveBtn);
+      const likeCount = document.createElement("div");
+      likeCount.className = "likes";
+      likeCount.textContent = post.likes || 0;
 
-      actions.appendChild(btns);
-      actions.appendChild(likeCount);
+      likeBtn.addEventListener("click", async () => {
+        likeCount.textContent = parseInt(likeCount.textContent) + 1;
+        await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
+      });
 
-      // Comments container
-      const commentsContainer = document.createElement('div');
-      commentsContainer.className = 'comments-container';
+      btns.append(likeBtn, commentBtn, saveBtn);
+      actions.append(btns, likeCount);
 
-      // Comment form (input + submit button)
-      const commentForm = document.createElement('form');
-      commentForm.className = 'comment-form';
-      commentForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const input = commentForm.querySelector('input');
+      const commentBox = document.createElement("div");
+      commentBox.className = "comment-box";
+      commentBox.innerHTML = `
+        <input type="text" placeholder="Add a comment..." />
+        <button>Post</button>
+      `;
+
+      const input = commentBox.querySelector("input");
+      const button = commentBox.querySelector("button");
+
+      const commentsRef = collection(db, "clixPosts", postId, "comments");
+      const commentsList = document.createElement("div");
+      commentsList.className = "comments-list";
+
+      onSnapshot(query(commentsRef, orderBy("createdAt", "desc")), (snap) => {
+        commentsList.innerHTML = "";
+        snap.forEach(commentDoc => {
+          const c = commentDoc.data();
+          const el = document.createElement("div");
+          el.innerHTML = `<strong>@${c.username || "anon"}</strong>: ${c.text}`;
+          commentsList.appendChild(el);
+        });
+      });
+
+      button.addEventListener("click", async () => {
         const text = input.value.trim();
-        if (!text) return alert('Please enter a comment.');
+        if (!text) return;
+
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        const username = userDoc.exists() ? userDoc.data().username : "anon";
 
         try {
-          const commentsRef = collection(db, "clixPosts", postId, "comments");
           await addDoc(commentsRef, {
             text,
-            createdAt: new Date()
+            username,
+            createdAt: serverTimestamp()
           });
-          input.value = '';
-        } catch (error) {
-          console.error("Error adding comment:", error);
-          alert('Failed to add comment. Try again.');
+          input.value = "";
+        } catch (e) {
+          alert("Failed to add comment. Try again.");
         }
       });
 
-      const commentInput = document.createElement('input');
-      commentInput.type = 'text';
-      commentInput.placeholder = 'Add a comment...';
-      commentInput.className = 'comment-input';
-
-      const commentSubmit = document.createElement('button');
-      commentSubmit.type = 'submit';
-      commentSubmit.textContent = 'Send';
-      commentSubmit.className = 'comment-submit';
-
-      commentForm.appendChild(commentInput);
-      commentForm.appendChild(commentSubmit);
-
-      // Focus input when comment button clicked
-      commentBtn.addEventListener('click', () => {
-        commentInput.focus();
-      });
-
-      postEl.appendChild(mediaEl);
-      postEl.appendChild(caption);
-      postEl.appendChild(actions);
-      postEl.appendChild(commentsContainer);
-      postEl.appendChild(commentForm);
-
+      postEl.append(mediaEl, caption, actions, commentsList, commentBox);
       feed.appendChild(postEl);
-
-      // Load comments realtime for this post
-      loadComments(postId, commentsContainer);
-    });
+    }
   }
-
-  loadFeed();
 </script>
 
 </body>
 </html>
-
