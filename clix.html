@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Clix Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clix • Feed</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
+    body, html {
       height: 100%;
       background: #000;
       font-family: 'Segoe UI', sans-serif;
@@ -23,44 +23,46 @@
       scroll-snap-align: start;
       position: relative;
       height: 100vh;
+      width: 100%;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       background: #000;
+      flex-direction: column;
     }
     .media {
       width: 100%;
-      max-height: 90vh;
-      object-fit: contain;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
     }
     .caption {
       position: absolute;
-      bottom: 110px;
+      bottom: 70px;
       left: 16px;
       right: 90px;
-      font-size: 1em;
+      font-size: 0.95em;
       background: rgba(0,0,0,0.6);
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: 12px;
     }
     .actions {
       position: absolute;
-      bottom: 110px;
+      bottom: 70px;
       right: 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .action-btn {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: rgba(255,255,255,0.1);
       color: white;
       border: none;
-      font-size: 1.4em;
+      font-size: 1.3em;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -93,9 +95,11 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, getAuth
+      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth as getFirebaseAuth } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -103,14 +107,12 @@
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getFirebaseAuth(app);
-
+    const auth = getAuth(app);
     const feedContainer = document.getElementById("feed");
 
     async function loadFeed() {
@@ -119,7 +121,27 @@
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
+          console.warn("⚠️ No posts found, loading sample...");
+          feedContainer.innerHTML = "";
+
+          const postEl = document.createElement("div");
+          postEl.className = "post";
+
+          const mediaEl = document.createElement("video");
+          mediaEl.src = "https://www.w3schools.com/html/mov_bbb.mp4";
+          mediaEl.autoplay = true;
+          mediaEl.muted = true;
+          mediaEl.loop = true;
+          mediaEl.playsInline = true;
+          mediaEl.className = "media";
+
+          const caption = document.createElement("div");
+          caption.className = "caption";
+          caption.textContent = "Sample Video - Upload your first Clix!";
+
+          postEl.appendChild(mediaEl);
+          postEl.appendChild(caption);
+          feedContainer.appendChild(postEl);
           return;
         }
 
@@ -132,7 +154,7 @@
 
           const mediaEl = post.type === "video"
             ? Object.assign(document.createElement("video"), {
-                src: post.mediaURL || "",
+                src: post.mediaURL,
                 autoplay: true,
                 muted: true,
                 loop: true,
@@ -140,16 +162,10 @@
                 className: "media"
               })
             : Object.assign(document.createElement("img"), {
-                src: post.mediaURL || "https://via.placeholder.com/300x600",
-                alt: post.caption || "Image Post",
+                src: post.mediaURL,
+                alt: post.caption || "",
                 className: "media"
               });
-
-          if (post.type === "video") {
-            mediaEl.addEventListener("click", () => {
-              mediaEl.muted = !mediaEl.muted;
-            });
-          }
 
           const caption = document.createElement("div");
           caption.className = "caption";
@@ -164,15 +180,13 @@
 
           const likeCount = document.createElement("div");
           likeCount.className = "like-count";
-          likeCount.textContent = post.likes?.length || 0;
+          likeCount.textContent = post.likes || 0;
 
           likeBtn.addEventListener("click", async () => {
-            const user = auth.currentUser;
-            if (!user) return alert("You must be logged in to like.");
-
-            likeCount.textContent = (parseInt(likeCount.textContent) || 0) + 1;
+            const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
+            likeCount.textContent = newLikes;
             await updateDoc(doc(db, "clixPosts", postId), {
-              likes: arrayUnion(user.uid)
+              likes: increment(1)
             });
           });
 
@@ -195,4 +209,5 @@
   </script>
 </body>
 </html>
+
 
