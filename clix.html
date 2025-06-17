@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Reels-style Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Clixly Reels Style Feed</title>
   <style>
     /* Reset */
     * {
@@ -11,181 +11,168 @@
       padding: 0;
       box-sizing: border-box;
     }
-    body {
+
+    body, html {
+      height: 100%;
       background: #000;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
       color: #fff;
-      font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 15px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Feed wrapper: center and max width */
-    .feed-container {
-      width: 100%;
-      max-width: 420px; /* typical phone width */
-      display: flex;
-      flex-direction: column;
-      gap: 30px;
-      overflow-y: auto;
-      scroll-behavior: smooth;
+    /* Feed container - vertical scroll, 100% viewport height */
+    .feed {
+      max-width: 420px;
+      margin: 0 auto;
+      height: 100vh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      background: #000;
+      position: relative;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #ff0050cc;
     }
 
-    /* Each post card with 9:16 ratio */
+    /* Each post takes full viewport height (like reels) */
     .post {
       position: relative;
-      background: #111;
-      border-radius: 20px;
-      overflow: hidden;
-      height: 700px; /* fixed height for demo */
+      height: 100vh;
+      scroll-snap-align: start;
       display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 12px #ff0050cc;
-      user-select: none;
-    }
-
-    /* Media container fills the post */
-    .media-container {
-      flex: 1 1 auto;
-      position: relative;
-      overflow: hidden;
-      border-radius: 20px 20px 0 0;
+      justify-content: center;
+      align-items: center;
       background: #000;
+      overflow: hidden;
+      user-select: none;
     }
 
-    /* Video or image fills container */
-    .media {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+    /* Video / image fills vertically, auto width */
+    .post video,
+    .post img {
+      max-height: 100vh;
       width: auto;
-      height: 100%;
-      max-width: none;
-      max-height: none;
-      border-radius: 20px 20px 0 0;
-      cursor: pointer;
-      user-select: none;
-    }
-    /* If media is portrait, fit width */
-    .media.landscape {
-      width: 100%;
-      height: auto;
+      display: block;
+      border-radius: 0;
+      object-fit: contain;
     }
 
-    /* Right vertical controls */
-    .right-controls {
+    /* Right side vertical controls container */
+    .controls {
       position: absolute;
-      top: 20%;
-      right: 10px;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
       display: flex;
       flex-direction: column;
-      gap: 24px;
       align-items: center;
+      gap: 28px;
       z-index: 10;
+      user-select: none;
     }
 
-    /* Buttons in controls */
-    .action-btn {
-      background: transparent;
-      border: none;
-      font-size: 2.4rem;
-      color: #fff;
-      cursor: pointer;
-      transition: transform 0.2s ease, color 0.3s ease;
-      user-select: none;
+    /* Each control button */
+    .control-btn {
+      background: rgba(0,0,0,0.4);
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
+      cursor: pointer;
+      color: white;
+      font-size: 28px;
+      transition: background-color 0.25s ease, transform 0.25s ease;
+      box-shadow: 0 4px 10px rgb(255 0 80 / 0.4);
     }
-    .action-btn:hover {
-      color: #ff0050;
-      transform: scale(1.2);
+    .control-btn:hover {
+      background-color: #ff0050;
+      transform: scale(1.15);
+      color: white;
+      box-shadow: 0 6px 15px #ff0050cc;
     }
 
     /* Like count below heart */
     .like-count {
-      font-size: 1rem;
-      margin-top: 4px;
-      color: #eee;
+      margin-top: 6px;
+      font-size: 14px;
+      color: #fff;
       user-select: none;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.03em;
     }
 
-    /* Caption area below media */
-    .caption-area {
-      padding: 15px 20px;
-      background: #111;
-      border-radius: 0 0 20px 20px;
-      min-height: 110px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      font-size: 1rem;
+    /* Caption area overlay bottom */
+    .caption-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 16px 20px 40px 20px;
+      background: linear-gradient(0deg, rgba(0,0,0,0.8), transparent);
+      color: white;
+      font-size: 15px;
       line-height: 1.3;
+      z-index: 9;
+      user-select: text;
     }
 
-    .caption-area strong {
+    .caption-overlay .username {
+      font-weight: 700;
       color: #ff0050;
       margin-bottom: 6px;
-      font-size: 1.1rem;
+      font-size: 17px;
     }
 
-    /* Upload button fixed bottom right */
+    /* Upload button bottom right fixed */
     .upload-btn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 28px;
+      right: 24px;
       background: #ff0050;
-      color: white;
-      font-size: 2.4em;
       border: none;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      box-shadow: 0 4px 15px rgba(255, 0, 80, 0.7);
+      font-size: 36px;
+      color: #fff;
       cursor: pointer;
+      box-shadow: 0 4px 16px #ff0050cc;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      z-index: 10000;
       display: flex;
       justify-content: center;
       align-items: center;
-      user-select: none;
-      transition: background-color 0.3s ease;
-      z-index: 9999;
     }
     .upload-btn:hover {
       background: #e60047;
     }
 
-    /* Scrollbar styling */
-    .feed-container::-webkit-scrollbar {
-      width: 8px;
-    }
-    .feed-container::-webkit-scrollbar-thumb {
-      background: #ff0050;
-      border-radius: 4px;
-    }
-
-    /* Responsive tweaks */
-    @media (max-width: 460px) {
-      .post {
-        height: 600px;
-      }
-      .action-btn {
-        font-size: 2rem;
+    /* Responsive font scaling */
+    @media (max-width: 450px) {
+      .control-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
       }
       .upload-btn {
-        width: 55px;
-        height: 55px;
-        font-size: 2rem;
+        width: 56px;
+        height: 56px;
+        font-size: 32px;
       }
     }
   </style>
 </head>
 <body>
 
-  <div class="feed-container" id="feed"></div>
+  <div class="feed" id="feed"></div>
 
-  <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
+  <button class="upload-btn" aria-label="Upload New Post" onclick="location.href='upload.html'">＋</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -207,128 +194,110 @@
     const db = getFirestore(app);
     const feed = document.getElementById("feed");
 
-    function checkMediaOrientation(mediaEl, callback) {
-      // For images/videos: detect orientation to adjust fit
-      if(mediaEl.tagName === "IMG"){
-        mediaEl.onload = () => {
-          if(mediaEl.naturalWidth > mediaEl.naturalHeight){
-            mediaEl.classList.add('landscape');
-          }
-          callback();
-        }
-      } else if(mediaEl.tagName === "VIDEO"){
-        // For videos, we can't easily check natural size via JS without metadata event
-        mediaEl.addEventListener('loadedmetadata', () => {
-          if(mediaEl.videoWidth > mediaEl.videoHeight){
-            mediaEl.classList.add('landscape');
-          }
-          callback();
-        });
-      } else {
-        callback();
-      }
-    }
-
+    // Load posts ordered by createdAt descending
     async function loadFeed() {
       const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
-
       if (snapshot.empty) {
-        feed.innerHTML = "<p style='text-align:center; padding:20px;'>No posts yet.</p>";
+        feed.innerHTML = "<p style='text-align:center; margin-top: 50px;'>No posts yet.</p>";
         return;
       }
-
       snapshot.forEach(docSnap => {
         const post = docSnap.data();
         const postId = docSnap.id;
 
-        const postEl = document.createElement("div");
-        postEl.className = "post";
+        // Create post container
+        const postEl = document.createElement("article");
+        postEl.classList.add("post");
 
-        // Media container for positioning
-        const mediaContainer = document.createElement("div");
-        mediaContainer.className = "media-container";
-
+        // Create media element
         let mediaEl;
-        if (post.type === "video") {
+        if(post.type === "video") {
           mediaEl = document.createElement("video");
           mediaEl.src = post.mediaURL || "";
           mediaEl.autoplay = true;
           mediaEl.muted = true;
           mediaEl.loop = true;
           mediaEl.playsInline = true;
-          mediaEl.className = "media";
-
-          // Toggle mute on click
+          mediaEl.setAttribute("playsinline", "");
+          mediaEl.style.objectFit = "contain";
+          // Toggle mute on tap
           mediaEl.addEventListener("click", () => {
             mediaEl.muted = !mediaEl.muted;
           });
-
-          mediaContainer.appendChild(mediaEl);
-          postEl.appendChild(mediaContainer);
-
-          // Check orientation and adjust media style after metadata loaded
-          checkMediaOrientation(mediaEl, () => {});
         } else {
           mediaEl = document.createElement("img");
           mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x700?text=No+Image";
           mediaEl.alt = post.caption || "Image Post";
-          mediaEl.className = "media";
-          mediaContainer.appendChild(mediaEl);
-          postEl.appendChild(mediaContainer);
-
-          // Check orientation and adjust media style after load
-          checkMediaOrientation(mediaEl, () => {});
+          mediaEl.style.objectFit = "contain";
+          mediaEl.draggable = false;
         }
+        postEl.appendChild(mediaEl);
 
-        // Right vertical controls container
-        const rightControls = document.createElement("div");
-        rightControls.className = "right-controls";
+        // Controls container
+        const controls = document.createElement("div");
+        controls.classList.add("controls");
 
         // Like button + count
         const likeBtn = document.createElement("button");
-        likeBtn.className = "action-btn";
+        likeBtn.classList.add("control-btn");
         likeBtn.innerHTML = "❤️";
-        let liked = false;
+        likeBtn.title = "Like";
 
         const likeCount = document.createElement("div");
-        likeCount.className = "like-count";
+        likeCount.classList.add("like-count");
         likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
 
         likeBtn.appendChild(likeCount);
 
+        let liked = false;
         likeBtn.addEventListener("click", async () => {
-          if (liked) return; // prevent multi likes for demo
+          if(liked) return;
           liked = true;
           likeCount.textContent = parseInt(likeCount.textContent) + 1;
-          likeBtn.style.color = "#ff0050";
+          likeBtn.style.backgroundColor = "#ff0050";
+          likeBtn.style.color = "#fff";
           await updateDoc(doc(db, "clixPosts", postId), {
             likes: increment(1)
           });
         });
 
-        // Comment button
+        // Comment button (placeholder)
         const commentBtn = document.createElement("button");
-        commentBtn.className = "action-btn";
+        commentBtn.classList.add("control-btn");
         commentBtn.textContent = "🗨️";
         commentBtn.title = "Comment (coming soon)";
+        commentBtn.disabled = true;
 
-        // Share button
+        // Share button (placeholder)
         const shareBtn = document.createElement("button");
-        shareBtn.className = "action-btn";
+        shareBtn.classList.add("control-btn");
         shareBtn.textContent = "↗️";
         shareBtn.title = "Share (coming soon)";
+        shareBtn.disabled = true;
 
-        rightControls.appendChild(likeBtn);
-        rightControls.appendChild(commentBtn);
-        rightControls.appendChild(shareBtn);
-        postEl.appendChild(rightControls);
+        controls.appendChild(likeBtn);
+        controls.appendChild(commentBtn);
+        controls.appendChild(shareBtn);
 
-        // Caption area below
-        const captionArea = document.createElement("div");
-        captionArea.className = "caption-area";
-        captionArea.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
-        postEl.appendChild(captionArea);
+        postEl.appendChild(controls);
+
+        // Caption overlay bottom
+        const captionOverlay = document.createElement("div");
+        captionOverlay.classList.add("caption-overlay");
+
+        const usernameEl = document.createElement("div");
+        usernameEl.classList.add("username");
+        usernameEl.textContent = `@${post.username || "user"}`;
+
+        const captionText = document.createElement("div");
+        captionText.classList.add("caption-text");
+        captionText.textContent = post.caption || "";
+
+        captionOverlay.appendChild(usernameEl);
+        captionOverlay.appendChild(captionText);
+
+        postEl.appendChild(captionOverlay);
 
         feed.appendChild(postEl);
       });
