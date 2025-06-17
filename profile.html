@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • All Users</title>
+  <title>Clixly • Users</title>
   <style>
     body {
       font-family: sans-serif;
@@ -24,7 +24,6 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      object-fit: cover;
     }
     .user-info {
       flex-grow: 1;
@@ -36,7 +35,7 @@
     .user-info p {
       margin: 5px 0 0;
       font-size: 14px;
-      color: #aaa;
+      color: #ccc;
     }
     .view-profile {
       background: #8a2be2;
@@ -49,7 +48,7 @@
   </style>
 </head>
 <body>
-  <h1>All Users</h1>
+  <h1>Explore People</h1>
   <div id="users-list"></div>
 
   <!-- Firebase -->
@@ -79,13 +78,13 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        alert("Login required");
+        alert("Please login to view users.");
         window.location.href = "login.html";
         return;
       }
 
-      const querySnapshot = await getDocs(collection(db, "users"));
-      querySnapshot.forEach((doc) => {
+      const snapshot = await getDocs(collection(db, "users"));
+      snapshot.forEach(doc => {
         const data = doc.data();
         const uid = doc.id;
 
@@ -99,7 +98,6 @@
           </div>
           <button class="view-profile" onclick="window.location.href='profile.html?uid=${uid}'">View</button>
         `;
-
         usersList.appendChild(div);
       });
     });
