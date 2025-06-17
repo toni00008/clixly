@@ -2,84 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Clixly • User Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clixly • All Users</title>
   <style>
     body {
-      font-family: sans-serif;
       background: #0d0d10;
       color: white;
+      font-family: sans-serif;
       padding: 20px;
-      max-width: 600px;
-      margin: auto;
     }
-    .profile-header {
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .user-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .user-card {
+      background: #1c1c26;
+      padding: 16px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       gap: 15px;
-      margin-bottom: 20px;
     }
-    .profile-header img {
-      width: 80px;
-      height: 80px;
+    .user-card img {
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       object-fit: cover;
-      background: #222;
+      background: #333;
     }
-    .follow-btn {
+    .user-info {
+      flex-grow: 1;
+    }
+    .view-btn {
       background: #8a2be2;
       color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 10px;
       cursor: pointer;
-      font-weight: bold;
-      margin-left: auto;
-    }
-    .post {
-      background: #1c1c26;
-      padding: 12px;
-      border-radius: 12px;
-      margin: 10px 0;
-    }
-    .post img {
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <div id="profile-container">
-    <div class="profile-header">
-      <img id="profile-pic" src="https://via.placeholder.com/80" alt="Profile Picture" />
-      <div>
-        <h2 id="username">Loading...</h2>
-        <p id="bio"></p>
-      </div>
-      <button id="follow-btn" class="follow-btn" style="display:none;">Follow</button>
-    </div>
-
-    <h3>User Posts</h3>
-    <div id="posts"></div>
-  </div>
+  <h1>Discover Users</h1>
+  <div class="user-list" id="userList">Loading...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      collection,
-      query,
-      where,
-      getDocs,
-      updateDoc,
-      arrayUnion,
-      arrayRemove
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -91,117 +67,46 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Get uid from URL query params
-    const urlParams = new URLSearchParams(window.location.search);
-    const uid = urlParams.get("uid");
+    const userList = document.getElementById("userList");
 
-    const usernameEl = document.getElementById("username");
-    const bioEl = document.getElementById("bio");
-    const picEl = document.getElementById("profile-pic");
-    const followBtn = document.getElementById("follow-btn");
-    const postsDiv = document.getElementById("posts");
-
-    if (!uid) {
-      document.body.innerHTML = "<h2 style='color:red;'>Error: UID not found in URL.</h2>";
-      throw new Error("UID not found in URL");
-    }
-
-    let currentUserUid = null;  // will hold logged-in user UID
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        alert("You must be logged in to view profiles.");
-        window.location.href = "login.html";
-        return;
-      }
-      currentUserUid = user.uid;
-      await loadProfile(uid);
-      await loadPosts(uid);
-    });
-
-    async function loadProfile(targetUid) {
+    async function loadUsers() {
       try {
-        const userRef = doc(db, "users", targetUid);
-        const userSnap = await getDoc(userRef);
+        const querySnapshot = await getDocs(collection(db, "users"));
+        userList.innerHTML = ""; // Clear loading text
 
-        if (!userSnap.exists()) {
-          document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
+        if (querySnapshot.empty) {
+          userList.textContent = "No users found.";
           return;
         }
 
-        const userData = userSnap.data();
+        querySnapshot.forEach(doc => {
+          const user = doc.data();
+          const uid = doc.id;
 
-        usernameEl.textContent = userData.username || "Unnamed User";
-        bioEl.textContent = userData.bio || "";
-        picEl.src = userData.profilePicture || "https://via.placeholder.com/80";
+          const userCard = document.createElement("div");
+          userCard.className = "user-card";
 
-        if (currentUserUid === targetUid) {
-          // Hide follow button if viewing own profile
-          followBtn.style.display = "none";
-          return;
-        }
-
-        followBtn.style.display = "inline-block";
-
-        // Check if current user follows target user
-        const currentUserRef = doc(db, "users", currentUserUid);
-        const currentUserSnap = await getDoc(currentUserRef);
-        const currentUserData = currentUserSnap.data();
-
-        const isFollowing = (currentUserData.following || []).includes(targetUid);
-        followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
-
-        followBtn.onclick = async () => {
-          if (followBtn.textContent === "Follow") {
-            await updateDoc(currentUserRef, {
-              following: arrayUnion(targetUid)
-            });
-            followBtn.textContent = "Unfollow";
-          } else {
-            await updateDoc(currentUserRef, {
-              following: arrayRemove(targetUid)
-            });
-            followBtn.textContent = "Follow";
-          }
-        };
-      } catch (error) {
-        console.error("Error loading profile:", error);
-        document.body.innerHTML = "<h2 style='color:red;'>Failed to load profile.</h2>";
-      }
-    }
-
-    async function loadPosts(targetUid) {
-      try {
-        postsDiv.innerHTML = "Loading posts...";
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", targetUid));
-        const postsSnap = await getDocs(postsQuery);
-
-        postsDiv.innerHTML = ""; // Clear loading text
-
-        if (postsSnap.empty) {
-          postsDiv.textContent = "No posts to display.";
-          return;
-        }
-
-        postsSnap.forEach(doc => {
-          const post = doc.data();
-          const postEl = document.createElement("div");
-          postEl.className = "post";
-          postEl.innerHTML = `
-            <div><strong>${usernameEl.textContent}</strong></div>
-            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post Image">` : ""}
-            <div>❤️ ${post.likes || 0}</div>
+          userCard.innerHTML = `
+            <img src="${user.profilePicture || 'https://via.placeholder.com/60'}" alt="User" />
+            <div class="user-info">
+              <h3 style="margin:0;">${user.username || "Unnamed User"}</h3>
+              <p style="margin:4px 0;">${user.bio || ""}</p>
+            </div>
+            <button class="view-btn" onclick="window.location.href='profile.html?uid=${uid}'">View</button>
           `;
-          postsDiv.appendChild(postEl);
+
+          userList.appendChild(userCard);
         });
+
       } catch (error) {
-        console.error("Error loading posts:", error);
-        postsDiv.textContent = "Failed to load posts.";
+        console.error("Error loading users:", error);
+        userList.textContent = "Failed to load users.";
       }
     }
+
+    loadUsers();
   </script>
 
 </body>
