@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • User Profile</title>
+  <title>Clixly • All Users</title>
   <style>
     body {
       font-family: sans-serif;
@@ -11,70 +11,57 @@
       color: white;
       padding: 20px;
     }
-    .profile-header {
+    .user-card {
+      background: #1a1a1f;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       gap: 15px;
-      margin-bottom: 20px;
     }
-    .profile-header img {
-      width: 80px;
-      height: 80px;
+    .user-card img {
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       object-fit: cover;
     }
-    .follow-btn {
+    .user-info {
+      flex-grow: 1;
+    }
+    .user-info h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .user-info p {
+      margin: 5px 0 0;
+      font-size: 14px;
+      color: #aaa;
+    }
+    .view-profile {
       background: #8a2be2;
       color: white;
       border: none;
-      padding: 8px 16px;
-      border-radius: 10px;
+      padding: 6px 12px;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
-    }
-    .post {
-      background: #1c1c26;
-      padding: 12px;
-      border-radius: 12px;
-      margin: 10px 0;
-    }
-    .post img {
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="profile-header">
-    <img id="profile-pic" src="" alt="Profile" />
-    <div>
-      <h2 id="username">Loading...</h2>
-      <p id="bio"></p>
-    </div>
-    <button class="follow-btn" id="follow-btn" style="margin-left:auto;">Follow</button>
-  </div>
+  <h1>All Users</h1>
+  <div id="users-list"></div>
 
-  <div id="posts"></div>
-
-  <!-- Firebase SDK -->
+  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
       getFirestore,
-      doc,
-      getDoc,
       collection,
-      query,
-      where,
-      getDocs,
-      updateDoc,
-      arrayUnion,
-      arrayRemove
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -84,26 +71,11 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Get UID from URL
-    const uid = new URLSearchParams(window.location.search).get("uid");
-    if (!uid) {
-      document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
-      throw new Error("No UID in URL");
-    }
-
-    // DOM Elements
-    const usernameEl = document.getElementById("username");
-    const bioEl = document.getElementById("bio");
-    const picEl = document.getElementById("profile-pic");
-    const followBtn = document.getElementById("follow-btn");
-    const postsDiv = document.getElementById("posts");
-
-    let currentUserUid = null;
+    const usersList = document.getElementById("users-list");
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -112,66 +84,27 @@
         return;
       }
 
-      currentUserUid = user.uid;
+      const querySnapshot = await getDocs(collection(db, "users"));
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const uid = doc.id;
 
-      // Load user being viewed
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
-        return;
-      }
-
-      const data = userSnap.data();
-      usernameEl.textContent = data.username || "Unnamed";
-      bioEl.textContent = data.bio || "";
-      picEl.src = data.profilePicture || "https://via.placeholder.com/80";
-
-      // Follow/unfollow button
-      const currentUserRef = doc(db, "users", currentUserUid);
-      const currentSnap = await getDoc(currentUserRef);
-      const currentData = currentSnap.data();
-      let isFollowing = (currentData.following || []).includes(uid);
-
-      const updateFollowBtn = () => {
-        followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
-      };
-
-      updateFollowBtn();
-
-      followBtn.onclick = async () => {
-        if (isFollowing) {
-          await updateDoc(currentUserRef, {
-            following: arrayRemove(uid)
-          });
-          isFollowing = false;
-        } else {
-          await updateDoc(currentUserRef, {
-            following: arrayUnion(uid)
-          });
-          isFollowing = true;
-        }
-        updateFollowBtn();
-      };
-
-      // Show user’s posts
-      const postQuery = query(collection(db, "posts"), where("userId", "==", uid));
-      const postSnap = await getDocs(postQuery);
-
-      postSnap.forEach((doc) => {
-        const post = doc.data();
-        const postEl = document.createElement("div");
-        postEl.className = "post";
-        postEl.innerHTML = `
-          <b>${data.username}</b><br>
-          <img src="${post.imageUrl}" alt="Post" />
-          <div class="likes">❤️ ${post.likes || 0}</div>
+        const div = document.createElement("div");
+        div.className = "user-card";
+        div.innerHTML = `
+          <img src="${data.profilePicture || 'https://via.placeholder.com/60'}" />
+          <div class="user-info">
+            <h3>${data.username || "Unnamed"}</h3>
+            <p>${data.bio || ""}</p>
+          </div>
+          <button class="view-profile" onclick="window.location.href='profile.html?uid=${uid}'">View</button>
         `;
-        postsDiv.appendChild(postEl);
+
+        usersList.appendChild(div);
       });
     });
   </script>
 </body>
 </html>
+
 
