@@ -3,59 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • All Users</title>
+  <title>Clixly • User Profile</title>
   <style>
     body {
+      font-family: sans-serif;
       background: #0d0d10;
       color: white;
-      font-family: sans-serif;
       padding: 20px;
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .user-list {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    .user-card {
-      background: #1c1c26;
-      padding: 16px;
-      border-radius: 10px;
+    .profile-header {
       display: flex;
       align-items: center;
       gap: 15px;
+      margin-bottom: 20px;
     }
-    .user-card img {
-      width: 60px;
-      height: 60px;
+    .profile-header img {
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       object-fit: cover;
-      background: #333;
     }
-    .user-info {
-      flex-grow: 1;
-    }
-    .view-btn {
+    .follow-btn {
       background: #8a2be2;
       color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 10px;
       cursor: pointer;
+      font-weight: bold;
+    }
+    .post {
+      background: #1c1c26;
+      padding: 12px;
+      border-radius: 12px;
+      margin: 10px 0;
+    }
+    .post img {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
+  <div class="profile-header">
+    <img id="profile-pic" src="" alt="Profile" />
+    <div>
+      <h2 id="username">Loading...</h2>
+      <p id="bio"></p>
+    </div>
+    <button class="follow-btn" id="follow-btn" style="margin-left:auto;">Follow</button>
+  </div>
 
-  <h1>Discover Users</h1>
-  <div class="user-list" id="userList">Loading...</div>
+  <div id="posts"></div>
 
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      collection,
+      query,
+      where,
+      getDocs,
+      updateDoc,
+      arrayUnion,
+      arrayRemove
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -67,47 +84,86 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const userList = document.getElementById("userList");
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get("uid");
 
-    async function loadUsers() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        userList.innerHTML = ""; // Clear loading text
-
-        if (querySnapshot.empty) {
-          userList.textContent = "No users found.";
-          return;
-        }
-
-        querySnapshot.forEach(doc => {
-          const user = doc.data();
-          const uid = doc.id;
-
-          const userCard = document.createElement("div");
-          userCard.className = "user-card";
-
-          userCard.innerHTML = `
-            <img src="${user.profilePicture || 'https://via.placeholder.com/60'}" alt="User" />
-            <div class="user-info">
-              <h3 style="margin:0;">${user.username || "Unnamed User"}</h3>
-              <p style="margin:4px 0;">${user.bio || ""}</p>
-            </div>
-            <button class="view-btn" onclick="window.location.href='profile.html?uid=${uid}'">View</button>
-          `;
-
-          userList.appendChild(userCard);
-        });
-
-      } catch (error) {
-        console.error("Error loading users:", error);
-        userList.textContent = "Failed to load users.";
-      }
+    // ✅ Redirect if no UID
+    if (!uid) {
+      alert("No user ID found. Redirecting...");
+      window.location.href = "profiles.html";
     }
 
-    loadUsers();
-  </script>
+    const usernameEl = document.getElementById("username");
+    const bioEl = document.getElementById("bio");
+    const picEl = document.getElementById("profile-pic");
+    const followBtn = document.getElementById("follow-btn");
+    const postsDiv = document.getElementById("posts");
 
+    let currentUserUid = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("Login required.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUserUid = user.uid;
+
+      // 🧠 Fetch target user's data
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        alert("User not found.");
+        window.location.href = "profiles.html";
+        return;
+      }
+
+      const userData = userSnap.data();
+      usernameEl.textContent = userData.username || "Unnamed";
+      bioEl.textContent = userData.bio || "";
+      picEl.src = userData.profilePicture || "https://via.placeholder.com/80";
+
+      // Follow / Unfollow logic
+      const currentUserRef = doc(db, "users", currentUserUid);
+      const currentSnap = await getDoc(currentUserRef);
+      const currentData = currentSnap.data();
+      const isFollowing = (currentData.following || []).includes(uid);
+
+      followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
+      followBtn.onclick = async () => {
+        if (isFollowing) {
+          await updateDoc(currentUserRef, {
+            following: arrayRemove(uid)
+          });
+          followBtn.textContent = "Follow";
+        } else {
+          await updateDoc(currentUserRef, {
+            following: arrayUnion(uid)
+          });
+          followBtn.textContent = "Unfollow";
+        }
+      };
+
+      // 🔥 Load user's posts
+      const q = query(collection(db, "posts"), where("userId", "==", uid));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const post = doc.data();
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+        postEl.innerHTML = `
+          <b>${userData.username}</b>
+          <img src="${post.imageUrl}" alt="Post" />
+          <div class="likes">❤️ ${post.likes || 0}</div>
+        `;
+        postsDiv.appendChild(postEl);
+      });
+    });
+  </script>
 </body>
 </html>
+
