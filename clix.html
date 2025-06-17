@@ -5,84 +5,73 @@
   <title>Clix • Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #000;
       color: #fff;
+      overflow-x: hidden;
     }
     .feed-container {
       display: flex;
       flex-direction: column;
-      gap: 24px;
-      padding: 16px;
-      max-width: 600px;
-      margin: auto;
+      gap: 20px;
+      padding: 10px;
     }
     .post {
+      position: relative;
       background: #111;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+      aspect-ratio: 9/16;
     }
     .media {
       width: 100%;
-      height: auto;
-      max-height: 75vh;
+      height: 100%;
       object-fit: cover;
       display: block;
     }
+    video.media {
+      width: 100%;
+      height: 100%;
+    }
+    .overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      padding: 10px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 50%);
+      width: 100%;
+    }
     .caption {
-      padding: 12px 16px;
-      font-size: 1em;
-      line-height: 1.5;
+      font-size: 0.9em;
+      line-height: 1.4em;
+    }
+    .username {
+      font-weight: bold;
     }
     .actions {
+      position: absolute;
+      right: 10px;
+      bottom: 80px;
       display: flex;
-      justify-content: space-between;
-      padding: 0 16px 12px;
-      align-items: center;
-    }
-    .action-btns {
-      display: flex;
-      gap: 18px;
+      flex-direction: column;
+      gap: 15px;
     }
     .action-btn {
-      font-size: 1.4rem;
+      font-size: 1.5em;
       background: none;
       border: none;
       color: #fff;
       cursor: pointer;
     }
     .likes {
-      font-size: 0.85rem;
-      color: #ccc;
-    }
-    .comment-box {
-      display: flex;
-      gap: 8px;
-      padding: 0 16px 12px;
-    }
-    .comment-box input {
-      flex: 1;
-      background: #222;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 8px 12px;
-    }
-    .comment-box button {
-      background: #ff0050;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 8px 14px;
-      cursor: pointer;
-    }
-    .comments-list {
-      padding: 0 16px 12px;
-      font-size: 0.9rem;
-      color: #ddd;
+      font-size: 0.75em;
+      text-align: center;
+      margin-top: 4px;
     }
     .upload-btn {
       position: fixed;
@@ -107,12 +96,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, collection, query, orderBy, getDocs, doc,
-    updateDoc, increment, addDoc, serverTimestamp, getDoc, onSnapshot
+    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import {
-    getAuth, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -126,18 +111,9 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const auth = getAuth();
   const feed = document.getElementById("feed");
 
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      alert("You must be logged in to view and comment.");
-    } else {
-      loadFeed(user);
-    }
-  });
-
-  async function loadFeed(currentUser) {
+  async function loadFeed() {
     const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
@@ -146,7 +122,7 @@
       return;
     }
 
-    for (const docSnap of snapshot.docs) {
+    snapshot.forEach(docSnap => {
       const post = docSnap.data();
       const postId = docSnap.id;
 
@@ -156,29 +132,37 @@
       let mediaEl;
       if (post.type === "video") {
         mediaEl = document.createElement("video");
-        mediaEl.src = post.mediaURL;
+        mediaEl.src = post.mediaURL || "";
         mediaEl.autoplay = true;
         mediaEl.muted = true;
         mediaEl.loop = true;
         mediaEl.playsInline = true;
         mediaEl.className = "media";
-        mediaEl.addEventListener("click", () => mediaEl.muted = !mediaEl.muted);
+
+        mediaEl.addEventListener("click", () => {
+          mediaEl.muted = !mediaEl.muted;
+        });
+
       } else {
         mediaEl = document.createElement("img");
-        mediaEl.src = post.mediaURL;
-        mediaEl.alt = "Post Image";
+        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+        mediaEl.alt = post.caption || "Image Post";
         mediaEl.className = "media";
       }
 
+      const overlay = document.createElement("div");
+      overlay.className = "overlay";
+
       const caption = document.createElement("div");
       caption.className = "caption";
-      caption.innerHTML = `<strong>@${post.username || "user"}</strong><br>${post.caption || ""}`;
+      const username = post.username && typeof post.username === "string" && !post.username.includes(",") 
+        ? post.username 
+        : "user";
+      caption.innerHTML = `<div class="username">@${username}</div>${post.caption || ''}`;
+      overlay.appendChild(caption);
 
       const actions = document.createElement("div");
       actions.className = "actions";
-
-      const btns = document.createElement("div");
-      btns.className = "action-btns";
 
       const likeBtn = document.createElement("button");
       likeBtn.className = "action-btn";
@@ -186,71 +170,38 @@
 
       const commentBtn = document.createElement("button");
       commentBtn.className = "action-btn";
-      commentBtn.textContent = "🗨️";
+      commentBtn.textContent = "💬";
 
       const saveBtn = document.createElement("button");
       saveBtn.className = "action-btn";
       saveBtn.textContent = "🔖";
 
+      const shareBtn = document.createElement("button");
+      shareBtn.className = "action-btn";
+      shareBtn.textContent = "📤";
+
       const likeCount = document.createElement("div");
       likeCount.className = "likes";
-      likeCount.textContent = post.likes || 0;
+      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
 
       likeBtn.addEventListener("click", async () => {
-        likeCount.textContent = parseInt(likeCount.textContent) + 1;
-        await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
-      });
-
-      btns.append(likeBtn, commentBtn, saveBtn);
-      actions.append(btns, likeCount);
-
-      const commentBox = document.createElement("div");
-      commentBox.className = "comment-box";
-      commentBox.innerHTML = `
-        <input type="text" placeholder="Add a comment..." />
-        <button>Post</button>
-      `;
-
-      const input = commentBox.querySelector("input");
-      const button = commentBox.querySelector("button");
-
-      const commentsRef = collection(db, "clixPosts", postId, "comments");
-      const commentsList = document.createElement("div");
-      commentsList.className = "comments-list";
-
-      onSnapshot(query(commentsRef, orderBy("createdAt", "desc")), (snap) => {
-        commentsList.innerHTML = "";
-        snap.forEach(commentDoc => {
-          const c = commentDoc.data();
-          const el = document.createElement("div");
-          el.innerHTML = `<strong>@${c.username || "anon"}</strong>: ${c.text}`;
-          commentsList.appendChild(el);
+        const newLikes = parseInt(likeCount.textContent) + 1;
+        likeCount.textContent = newLikes;
+        await updateDoc(doc(db, "clixPosts", postId), {
+          likes: increment(1)
         });
       });
 
-      button.addEventListener("click", async () => {
-        const text = input.value.trim();
-        if (!text) return;
+      [likeBtn, likeCount, commentBtn, saveBtn, shareBtn].forEach(el => actions.appendChild(el));
 
-        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-        const username = userDoc.exists() ? userDoc.data().username : "anon";
-
-        try {
-          await addDoc(commentsRef, {
-            text,
-            username,
-            createdAt: serverTimestamp()
-          });
-          input.value = "";
-        } catch (e) {
-          alert("Failed to add comment. Try again.");
-        }
-      });
-
-      postEl.append(mediaEl, caption, actions, commentsList, commentBox);
+      postEl.appendChild(mediaEl);
+      postEl.appendChild(overlay);
+      postEl.appendChild(actions);
       feed.appendChild(postEl);
-    }
+    });
   }
+
+  loadFeed();
 </script>
 
 </body>
