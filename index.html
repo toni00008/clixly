@@ -170,11 +170,11 @@
         <div class="auth-buttons">
           <button id="signup-btn" onclick="window.location.href='signup.html'">Sign Up</button>
           <button id="login-btn" onclick="window.location.href='login.html'">Login</button>
-          <button id="edit%20profile-btn" style="display:none;">Edit Profile</button>
+          <button id="edit-profile-btn" style="display:none;">Edit Profile</button>
         </div>
       </div>
 
-      <!-- Sample Post -->
+      <!-- Sample Posts -->
       <div class="post">
         <b>alex123</b> • 2h ago
         <img src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80" alt="Post" />
@@ -218,7 +218,7 @@
         loginBtn.style.display = "none";
         editBtn.style.display = "inline-block";
         editBtn.onclick = () => {
-          window.location.href = "edit-profile.html";
+          window.location.href = "edit profile.html"; // 🟢 updated with space
         };
       }
     });
