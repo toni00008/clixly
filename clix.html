@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html {
@@ -17,12 +17,11 @@
       height: 100vh;
       overflow-y: auto;
       scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch;
     }
     .post {
       scroll-snap-align: start;
       position: relative;
-      min-height: 100vh;
+      height: 100vh;
       width: 100%;
       display: flex;
       align-items: center;
@@ -31,8 +30,11 @@
       flex-direction: column;
     }
     .media {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100vh;
+      height: 100%;
       object-fit: cover;
     }
     .caption {
@@ -52,16 +54,16 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .action-btn {
-      width: 48px;
-      height: 48px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: rgba(255,255,255,0.1);
       color: white;
       border: none;
-      font-size: 1.4em;
+      font-size: 1.2em;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -81,28 +83,6 @@
       z-index: 10;
       cursor: pointer;
     }
-    .comment-box {
-      position: absolute;
-      bottom: 20px;
-      left: 16px;
-      right: 90px;
-      display: flex;
-      align-items: center;
-    }
-    .comment-box input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 20px;
-      border: none;
-    }
-    .comment-box button {
-      margin-left: 10px;
-      background: #ff0050;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      padding: 10px 15px;
-    }
   </style>
 </head>
 <body>
@@ -112,11 +92,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, addDoc
+      getFirestore, collection, query, orderBy, getDocs,
+      doc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -129,13 +107,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
     const feedContainer = document.getElementById("feed");
-
-    let currentUser = null;
-    onAuthStateChanged(auth, user => {
-      if (user) currentUser = user;
-    });
 
     async function loadFeed() {
       const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
@@ -144,6 +116,7 @@
       snapshot.forEach(docSnap => {
         const post = docSnap.data();
         const postId = docSnap.id;
+
         const postEl = document.createElement("div");
         postEl.className = "post";
 
@@ -158,7 +131,6 @@
             })
           : Object.assign(document.createElement("img"), {
               src: post.mediaURL,
-              alt: "Post",
               className: "media"
             });
 
@@ -177,56 +149,45 @@
 
         const likeBtn = document.createElement("button");
         likeBtn.className = "action-btn";
-        likeBtn.innerHTML = post.likes?.includes(currentUser?.uid) ? "❤️" : "🤍";
+        likeBtn.textContent = "❤️";
+        const likeCount = document.createElement("div");
+        likeCount.textContent = post.likes || 0;
 
         likeBtn.addEventListener("click", async () => {
-          const postRef = doc(db, "clixPosts", postId);
-          const liked = post.likes?.includes(currentUser?.uid);
-
-          likeBtn.innerHTML = liked ? "🤍" : "❤️";
-          await updateDoc(postRef, {
-            likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-          });
+          await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
+          likeCount.textContent = parseInt(likeCount.textContent) + 1;
         });
 
-        const commentBox = document.createElement("div");
-        commentBox.className = "comment-box";
-
-        const input = document.createElement("input");
-        input.placeholder = "Add a comment...";
-        const send = document.createElement("button");
-        send.textContent = "Post";
-
-        send.onclick = async () => {
-          if (!input.value.trim()) return;
-          await addDoc(collection(db, `clixPosts/${postId}/comments`), {
-            user: currentUser.uid,
-            text: input.value,
-            createdAt: Date.now()
-          });
-          input.value = "";
-        };
-
-        commentBox.appendChild(input);
-        commentBox.appendChild(send);
+        const commentBtn = document.createElement("button");
+        commentBtn.className = "action-btn";
+        commentBtn.textContent = "💬";
+        commentBtn.addEventListener("click", () => {
+          alert("Comments feature coming soon");
+        });
 
         const saveBtn = document.createElement("button");
         saveBtn.className = "action-btn";
-        saveBtn.innerHTML = "🔖";
-        saveBtn.addEventListener("click", async () => {
-          const userRef = doc(db, "users", currentUser.uid);
-          await updateDoc(userRef, {
-            savedPosts: arrayUnion(postId)
-          });
+        saveBtn.textContent = "🔖";
+        saveBtn.addEventListener("click", () => {
+          alert("Saved post");
+        });
+
+        const profileBtn = document.createElement("button");
+        profileBtn.className = "action-btn";
+        profileBtn.textContent = "👤";
+        profileBtn.addEventListener("click", () => {
+          alert("Profile page coming soon");
         });
 
         actions.appendChild(likeBtn);
+        actions.appendChild(likeCount);
+        actions.appendChild(commentBtn);
         actions.appendChild(saveBtn);
+        actions.appendChild(profileBtn);
 
         postEl.appendChild(mediaEl);
         postEl.appendChild(caption);
         postEl.appendChild(actions);
-        postEl.appendChild(commentBox);
         feedContainer.appendChild(postEl);
       });
     }
@@ -235,3 +196,4 @@
   </script>
 </body>
 </html>
+
