@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • User Profile</title>
+  <title>Clixly • Profile</title>
   <style>
     body {
       font-family: sans-serif;
@@ -48,30 +48,23 @@
 </head>
 <body>
   <div class="profile-header">
-    <img id="profile-pic" src="" alt="Profile" />
+    <img id="profile-pic" src="https://via.placeholder.com/80" alt="Profile" />
     <div>
       <h2 id="username">Loading...</h2>
       <p id="bio"></p>
     </div>
-    <button class="follow-btn" id="follow-btn">Follow</button>
+    <button class="follow-btn" id="follow-btn" style="display:none;">Follow</button>
   </div>
 
   <div id="posts"></div>
 
+  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore,
-      doc,
-      getDoc,
-      collection,
-      query,
-      where,
-      getDocs,
-      updateDoc,
-      arrayUnion,
-      arrayRemove
+      getFirestore, doc, getDoc, collection, query, where, getDocs,
+      updateDoc, arrayUnion, arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -84,8 +77,8 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
     const uid = new URLSearchParams(window.location.search).get("uid");
     const usernameEl = document.getElementById("username");
@@ -94,72 +87,65 @@
     const followBtn = document.getElementById("follow-btn");
     const postsDiv = document.getElementById("posts");
 
-    let currentUserUid = null;
+    if (!uid) {
+      document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
+      throw new Error("UID not found in URL");
+    }
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        alert("Please login to view profile.");
-        window.location.href = "login.html";
-        return;
-      }
+      if (!user) return window.location.href = "login.html";
 
-      currentUserUid = user.uid;
+      const profileRef = doc(db, "users", uid);
+      const profileSnap = await getDoc(profileRef);
 
-      if (!uid) {
-        document.body.innerHTML = "<h2 style='color:red;'>User not found in URL.</h2>";
-        return;
-      }
-
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
+      if (!profileSnap.exists()) {
         document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
         return;
       }
 
-      const data = userSnap.data();
+      const data = profileSnap.data();
       usernameEl.textContent = data.username || "Unnamed";
       bioEl.textContent = data.bio || "";
       picEl.src = data.profilePicture || "https://via.placeholder.com/80";
 
-      const currentUserRef = doc(db, "users", currentUserUid);
-      const currentSnap = await getDoc(currentUserRef);
+      // Follow system
+      followBtn.style.display = "inline-block";
+      const currentRef = doc(db, "users", user.uid);
+      const currentSnap = await getDoc(currentRef);
       const currentData = currentSnap.data();
-      const isFollowing = (currentData.following || []).includes(uid);
 
+      const isFollowing = (currentData.following || []).includes(uid);
       followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
+
       followBtn.onclick = async () => {
         if (isFollowing) {
-          await updateDoc(currentUserRef, {
+          await updateDoc(currentRef, {
             following: arrayRemove(uid)
           });
           followBtn.textContent = "Follow";
         } else {
-          await updateDoc(currentUserRef, {
+          await updateDoc(currentRef, {
             following: arrayUnion(uid)
           });
           followBtn.textContent = "Unfollow";
         }
       };
 
+      // Show posts
       const q = query(collection(db, "posts"), where("userId", "==", uid));
-      const querySnapshot = await getDocs(q);
-      querySnapshot.forEach((doc) => {
-        const post = doc.data();
-        const postEl = document.createElement("div");
-        postEl.className = "post";
-        postEl.innerHTML = `
+      const posts = await getDocs(q);
+      posts.forEach(postDoc => {
+        const post = postDoc.data();
+        const el = document.createElement("div");
+        el.className = "post";
+        el.innerHTML = `
           <b>${data.username}</b>
-          <img src="${post.imageUrl}" alt="Post" />
-          <div>❤️ ${post.likes || 0}</div>
+          <img src="${post.imageUrl}" />
+          <div class="likes">❤️ ${post.likes || 0}</div>
         `;
-        postsDiv.appendChild(postEl);
+        postsDiv.appendChild(el);
       });
     });
   </script>
 </body>
 </html>
-
-
-
