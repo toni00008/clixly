@@ -2,19 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clix • Feed with Comments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #000;
       color: #fff;
       overflow-x: hidden;
+      min-height: 100vh;
+      padding-bottom: 80px; /* space for upload button */
     }
     .feed-container {
       display: flex;
@@ -23,102 +21,138 @@
       padding: 10px;
       overflow-y: auto;
       max-width: 600px;
-      margin: 0 auto;
+      margin: auto;
     }
     .post {
       position: relative;
       background: #111;
       border-radius: 16px;
       overflow: hidden;
-      aspect-ratio: 9 / 16;
       max-width: 100%;
+      box-shadow: 0 0 8px #ff0050aa;
+      padding-bottom: 10px;
+    }
+    .media {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 16px 16px 0 0;
       user-select: none;
     }
-    /* Media */
-    .post video,
-    .post img {
+    video.media {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
-      position: relative; /* make sure z-index works */
-      z-index: 1;
-      border-radius: 16px;
-      user-select: none;
+      height: auto;
+      border-radius: 16px 16px 0 0;
     }
-    /* Caption Overlay */
-    .caption-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 16px 20px 40px 20px;
-      background: linear-gradient(0deg, rgba(0, 0, 0, 0.85), transparent);
-      color: white;
-      font-size: 15px;
-      line-height: 1.3;
-      z-index: 10;
-      user-select: text;
+    .caption {
+      padding: 10px;
+      font-size: 0.95em;
+      border-bottom: 1px solid #222;
     }
-    /* Controls on the right side */
-    .controls {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
+    .actions {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      padding: 0 10px 10px;
       align-items: center;
-      gap: 28px;
-      z-index: 10;
-      user-select: none;
     }
-    .controls button {
-      font-size: 1.8rem;
-      background: transparent;
+    .action-btns {
+      display: flex;
+      gap: 16px;
+    }
+    .action-btn {
+      font-size: 1.5em;
+      background: none;
       border: none;
-      color: white;
+      color: #fff;
       cursor: pointer;
-      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
-      transition: transform 0.15s ease;
+      transition: color 0.3s ease;
     }
-    .controls button:active {
-      transform: scale(0.9);
+    .action-btn:hover {
+      color: #ff0050;
     }
-    /* Like count below like button */
-    .like-count {
-      font-size: 0.9rem;
-      margin-top: 4px;
-      color: #ff3860;
-      font-weight: 600;
+    .likes {
+      font-size: 0.8em;
+      color: #bbb;
       user-select: none;
     }
-    /* Upload button bottom right */
+    /* Comments container */
+    .comments-container {
+      max-height: 150px;
+      overflow-y: auto;
+      background: #222;
+      border-radius: 12px;
+      padding: 8px 10px;
+      margin: 8px 10px;
+      color: #ddd;
+      font-size: 0.9em;
+      scrollbar-width: thin;
+    }
+    .comments-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .comments-container::-webkit-scrollbar-thumb {
+      background-color: #555;
+      border-radius: 10px;
+    }
+    .comment-item {
+      border-bottom: 1px solid #333;
+      padding: 6px 0;
+    }
+    .comment-text {
+      margin-bottom: 2px;
+    }
+    .comment-time {
+      font-size: 0.75em;
+      color: #666;
+      user-select: none;
+    }
+    /* Comment input form */
+    .comment-form {
+      display: flex;
+      align-items: center;
+      padding: 0 10px 10px;
+      gap: 10px;
+    }
+    .comment-input {
+      flex-grow: 1;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 1em;
+    }
+    .comment-submit {
+      padding: 6px 16px;
+      border-radius: 8px;
+      border: none;
+      background: #ff0050;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .comment-submit:hover {
+      background: #e60047;
+    }
+    /* Upload button */
     .upload-btn {
       position: fixed;
       bottom: 20px;
       right: 20px;
       background: #ff0050;
       color: white;
-      font-size: 2.4em;
+      font-size: 2em;
       border: none;
       border-radius: 50%;
       width: 60px;
       height: 60px;
       z-index: 100;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(255, 0, 80, 0.7);
-      user-select: none;
+      box-shadow: 0 0 10px #ff0050aa;
+      transition: background-color 0.3s ease;
     }
-    /* Responsive tweaks */
-    @media (max-width: 400px) {
-      .controls button {
-        font-size: 1.5rem;
-        margin: 0;
-      }
-      .caption-overlay {
-        font-size: 13px;
-        padding-bottom: 30px;
-      }
+    .upload-btn:hover {
+      background: #e60047;
     }
   </style>
 </head>
@@ -130,7 +164,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
+    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment, addDoc, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -147,9 +181,46 @@
   const db = getFirestore(app);
   const feed = document.getElementById("feed");
 
+  // Load comments realtime for a post
+  function loadComments(postId, container) {
+    const commentsRef = collection(db, "clixPosts", postId, "comments");
+    const q = query(commentsRef, orderBy("createdAt", "asc"));
+
+    return onSnapshot(q, (querySnapshot) => {
+      container.innerHTML = ''; // clear previous comments
+      if (querySnapshot.empty) {
+        container.innerHTML = '<small style="color:#aaa;">No comments yet</small>';
+        return;
+      }
+
+      querySnapshot.forEach(doc => {
+        const comment = doc.data();
+        const commentEl = document.createElement('div');
+        commentEl.className = 'comment-item';
+
+        const textEl = document.createElement('div');
+        textEl.className = 'comment-text';
+        textEl.textContent = comment.text;
+
+        const date = comment.createdAt?.toDate?.() || new Date();
+        const timeStr = date.toLocaleString();
+
+        const timeEl = document.createElement('div');
+        timeEl.className = 'comment-time';
+        timeEl.textContent = timeStr;
+
+        commentEl.appendChild(textEl);
+        commentEl.appendChild(timeEl);
+        container.appendChild(commentEl);
+      });
+    });
+  }
+
   async function loadFeed() {
     const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
+
+    feed.innerHTML = '';
 
     if (snapshot.empty) {
       feed.innerHTML = "<p style='text-align:center;'>No posts yet.</p>";
@@ -173,7 +244,6 @@
         mediaEl.playsInline = true;
         mediaEl.className = "media";
 
-        // Mute/Unmute on tap
         mediaEl.addEventListener("click", () => {
           mediaEl.muted = !mediaEl.muted;
         });
@@ -185,22 +255,24 @@
         mediaEl.className = "media";
       }
 
-      // Caption overlay
-      const captionOverlay = document.createElement("div");
-      captionOverlay.className = "caption-overlay";
-      captionOverlay.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
+      const caption = document.createElement("div");
+      caption.className = "caption";
+      caption.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
 
-      // Controls container
-      const controls = document.createElement("div");
-      controls.className = "controls";
+      // Actions (like, comment, save)
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
-      // Like button and count
+      const btns = document.createElement("div");
+      btns.className = "action-btns";
+
+      // Like button
       const likeBtn = document.createElement("button");
-      likeBtn.title = "Like";
-      likeBtn.innerHTML = "❤️";
+      likeBtn.className = "action-btn";
+      likeBtn.textContent = "❤️";
 
       const likeCount = document.createElement("div");
-      likeCount.className = "like-count";
+      likeCount.className = "likes";
       likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
 
       likeBtn.addEventListener("click", async () => {
@@ -211,26 +283,78 @@
         });
       });
 
-      // Comment button
+      // Comment button (focus input on click)
       const commentBtn = document.createElement("button");
-      commentBtn.title = "Comment";
-      commentBtn.textContent = "💬";
+      commentBtn.className = "action-btn";
+      commentBtn.textContent = "🗨️";
+      commentBtn.title = "Focus comment input";
 
-      // Share button
-      const shareBtn = document.createElement("button");
-      shareBtn.title = "Share";
-      shareBtn.textContent = "🔗";
+      // Save button (placeholder)
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "action-btn";
+      saveBtn.textContent = "🔖";
 
-      controls.appendChild(likeBtn);
-      controls.appendChild(likeCount);
-      controls.appendChild(commentBtn);
-      controls.appendChild(shareBtn);
+      btns.appendChild(likeBtn);
+      btns.appendChild(commentBtn);
+      btns.appendChild(saveBtn);
+
+      actions.appendChild(btns);
+      actions.appendChild(likeCount);
+
+      // Comments container
+      const commentsContainer = document.createElement('div');
+      commentsContainer.className = 'comments-container';
+
+      // Comment form (input + submit button)
+      const commentForm = document.createElement('form');
+      commentForm.className = 'comment-form';
+      commentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = commentForm.querySelector('input');
+        const text = input.value.trim();
+        if (!text) return alert('Please enter a comment.');
+
+        try {
+          const commentsRef = collection(db, "clixPosts", postId, "comments");
+          await addDoc(commentsRef, {
+            text,
+            createdAt: new Date()
+          });
+          input.value = '';
+        } catch (error) {
+          console.error("Error adding comment:", error);
+          alert('Failed to add comment. Try again.');
+        }
+      });
+
+      const commentInput = document.createElement('input');
+      commentInput.type = 'text';
+      commentInput.placeholder = 'Add a comment...';
+      commentInput.className = 'comment-input';
+
+      const commentSubmit = document.createElement('button');
+      commentSubmit.type = 'submit';
+      commentSubmit.textContent = 'Send';
+      commentSubmit.className = 'comment-submit';
+
+      commentForm.appendChild(commentInput);
+      commentForm.appendChild(commentSubmit);
+
+      // Focus input when comment button clicked
+      commentBtn.addEventListener('click', () => {
+        commentInput.focus();
+      });
 
       postEl.appendChild(mediaEl);
-      postEl.appendChild(captionOverlay);
-      postEl.appendChild(controls);
+      postEl.appendChild(caption);
+      postEl.appendChild(actions);
+      postEl.appendChild(commentsContainer);
+      postEl.appendChild(commentForm);
 
       feed.appendChild(postEl);
+
+      // Load comments realtime for this post
+      loadComments(postId, commentsContainer);
     });
   }
 
