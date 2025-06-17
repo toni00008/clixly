@@ -2,162 +2,237 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clixly • Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clixly • User Profile</title>
   <style>
+    /* Reset & basics */
     body {
-      font-family: 'Segoe UI', sans-serif;
+      margin: 0; padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
       max-width: 600px;
-      margin: auto;
-      background: #f9f9f9;
+      width: 90%;
       padding: 20px;
-      text-align: center;
+      margin-top: 40px;
     }
-    h2 {
-      margin-bottom: 0;
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 30px;
     }
-    .counts {
-      margin: 10px 0 20px;
-      font-size: 1.1em;
-      color: #555;
+
+    .profile-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
-    button.follow-btn {
-      padding: 10px 20px;
-      background: #0077ff;
-      color: white;
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #333;
+      flex-shrink: 0;
+    }
+
+    .username {
+      font-size: 1.8rem;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    #followBtn {
+      background-color: #ff0050;
       border: none;
-      border-radius: 6px;
+      padding: 10px 24px;
+      font-weight: 700;
+      border-radius: 30px;
+      color: white;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease;
+      min-width: 110px;
+      user-select: none;
+    }
+
+    #followBtn.following {
+      background-color: #aaa;
+      color: #333;
+    }
+
+    #followBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Clix grid placeholder */
+    .clix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
+      gap: 15px;
+    }
+
+    .clix-item {
+      background: #222;
+      height: 140px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #555;
+      user-select: none;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 400px) {
+      .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      #followBtn {
+        width: 100%;
+        min-width: unset;
+      }
     }
   </style>
 </head>
 <body>
-  <h2 id="username">Loading...</h2>
-  <div class="counts">
-    <span id="followersCount">Followers: 0</span> |
-    <span id="followingCount">Following: 0</span>
+  <div class="container">
+    <div class="profile-header">
+      <div class="profile-info">
+        <div class="avatar" id="profileAvatar" title="User avatar"></div>
+        <div class="username" id="username">@loading...</div>
+      </div>
+      <button id="followBtn" style="display:none;">Follow</button>
+    </div>
+
+    <div class="clix-grid" id="clixGrid">
+      <!-- User Clix posts will appear here -->
+      <div class="clix-item">No Clix yet</div>
+    </div>
   </div>
-  <button id="followBtn" class="follow-btn" style="display:none;"></button>
 
   <script type="module">
+    // Firebase imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+    // Your Firebase config here
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const profileUserId = urlParams.get('id');
-
-    const usernameEl = document.getElementById('username');
-    const followersCountEl = document.getElementById('followersCount');
-    const followingCountEl = document.getElementById('followingCount');
-    const followBtn = document.getElementById('followBtn');
+    const usernameEl = document.getElementById("username");
+    const followBtn = document.getElementById("followBtn");
+    const clixGrid = document.getElementById("clixGrid");
+    const profileAvatar = document.getElementById("profileAvatar");
 
     let currentUser = null;
-    let profileUserData = null;
-    let currentUserData = null;
+    let profileUid = null;
+    let profileUsername = null;
 
-    onAuthStateChanged(auth, async user => {
-      if (!user) {
-        usernameEl.innerText = 'Please login to view profiles.';
-        return;
-      }
-      currentUser = user;
-
-      if (!profileUserId) {
-        usernameEl.innerText = 'No user ID provided in URL.';
-        return;
-      }
-
-      await loadProfileUser();
-      await loadCurrentUser();
-      renderProfile();
-    });
-
-    async function loadProfileUser() {
-      const docSnap = await getDoc(doc(db, 'users', profileUserId));
-      if (!docSnap.exists()) {
-        usernameEl.innerText = 'User not found.';
-        followBtn.style.display = 'none';
-        return;
-      }
-      profileUserData = docSnap.data();
+    // Helper to get query params from URL (like ?uid=abc123&username=cooluser)
+    function getQueryParams() {
+      return new URLSearchParams(window.location.search);
     }
 
-    async function loadCurrentUser() {
-      const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
-      currentUserData = docSnap.exists() ? docSnap.data() : { following: [] };
+    async function fetchUsername(uid) {
+      const userDocRef = doc(db, "users", uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        return userDocSnap.data().username || "unknown";
+      }
+      return "unknown";
     }
 
-    function renderProfile() {
-      usernameEl.innerText = profileUserData.username || 'Unknown User';
+    async function loadProfile() {
+      const params = getQueryParams();
+      profileUid = params.get("uid");
+      profileUsername = params.get("username");
 
-      const followers = profileUserData.followers || [];
-      const following = profileUserData.following || [];
+      if (!profileUid) {
+        usernameEl.textContent = "User not found";
+        followBtn.style.display = "none";
+        return;
+      }
 
-      followersCountEl.innerText = `Followers: ${followers.length}`;
-      followingCountEl.innerText = `Following: ${following.length}`;
+      if (!profileUsername) {
+        profileUsername = await fetchUsername(profileUid);
+      }
 
-      // Show follow/unfollow button only if not viewing own profile
-      if (currentUser.uid !== profileUserId) {
-        followBtn.style.display = 'inline-block';
-        if ((currentUserData.following || []).includes(profileUserId)) {
-          followBtn.innerText = 'Unfollow';
-        } else {
-          followBtn.innerText = 'Follow';
+      usernameEl.textContent = `@${profileUsername}`;
+
+      // TODO: Load avatar URL from user profile if you store it
+      // For now, just a colored circle with first letter
+      profileAvatar.textContent = profileUsername.charAt(0).toUpperCase();
+
+      // Load user Clix posts
+      await loadUserClix();
+
+      // Show follow button only if logged in and viewing another user
+      onAuthStateChanged(auth, user => {
+        currentUser = user;
+        if (!user || user.uid === profileUid) {
+          followBtn.style.display = "none";
+          return;
         }
-      } else {
-        followBtn.style.display = 'none'; // Hide button on own profile
-      }
+        followBtn.style.display = "inline-block";
+        // TODO: Attach follow/unfollow logic here later
+      });
     }
 
-    followBtn.onclick = async () => {
-      const currentUserRef = doc(db, 'users', currentUser.uid);
-      const profileUserRef = doc(db, 'users', profileUserId);
+    async function loadUserClix() {
+      clixGrid.innerHTML = ""; // Clear grid
 
-      const isFollowing = (currentUserData.following || []).includes(profileUserId);
+      if (!profileUid) return;
 
-      if (isFollowing) {
-        // Unfollow
-        await updateDoc(currentUserRef, {
-          following: arrayRemove(profileUserId)
-        });
-        await updateDoc(profileUserRef, {
-          followers: arrayRemove(currentUser.uid)
-        });
-      } else {
-        // Follow
-        await updateDoc(currentUserRef, {
-          following: arrayUnion(profileUserId)
-        });
-        await updateDoc(profileUserRef, {
-          followers: arrayUnion(currentUser.uid)
-        });
+      // Query all clix posted by profileUid
+      const clixQuery = query(collection(db, "clix"), where("userId", "==", profileUid));
+      const clixSnap = await getDocs(clixQuery);
+
+      if (clixSnap.empty) {
+        clixGrid.innerHTML = '<div class="clix-item">No Clix yet</div>';
+        return;
       }
 
-      // Refresh data
-      await loadCurrentUser();
-      await loadProfileUser();
-      renderProfile();
-    };
+      clixSnap.forEach(docSnap => {
+        const clix = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "clix-item";
+
+        // Placeholder: show clix text or a thumbnail here
+        div.textContent = clix.text ? clix.text.substring(0, 20) + "..." : "Clix post";
+
+        clixGrid.appendChild(div);
+      });
+    }
+
+    loadProfile();
   </script>
 </body>
 </html>
-
 
