@@ -28,24 +28,23 @@
       align-items: center;
       justify-content: center;
       background: #000;
+      flex-direction: column;
     }
     .media {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    .caption {
-      position: absolute;
-      bottom: 90px;
+    .caption, .comments {
+      position: relative;
+      bottom: 20px;
       left: 16px;
-      right: 90px;
       font-size: 1em;
       background: rgba(0,0,0,0.6);
       padding: 10px 14px;
       border-radius: 12px;
+      max-width: 90%;
+      margin-bottom: 8px;
     }
     .actions {
       position: absolute;
@@ -68,10 +67,6 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-    }
-    .like-count {
-      font-size: 0.75em;
-      text-align: center;
     }
     .upload-btn {
       position: fixed;
@@ -98,7 +93,9 @@
     import {
       getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -106,108 +103,97 @@
       projectId: "clixly-bc284",
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
+    const auth = getAuth();
+
     const feedContainer = document.getElementById("feed");
 
-    let currentUserID = null;
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, user => {
       if (user) {
-        currentUserID = user.uid;
-        loadFeed();
+        loadFeed(user.uid);
       } else {
-        alert("Please login to view the feed.");
+        alert("Please login to interact with posts.");
       }
     });
 
-    async function loadFeed() {
-      try {
-        const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
+    async function loadFeed(uid) {
+      const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
 
-        if (snapshot.empty) {
-          feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
-          return;
-        }
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        const postId = docSnap.id;
 
-        snapshot.forEach(docSnap => {
-          const post = docSnap.data();
-          const postId = docSnap.id;
+        const postEl = document.createElement("div");
+        postEl.className = "post";
 
-          const postEl = document.createElement("div");
-          postEl.className = "post";
-
-          const mediaEl = post.type === "video"
-            ? Object.assign(document.createElement("video"), {
-                src: post.mediaURL || "",
-                autoplay: true,
-                muted: true,
-                loop: true,
-                playsInline: true,
-                className: "media"
-              })
-            : Object.assign(document.createElement("img"), {
-                src: post.mediaURL || "https://via.placeholder.com/300x600",
-                alt: post.caption || "Image Post",
-                className: "media"
-              });
-
-          if (post.type === "video") {
-            mediaEl.addEventListener("click", () => {
-              mediaEl.muted = !mediaEl.muted;
+        const mediaEl = post.type === "video"
+          ? Object.assign(document.createElement("video"), {
+              src: post.mediaURL,
+              autoplay: true,
+              muted: true,
+              loop: true,
+              playsInline: true,
+              className: "media"
+            })
+          : Object.assign(document.createElement("img"), {
+              src: post.mediaURL,
+              alt: post.caption,
+              className: "media"
             });
-          }
 
-          const caption = document.createElement("div");
-          caption.className = "caption";
-          caption.textContent = post.caption || "";
-
-          const actions = document.createElement("div");
-          actions.className = "actions";
-
-          const likeBtn = document.createElement("button");
-          likeBtn.className = "action-btn";
-          likeBtn.innerHTML = post.likes && post.likes.includes(currentUserID) ? "❤️" : "🤍";
-
-          const likeCount = document.createElement("div");
-          likeCount.className = "like-count";
-          likeCount.textContent = post.likes ? post.likes.length : 0;
-
-          likeBtn.addEventListener("click", async () => {
-            const postRef = doc(db, "clixPosts", postId);
-            if (post.likes && post.likes.includes(currentUserID)) {
-              await updateDoc(postRef, {
-                likes: arrayRemove(currentUserID)
-              });
-              likeBtn.innerHTML = "🤍";
-              likeCount.textContent = parseInt(likeCount.textContent) - 1;
-            } else {
-              await updateDoc(postRef, {
-                likes: arrayUnion(currentUserID)
-              });
-              likeBtn.innerHTML = "❤️";
-              likeCount.textContent = parseInt(likeCount.textContent) + 1;
-            }
-          });
-
-          actions.appendChild(likeBtn);
-          actions.appendChild(likeCount);
-
-          postEl.appendChild(mediaEl);
-          postEl.appendChild(caption);
-          postEl.appendChild(actions);
-          feedContainer.appendChild(postEl);
+        mediaEl.addEventListener("click", () => {
+          if (post.type === "video") mediaEl.muted = !mediaEl.muted;
         });
 
-      } catch (err) {
-        console.error("❌ Feed error:", err);
-        feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>Error loading posts.</p>";
-      }
+        const caption = document.createElement("div");
+        caption.className = "caption";
+        caption.textContent = post.caption;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const likeBtn = document.createElement("button");
+        likeBtn.className = "action-btn";
+        likeBtn.textContent = post.likes?.includes(uid) ? "❤️" : "🤍";
+
+        likeBtn.onclick = async () => {
+          const postRef = doc(db, "clixPosts", postId);
+          if (post.likes?.includes(uid)) {
+            await updateDoc(postRef, { likes: arrayRemove(uid) });
+            likeBtn.textContent = "🤍";
+          } else {
+            await updateDoc(postRef, { likes: arrayUnion(uid) });
+            likeBtn.textContent = "❤️";
+          }
+        };
+
+        const commentBtn = document.createElement("button");
+        commentBtn.className = "action-btn";
+        commentBtn.textContent = "💬";
+        commentBtn.onclick = () => {
+          const text = prompt("Enter your comment:");
+          if (text) alert("(Comment system coming soon)");
+        };
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "action-btn";
+        saveBtn.textContent = "🔖";
+        saveBtn.onclick = () => alert("(Save feature coming soon)");
+
+        actions.appendChild(likeBtn);
+        actions.appendChild(commentBtn);
+        actions.appendChild(saveBtn);
+
+        postEl.appendChild(mediaEl);
+        postEl.appendChild(caption);
+        postEl.appendChild(actions);
+        feedContainer.appendChild(postEl);
+      });
     }
   </script>
 </body>
