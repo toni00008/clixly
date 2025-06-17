@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clixly • All Users</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #0d0d10;
+      color: white;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #8a2be2;
+    }
+    .user-card {
+      background: #1c1c26;
+      padding: 15px;
+      border-radius: 12px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .user-card img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .user-card .info {
+      flex-grow: 1;
+    }
+    .user-card button {
+      background: #8a2be2;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>All Clixly Users</h1>
+  <div id="user-list"></div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const userList = document.getElementById("user-list");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("Login required.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const querySnapshot = await getDocs(collection(db, "users"));
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const uid = docSnap.id;
+
+        // Don’t show current logged-in user
+        if (uid === user.uid) return;
+
+        const card = document.createElement("div");
+        card.className = "user-card";
+
+        card.innerHTML = `
+          <img src="${data.profilePicture || 'https://via.placeholder.com/60'}" />
+          <div class="info">
+            <strong>${data.username || 'Unnamed'}</strong><br />
+            <small>${data.bio || ''}</small>
+          </div>
+          <button onclick="location.href='profile.html?uid=${uid}'">View</button>
+        `;
+
+        userList.appendChild(card);
+      });
+    });
+  </script>
+</body>
+</html>
