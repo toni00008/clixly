@@ -1,21 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Edit Profile • Clixly</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       max-width: 500px;
-      margin: auto;
+      margin: 40px auto;
       background: #f9f9f9;
       padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
     h2 {
       text-align: center;
+      margin-bottom: 20px;
     }
     label {
       display: block;
       margin-top: 20px;
+      font-weight: bold;
     }
     input, textarea {
       width: 100%;
@@ -24,47 +30,62 @@
       border: 1px solid #ccc;
       border-radius: 10px;
       font-size: 1em;
+      box-sizing: border-box;
     }
     button {
-      margin-top: 20px;
+      margin-top: 30px;
       padding: 12px;
       width: 100%;
       background-color: #0077ff;
       color: white;
       border: none;
       border-radius: 10px;
-      font-size: 1em;
+      font-size: 1.1em;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #005bbb;
     }
     img {
-      width: 100px;
-      border-radius: 50%;
       display: block;
       margin: 20px auto;
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #0077ff;
+    }
+    .message {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
 
   <h2>Edit Your Profile</h2>
-  <div id="form-container">
-    <img id="profilePicPreview" src="" alt="Profile Picture">
-    <label>New Profile Picture (URL)</label>
-    <input type="text" id="profilePic">
 
-    <label>Username</label>
-    <input type="text" id="username">
+  <img id="profilePicPreview" src="" alt="Profile Picture" />
 
-    <label>Bio</label>
-    <textarea id="bio" rows="4"></textarea>
+  <label for="profilePic">Profile Picture URL</label>
+  <input type="text" id="profilePic" placeholder="Enter image URL" />
 
-    <button onclick="updateProfile()">💾 Save Changes</button>
-  </div>
+  <label for="username">Username</label>
+  <input type="text" id="username" placeholder="Your username" />
+
+  <label for="bio">Bio</label>
+  <textarea id="bio" rows="4" placeholder="Short bio about yourself"></textarea>
+
+  <button id="saveBtn">💾 Save Changes</button>
+
+  <p id="statusMessage" class="message"></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, doc, getDoc, updateDoc
+      getFirestore, doc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import {
       getAuth, onAuthStateChanged
@@ -83,49 +104,75 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    const profilePicInput = document.getElementById('profilePic');
+    const usernameInput = document.getElementById('username');
+    const bioInput = document.getElementById('bio');
+    const profilePicPreview = document.getElementById('profilePicPreview');
+    const saveBtn = document.getElementById('saveBtn');
+    const statusMessage = document.getElementById('statusMessage');
+
     let currentUserId = null;
+
+    // Update profile picture live preview when input changes
+    profilePicInput.addEventListener('input', () => {
+      const url = profilePicInput.value.trim();
+      profilePicPreview.src = url || 'https://via.placeholder.com/100?text=No+Image';
+    });
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUserId = user.uid;
-        const userDoc = await getDoc(doc(db, "users", currentUserId));
+
+        // Load user profile data from Firestore
+        const userDoc = await getDoc(doc(db, 'users', currentUserId));
         if (userDoc.exists()) {
           const data = userDoc.data();
-          document.getElementById("username").value = data.username || "";
-          document.getElementById("bio").value = data.bio || "";
-          document.getElementById("profilePic").value = data.profilePic || "";
-          document.getElementById("profilePicPreview").src = data.profilePic || "";
+          profilePicInput.value = data.profilePic || '';
+          usernameInput.value = data.username || '';
+          bioInput.value = data.bio || '';
+          profilePicPreview.src = data.profilePic || 'https://via.placeholder.com/100?text=No+Image';
+        } else {
+          // No profile data yet
+          profilePicPreview.src = 'https://via.placeholder.com/100?text=No+Image';
         }
+
       } else {
-        document.body.innerHTML = '<p>Please <a href="login.html">log in</a> to edit your profile.</p>';
+        // Not logged in — redirect to login page or show message
+        document.body.innerHTML = '<p style="text-align:center; margin-top: 50px;">Please <a href="login.html">log in</a> to edit your profile.</p>';
       }
     });
 
-    window.updateProfile = async function () {
-      const username = document.getElementById("username").value.trim();
-      const bio = document.getElementById("bio").value.trim();
-      const profilePic = document.getElementById("profilePic").value.trim();
+    saveBtn.addEventListener('click', async () => {
+      const username = usernameInput.value.trim();
+      const bio = bioInput.value.trim();
+      const profilePic = profilePicInput.value.trim();
 
-      if (!username || !profilePic) {
-        alert("Username and Profile Picture URL are required.");
+      if (!username) {
+        statusMessage.textContent = '❗ Username cannot be empty.';
+        return;
+      }
+      if (!profilePic) {
+        statusMessage.textContent = '❗ Profile picture URL cannot be empty.';
         return;
       }
 
-      await updateDoc(doc(db, "users", currentUserId), {
-        username,
-        bio,
-        profilePic
-      });
+      try {
+        await setDoc(doc(db, 'users', currentUserId), {
+          username,
+          bio,
+          profilePic,
+          uid: currentUserId,
+          email: auth.currentUser.email || ''
+        }, { merge: true });
 
-      alert("✅ Profile updated!");
-      document.getElementById("profilePicPreview").src = profilePic;
-    };
-
-    // Live preview for profile picture
-    document.getElementById("profilePic").addEventListener("input", (e) => {
-      document.getElementById("profilePicPreview").src = e.target.value.trim();
+        statusMessage.style.color = 'green';
+        statusMessage.textContent = '✅ Profile updated successfully!';
+      } catch (error) {
+        statusMessage.style.color = 'red';
+        statusMessage.textContent = '❌ Error updating profile: ' + error.message;
+      }
     });
   </script>
+
 </body>
 </html>
-
