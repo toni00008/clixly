@@ -1,123 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clix • Reels-style Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* Reset & base */
+    /* Reset */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
     body {
-      font-family: 'Segoe UI', sans-serif;
       background: #000;
       color: #fff;
-      overflow-x: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      padding: 15px;
     }
 
-    /* Feed container with max-width & centered for desktop */
+    /* Feed wrapper: center and max width */
     .feed-container {
+      width: 100%;
+      max-width: 420px; /* typical phone width */
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      padding: 10px;
+      gap: 30px;
       overflow-y: auto;
-      width: 100%;
-      max-width: 700px; /* max width for desktop */
-      margin: 0 auto;
-      flex-grow: 1; /* fill available height */
+      scroll-behavior: smooth;
     }
 
-    /* Each post styling */
+    /* Each post card with 9:16 ratio */
     .post {
       position: relative;
       background: #111;
-      border-radius: 16px;
+      border-radius: 20px;
       overflow: hidden;
-      width: 100%;
-      box-shadow: 0 2px 10px rgba(255, 0, 80, 0.3);
-      transition: box-shadow 0.3s ease;
-    }
-    .post:hover {
-      box-shadow: 0 4px 20px rgba(255, 0, 80, 0.6);
-    }
-
-    /* Media responsive */
-    .media {
-      display: block;
-      width: 100%;
-      height: auto;
-      border-bottom: 1px solid #222;
-      border-radius: 16px 16px 0 0;
+      height: 700px; /* fixed height for demo */
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 12px #ff0050cc;
       user-select: none;
-      cursor: pointer;
     }
-    video.media {
-      display: block;
+
+    /* Media container fills the post */
+    .media-container {
+      flex: 1 1 auto;
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px 20px 0 0;
+      background: #000;
+    }
+
+    /* Video or image fills container */
+    .media {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: auto;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      border-radius: 20px 20px 0 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    /* If media is portrait, fit width */
+    .media.landscape {
       width: 100%;
       height: auto;
-      border-radius: 16px 16px 0 0;
     }
 
-    /* Caption text */
-    .caption {
-      padding: 12px 15px;
-      font-size: 1em;
-      line-height: 1.3;
-      word-wrap: break-word;
-    }
-    .caption strong {
-      color: #ff0050;
-    }
-
-    /* Actions container */
-    .actions {
+    /* Right vertical controls */
+    .right-controls {
+      position: absolute;
+      top: 20%;
+      right: 10px;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 24px;
       align-items: center;
-      padding: 8px 15px 15px;
+      z-index: 10;
     }
-    .action-btns {
-      display: flex;
-      gap: 18px;
-    }
+
+    /* Buttons in controls */
     .action-btn {
-      font-size: 1.6em;
-      background: none;
+      background: transparent;
       border: none;
+      font-size: 2.4rem;
       color: #fff;
       cursor: pointer;
-      transition: color 0.25s ease;
+      transition: transform 0.2s ease, color 0.3s ease;
       user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .action-btn:hover {
       color: #ff0050;
+      transform: scale(1.2);
     }
-    .likes {
-      font-size: 0.9em;
-      color: #aaa;
+
+    /* Like count below heart */
+    .like-count {
+      font-size: 1rem;
+      margin-top: 4px;
+      color: #eee;
       user-select: none;
     }
 
-    /* Upload button fixed on bottom right */
+    /* Caption area below media */
+    .caption-area {
+      padding: 15px 20px;
+      background: #111;
+      border-radius: 0 0 20px 20px;
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .caption-area strong {
+      color: #ff0050;
+      margin-bottom: 6px;
+      font-size: 1.1rem;
+    }
+
+    /* Upload button fixed bottom right */
     .upload-btn {
       position: fixed;
       bottom: 20px;
       right: 20px;
       background: #ff0050;
       color: white;
-      font-size: 2.2em;
+      font-size: 2.4em;
       border: none;
       border-radius: 50%;
       width: 60px;
       height: 60px;
-      z-index: 100;
       box-shadow: 0 4px 15px rgba(255, 0, 80, 0.7);
       cursor: pointer;
       display: flex;
@@ -125,160 +150,191 @@
       align-items: center;
       user-select: none;
       transition: background-color 0.3s ease;
+      z-index: 9999;
     }
     .upload-btn:hover {
       background: #e60047;
     }
 
-    /* Scrollbar styling for feed */
+    /* Scrollbar styling */
     .feed-container::-webkit-scrollbar {
-      width: 6px;
+      width: 8px;
     }
     .feed-container::-webkit-scrollbar-thumb {
       background: #ff0050;
-      border-radius: 3px;
+      border-radius: 4px;
     }
 
-    /* Responsive typography */
-    @media (max-width: 480px) {
-      body {
-        font-size: 14px;
-      }
-      .caption {
-        font-size: 0.95em;
-        padding: 10px 12px;
+    /* Responsive tweaks */
+    @media (max-width: 460px) {
+      .post {
+        height: 600px;
       }
       .action-btn {
-        font-size: 1.3em;
+        font-size: 2rem;
       }
       .upload-btn {
         width: 55px;
         height: 55px;
-        font-size: 1.8em;
-        bottom: 15px;
-        right: 15px;
-      }
-      .feed-container {
-        padding: 8px 8px 20px;
-        max-width: 100%;
-        gap: 15px;
+        font-size: 2rem;
       }
     }
   </style>
 </head>
 <body>
 
-<div class="feed-container" id="feed"></div>
-<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
+  <div class="feed-container" id="feed"></div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-    authDomain: "clixly-bc284.firebaseapp.com",
-    projectId: "clixly-bc284",
-    storageBucket: "clixly-bc284.appspot.com",
-    messagingSenderId: "33343695899",
-    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-  };
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const feed = document.getElementById("feed");
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+    };
 
-  async function loadFeed() {
-    const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const feed = document.getElementById("feed");
 
-    if (snapshot.empty) {
-      feed.innerHTML = "<p style='text-align:center; padding:20px;'>No posts yet.</p>";
-      return;
+    function checkMediaOrientation(mediaEl, callback) {
+      // For images/videos: detect orientation to adjust fit
+      if(mediaEl.tagName === "IMG"){
+        mediaEl.onload = () => {
+          if(mediaEl.naturalWidth > mediaEl.naturalHeight){
+            mediaEl.classList.add('landscape');
+          }
+          callback();
+        }
+      } else if(mediaEl.tagName === "VIDEO"){
+        // For videos, we can't easily check natural size via JS without metadata event
+        mediaEl.addEventListener('loadedmetadata', () => {
+          if(mediaEl.videoWidth > mediaEl.videoHeight){
+            mediaEl.classList.add('landscape');
+          }
+          callback();
+        });
+      } else {
+        callback();
+      }
     }
 
-    snapshot.forEach(docSnap => {
-      const post = docSnap.data();
-      const postId = docSnap.id;
+    async function loadFeed() {
+      const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
 
-      const postEl = document.createElement("div");
-      postEl.className = "post";
-
-      let mediaEl;
-      if (post.type === "video") {
-        mediaEl = document.createElement("video");
-        mediaEl.src = post.mediaURL || "";
-        mediaEl.autoplay = true;
-        mediaEl.muted = true;
-        mediaEl.loop = true;
-        mediaEl.playsInline = true;
-        mediaEl.className = "media";
-
-        // Mute/Unmute on tap
-        mediaEl.addEventListener("click", () => {
-          mediaEl.muted = !mediaEl.muted;
-        });
-
-      } else {
-        mediaEl = document.createElement("img");
-        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
-        mediaEl.alt = post.caption || "Image Post";
-        mediaEl.className = "media";
+      if (snapshot.empty) {
+        feed.innerHTML = "<p style='text-align:center; padding:20px;'>No posts yet.</p>";
+        return;
       }
 
-      const caption = document.createElement("div");
-      caption.className = "caption";
-      caption.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        const postId = docSnap.id;
 
-      const actions = document.createElement("div");
-      actions.className = "actions";
+        const postEl = document.createElement("div");
+        postEl.className = "post";
 
-      const btns = document.createElement("div");
-      btns.className = "action-btns";
+        // Media container for positioning
+        const mediaContainer = document.createElement("div");
+        mediaContainer.className = "media-container";
 
-      const likeBtn = document.createElement("button");
-      likeBtn.className = "action-btn";
-      likeBtn.textContent = "❤️";
+        let mediaEl;
+        if (post.type === "video") {
+          mediaEl = document.createElement("video");
+          mediaEl.src = post.mediaURL || "";
+          mediaEl.autoplay = true;
+          mediaEl.muted = true;
+          mediaEl.loop = true;
+          mediaEl.playsInline = true;
+          mediaEl.className = "media";
 
-      const commentBtn = document.createElement("button");
-      commentBtn.className = "action-btn";
-      commentBtn.textContent = "🗨️";
+          // Toggle mute on click
+          mediaEl.addEventListener("click", () => {
+            mediaEl.muted = !mediaEl.muted;
+          });
 
-      const saveBtn = document.createElement("button");
-      saveBtn.className = "action-btn";
-      saveBtn.textContent = "🔖";
+          mediaContainer.appendChild(mediaEl);
+          postEl.appendChild(mediaContainer);
 
-      const likeCount = document.createElement("div");
-      likeCount.className = "likes";
-      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
+          // Check orientation and adjust media style after metadata loaded
+          checkMediaOrientation(mediaEl, () => {});
+        } else {
+          mediaEl = document.createElement("img");
+          mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x700?text=No+Image";
+          mediaEl.alt = post.caption || "Image Post";
+          mediaEl.className = "media";
+          mediaContainer.appendChild(mediaEl);
+          postEl.appendChild(mediaContainer);
 
-      likeBtn.addEventListener("click", async () => {
-        const newLikes = parseInt(likeCount.textContent) + 1;
-        likeCount.textContent = newLikes;
-        await updateDoc(doc(db, "clixPosts", postId), {
-          likes: increment(1)
+          // Check orientation and adjust media style after load
+          checkMediaOrientation(mediaEl, () => {});
+        }
+
+        // Right vertical controls container
+        const rightControls = document.createElement("div");
+        rightControls.className = "right-controls";
+
+        // Like button + count
+        const likeBtn = document.createElement("button");
+        likeBtn.className = "action-btn";
+        likeBtn.innerHTML = "❤️";
+        let liked = false;
+
+        const likeCount = document.createElement("div");
+        likeCount.className = "like-count";
+        likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
+
+        likeBtn.appendChild(likeCount);
+
+        likeBtn.addEventListener("click", async () => {
+          if (liked) return; // prevent multi likes for demo
+          liked = true;
+          likeCount.textContent = parseInt(likeCount.textContent) + 1;
+          likeBtn.style.color = "#ff0050";
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
+          });
         });
+
+        // Comment button
+        const commentBtn = document.createElement("button");
+        commentBtn.className = "action-btn";
+        commentBtn.textContent = "🗨️";
+        commentBtn.title = "Comment (coming soon)";
+
+        // Share button
+        const shareBtn = document.createElement("button");
+        shareBtn.className = "action-btn";
+        shareBtn.textContent = "↗️";
+        shareBtn.title = "Share (coming soon)";
+
+        rightControls.appendChild(likeBtn);
+        rightControls.appendChild(commentBtn);
+        rightControls.appendChild(shareBtn);
+        postEl.appendChild(rightControls);
+
+        // Caption area below
+        const captionArea = document.createElement("div");
+        captionArea.className = "caption-area";
+        captionArea.innerHTML = `<strong>@${post.username || 'user'}</strong><br>${post.caption || ''}`;
+        postEl.appendChild(captionArea);
+
+        feed.appendChild(postEl);
       });
+    }
 
-      btns.appendChild(likeBtn);
-      btns.appendChild(commentBtn);
-      btns.appendChild(saveBtn);
-
-      actions.appendChild(btns);
-      actions.appendChild(likeCount);
-
-      postEl.appendChild(mediaEl);
-      postEl.appendChild(caption);
-      postEl.appendChild(actions);
-      feed.appendChild(postEl);
-    });
-  }
-
-  loadFeed();
-</script>
-
+    loadFeed();
+  </script>
 </body>
 </html>
