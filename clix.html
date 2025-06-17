@@ -2,103 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Feed</title>
+  <title>Clix • Transparent Overlay Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #000;
       color: #fff;
       overflow-x: hidden;
     }
     .feed-container {
+      max-width: 600px;
+      margin: 16px auto;
       display: flex;
       flex-direction: column;
       gap: 30px;
-      padding: 16px;
-      max-width: 600px;
-      margin: auto;
+      padding: 0 12px;
     }
     .post {
       position: relative;
-      background: #111;
+      width: 100%;
       border-radius: 16px;
       overflow: hidden;
-      width: 100%;
+      background: transparent;
     }
     .media-container {
       position: relative;
       width: 100%;
       aspect-ratio: 9 / 16;
       overflow: hidden;
+      border-radius: 16px;
+      background: #000;
     }
-    .media {
+    video, img.media {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
+      user-select: none;
     }
+
+    /* Username inside video bottom-left */
+    .username-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      font-weight: 600;
+      font-size: 1.1em;
+      color: white;
+      text-shadow:
+        0 0 4px rgba(0,0,0,0.9),
+        0 0 6px rgba(0,0,0,0.8);
+      pointer-events: none; /* let clicks go through */
+      user-select: none;
+      background: transparent;
+    }
+
+    /* Buttons stacked vertically on right inside video */
     .action-overlay {
       position: absolute;
-      right: 12px;
       bottom: 12px;
+      right: 12px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      z-index: 2;
+      gap: 14px;
+      z-index: 10;
+      user-select: none;
     }
     .action-btn {
-      font-size: 1.7em;
-      background: rgba(255 255 255 / 0.25);
+      background: transparent;
       border: none;
+      font-size: 1.9em;
       color: rgba(255 255 255 / 0.85);
-      border-radius: 50%;
-      padding: 10px;
       cursor: pointer;
-      box-shadow: 0 0 8px rgba(0,0,0,0.6);
-      transition: background-color 0.3s ease;
+      padding: 6px;
+      user-select: none;
+      transition: color 0.25s ease;
     }
     .action-btn:hover {
-      background: rgba(255 255 255 / 0.5);
+      color: #ff0050;
     }
+
+    /* Caption below video - fully transparent background */
     .caption {
-      padding: 12px;
+      margin-top: 8px;
       font-size: 0.95em;
-      color: rgba(255 255 255 / 0.8);
-      text-shadow: 0 0 6px rgba(0,0,0,0.9);
-    }
-    .username {
-      font-weight: 700;
       color: rgba(255 255 255 / 0.85);
-      text-shadow: 0 0 8px rgba(0,0,0,0.9);
+      text-shadow:
+        0 0 4px rgba(0,0,0,0.8);
+      background: transparent;
+      user-select: text;
     }
+
+    /* Likes count below caption */
     .likes {
-      font-size: 0.8em;
-      padding: 0 12px 12px;
-      color: rgba(255 255 255 / 0.7);
-      text-shadow: 0 0 6px rgba(0,0,0,0.7);
+      font-size: 0.85em;
+      color: rgba(255 255 255 / 0.6);
+      margin-top: 4px;
+      user-select: none;
+      text-shadow:
+        0 0 3px rgba(0,0,0,0.7);
     }
+
+    /* Upload Button fixed bottom right */
     .upload-btn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 22px;
+      right: 22px;
       background: #ff0050;
       color: white;
-      font-size: 2em;
+      font-size: 2.4em;
       border: none;
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
+      width: 64px;
+      height: 64px;
       z-index: 100;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(255, 0, 80, 0.6);
+      box-shadow: 0 4px 12px rgba(255, 0, 80, 0.7);
       transition: background-color 0.3s ease;
     }
     .upload-btn:hover {
       background: #e60044;
     }
 
-    /* Comment Popup */
+    /* Comment Popup styles remain same */
     #commentModal {
       display:none;
       position:fixed;
@@ -127,6 +157,7 @@
       margin-bottom:8px;
       border-bottom:1px solid #333;
       padding-bottom:6px;
+      color: white;
     }
     input, button {
       font-family: inherit;
@@ -136,18 +167,19 @@
 <body>
 
 <div class="feed-container" id="feed"></div>
+
 <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-<!-- 💬 Comment Popup -->
+<!-- Comment Popup -->
 <div id="commentModal">
   <div class="popup">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
       <h3>Comments</h3>
-      <button onclick="closeCommentModal()" style="background:none;border:none;font-size:1.5em;color:#fff;">✖</button>
+      <button onclick="closeCommentModal()" style="background:none;border:none;font-size:1.5em;color:#fff;cursor:pointer;">✖</button>
     </div>
     <div id="commentList"></div>
-    <input id="commentInput" type="text" placeholder="Add a comment..." style="padding:8px; border-radius:8px; border:none; margin-bottom:10px;"/>
-    <button onclick="submitComment()" style="padding:8px; background:#ff0050; color:white; border:none; border-radius:8px;">Post</button>
+    <input id="commentInput" type="text" placeholder="Add a comment..." style="padding:8px; border-radius:8px; border:none; margin-bottom:10px;" />
+    <button onclick="submitComment()" style="padding:8px; background:#ff0050; color:white; border:none; border-radius:8px; cursor:pointer;">Post</button>
   </div>
 </div>
 
@@ -177,17 +209,17 @@
   const PAGE_SIZE = 4;
   let loading = false;
 
-  // Comment popup handlers
-  window.openCommentModal = function (postId) {
+  // Comment modal handlers
+  window.openCommentModal = function(postId) {
     currentPostId = postId;
     document.getElementById('commentModal').style.display = 'block';
     document.getElementById('commentInput').value = '';
     loadComments(postId);
   };
-  window.closeCommentModal = function () {
+  window.closeCommentModal = function() {
     document.getElementById('commentModal').style.display = 'none';
   };
-  window.submitComment = async function () {
+  window.submitComment = async function() {
     const input = document.getElementById('commentInput');
     const text = input.value.trim();
     if (!text) return;
@@ -214,16 +246,14 @@
       snapshot.forEach(doc => {
         const c = doc.data();
         const div = document.createElement('div');
-        div.innerHTML = `<strong>@${sanitize(c.username) || 'user'}</strong><br>${sanitize(c.text)}`;
+        div.innerHTML = `<strong>@${sanitize(c.username)}</strong><br>${sanitize(c.text)}`;
         commentList.appendChild(div);
       });
     });
   }
 
-  // Sanitize to avoid unwanted strings
   function sanitize(str) {
     if (!str) return '';
-    // Remove any suspicious string similar to unwanted characters
     return str.replace(/,uLetCRgPbSOz6Te2vTfbsF3Fh3F3,iHThDpcSvFWUXk57YLE2RJMdDfp1/g, '').trim();
   }
 
@@ -253,6 +283,12 @@
       mediaEl.className = "media";
     }
 
+    // Username overlay inside video frame bottom-left
+    const usernameOverlay = document.createElement("div");
+    usernameOverlay.className = "username-overlay";
+    usernameOverlay.textContent = "@" + sanitize(post.username || "user");
+
+    // Action buttons vertical stack on bottom-right
     const actionOverlay = document.createElement("div");
     actionOverlay.className = "action-overlay";
 
@@ -289,16 +325,20 @@
     actionOverlay.appendChild(saveBtn);
     actionOverlay.appendChild(shareBtn);
 
+    // Caption below video frame
     const caption = document.createElement("div");
     caption.className = "caption";
-    caption.innerHTML = `<span class="username">@${sanitize(post.username) || 'user'}</span><br>${sanitize(post.caption) || ''}`;
+    caption.textContent = sanitize(post.caption || "");
 
+    // Likes count below caption
     const likeCount = document.createElement("div");
     likeCount.className = "likes";
     likeCount.textContent = post.likes || 0;
 
     mediaWrapper.appendChild(mediaEl);
+    mediaWrapper.appendChild(usernameOverlay);
     mediaWrapper.appendChild(actionOverlay);
+
     postEl.appendChild(mediaWrapper);
     postEl.appendChild(caption);
     postEl.appendChild(likeCount);
@@ -327,19 +367,16 @@
     loading = false;
   }
 
-  // Infinite scroll event
   window.addEventListener('scroll', () => {
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
       loadFeedPage();
     }
   });
 
-  // Initial load
   loadFeedPage();
 
 </script>
 
 </body>
 </html>
-
 
