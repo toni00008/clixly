@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html {
+    html, body {
       height: 100%;
       background: #000;
       font-family: 'Segoe UI', sans-serif;
@@ -97,9 +97,6 @@
     import {
       getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -112,7 +109,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
     const feedContainer = document.getElementById("feed");
 
     async function loadFeed() {
@@ -121,27 +117,7 @@
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          console.warn("⚠️ No posts found, loading sample...");
-          feedContainer.innerHTML = "";
-
-          const postEl = document.createElement("div");
-          postEl.className = "post";
-
-          const mediaEl = document.createElement("video");
-          mediaEl.src = "https://www.w3schools.com/html/mov_bbb.mp4";
-          mediaEl.autoplay = true;
-          mediaEl.muted = true;
-          mediaEl.loop = true;
-          mediaEl.playsInline = true;
-          mediaEl.className = "media";
-
-          const caption = document.createElement("div");
-          caption.className = "caption";
-          caption.textContent = "Sample Video - Upload your first Clix!";
-
-          postEl.appendChild(mediaEl);
-          postEl.appendChild(caption);
-          feedContainer.appendChild(postEl);
+          feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
           return;
         }
 
@@ -154,7 +130,7 @@
 
           const mediaEl = post.type === "video"
             ? Object.assign(document.createElement("video"), {
-                src: post.mediaURL,
+                src: post.mediaURL || "",
                 autoplay: true,
                 muted: true,
                 loop: true,
@@ -162,10 +138,17 @@
                 className: "media"
               })
             : Object.assign(document.createElement("img"), {
-                src: post.mediaURL,
-                alt: post.caption || "",
+                src: post.mediaURL || "https://via.placeholder.com/300x600",
+                alt: post.caption || "Image Post",
                 className: "media"
               });
+
+          // 🟢 Click to toggle mute on videos
+          if (post.type === "video") {
+            mediaEl.addEventListener("click", () => {
+              mediaEl.muted = !mediaEl.muted;
+            });
+          }
 
           const caption = document.createElement("div");
           caption.className = "caption";
@@ -180,7 +163,7 @@
 
           const likeCount = document.createElement("div");
           likeCount.className = "like-count";
-          likeCount.textContent = post.likes || 0;
+          likeCount.textContent = typeof post.likes === "number" ? post.likes : 0;
 
           likeBtn.addEventListener("click", async () => {
             const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
