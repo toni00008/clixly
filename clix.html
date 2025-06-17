@@ -2,51 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html {
-      height: 100%;
       background: #000;
       font-family: 'Segoe UI', sans-serif;
       color: #fff;
-      overflow: hidden;
+      height: 100%;
     }
+
     .feed-container {
+      max-width: 600px;
+      margin: 0 auto;
       height: 100vh;
       overflow-y: auto;
       scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
     }
+
     .post {
       scroll-snap-align: start;
       position: relative;
       height: 100vh;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       background: #000;
+      display: flex;
       flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
+
     .media {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+
     .caption {
       position: absolute;
-      bottom: 110px;
+      bottom: 90px;
       left: 16px;
-      right: 90px;
-      font-size: 1em;
       background: rgba(0,0,0,0.6);
       padding: 10px 14px;
       border-radius: 12px;
+      font-size: 0.95em;
+      max-width: 80%;
     }
+
     .actions {
       position: absolute;
       bottom: 90px;
@@ -54,11 +57,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
+
     .action-btn {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: rgba(255,255,255,0.1);
       color: white;
@@ -68,19 +72,30 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: transform 0.2s ease;
     }
+
+    .action-btn:active {
+      transform: scale(1.1);
+    }
+
+    .like-count {
+      font-size: 0.8em;
+      text-align: center;
+    }
+
     .upload-btn {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 20px;
+      right: 20px;
       background: #ff0050;
-      color: #fff;
+      color: white;
       width: 60px;
       height: 60px;
-      border-radius: 50%;
       font-size: 2em;
       border: none;
-      z-index: 10;
+      border-radius: 50%;
+      z-index: 100;
       cursor: pointer;
     }
   </style>
@@ -92,10 +107,10 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, getDocs,
-      doc, updateDoc, increment
+      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment, arrayUnion
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -112,6 +127,11 @@
     async function loadFeed() {
       const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        feedContainer.innerHTML = "<p style='text-align:center; padding-top: 2rem;'>No posts yet. Upload something!</p>";
+        return;
+      }
 
       snapshot.forEach(docSnap => {
         const post = docSnap.data();
@@ -147,43 +167,26 @@
         const actions = document.createElement("div");
         actions.className = "actions";
 
+        // ❤️ Like button
         const likeBtn = document.createElement("button");
         likeBtn.className = "action-btn";
-        likeBtn.textContent = "❤️";
+        likeBtn.innerHTML = "❤️";
+
         const likeCount = document.createElement("div");
+        likeCount.className = "like-count";
         likeCount.textContent = post.likes || 0;
 
         likeBtn.addEventListener("click", async () => {
-          await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
-          likeCount.textContent = parseInt(likeCount.textContent) + 1;
-        });
+          const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
+          likeCount.textContent = newLikes;
 
-        const commentBtn = document.createElement("button");
-        commentBtn.className = "action-btn";
-        commentBtn.textContent = "💬";
-        commentBtn.addEventListener("click", () => {
-          alert("Comments feature coming soon");
-        });
-
-        const saveBtn = document.createElement("button");
-        saveBtn.className = "action-btn";
-        saveBtn.textContent = "🔖";
-        saveBtn.addEventListener("click", () => {
-          alert("Saved post");
-        });
-
-        const profileBtn = document.createElement("button");
-        profileBtn.className = "action-btn";
-        profileBtn.textContent = "👤";
-        profileBtn.addEventListener("click", () => {
-          alert("Profile page coming soon");
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
+          });
         });
 
         actions.appendChild(likeBtn);
         actions.appendChild(likeCount);
-        actions.appendChild(commentBtn);
-        actions.appendChild(saveBtn);
-        actions.appendChild(profileBtn);
 
         postEl.appendChild(mediaEl);
         postEl.appendChild(caption);
