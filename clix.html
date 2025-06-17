@@ -36,7 +36,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      background: #000; /* Fallback background */
+      background: #000;
     }
     .caption {
       position: absolute;
@@ -95,13 +95,11 @@
   <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
   <script type="module">
-    // ✅ Firebase import
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ✅ Your Firebase config with databaseURL
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -109,16 +107,14 @@
       storageBucket: "clixly-bc284.appspot.com",
       messagingSenderId: "33343695899",
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com" // Added for completeness
+      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
     };
 
-    // ✅ Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const feedContainer = document.getElementById("feed");
 
-    // ✅ Load Feed
     async function loadFeed() {
       try {
         const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
@@ -146,21 +142,15 @@
                 className: "media"
               })
             : Object.assign(document.createElement("img"), {
-                src: post.mediaURL || "https://via.placeholder.com/300x600", // Fallback image
+                src: post.mediaURL || "https://via.placeholder.com/300x600",
                 alt: post.caption || "Image Post",
                 className: "media"
               });
 
-          // Debug output
-          console.log(`Post ${postId}: type=${post.type}, mediaURL=${post.mediaURL}`);
-
-          // 🔇 Toggle mute for videos
           if (post.type === "video") {
             mediaEl.addEventListener("click", () => {
               mediaEl.muted = !mediaEl.muted;
             });
-          } else if (!post.mediaURL) {
-            console.warn(`No mediaURL for post ${postId}, using fallback image`);
           }
 
           const caption = document.createElement("div");
@@ -205,3 +195,4 @@
   </script>
 </body>
 </html>
+
