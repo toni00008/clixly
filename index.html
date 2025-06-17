@@ -63,6 +63,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .logo {
@@ -74,6 +75,7 @@
     .auth-buttons {
       display: flex;
       gap: 10px;
+      margin-top: 10px;
     }
 
     .auth-buttons button {
@@ -121,29 +123,6 @@
       color: #ccc;
     }
 
-    #edit-profile-modal {
-      display: none;
-      position: fixed;
-      top: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      max-width: 400px;
-      z-index: 999;
-    }
-
-    #edit-profile-modal input, #edit-profile-modal textarea {
-      width: 100%;
-      padding: 8px;
-      margin: 6px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
@@ -174,6 +153,7 @@
 </head>
 <body>
   <div class="container">
+    <!-- Sidebar -->
     <div class="sidebar">
       <a href="clix.html">📹 Clix</a>
       <a href="upload.html">📤 Upload</a>
@@ -182,6 +162,7 @@
       <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
     </div>
 
+    <!-- Main Content -->
     <div class="main">
       <div class="top-bar">
         <div class="logo">Clixly</div>
@@ -191,18 +172,6 @@
           <button id="login-btn" onclick="window.location.href='login.html'">Login</button>
           <button id="edit-profile-btn" style="display:none;">Edit Profile</button>
         </div>
-      </div>
-
-      <!-- Edit Profile Modal -->
-      <div id="edit-profile-modal">
-        <h3>Edit Your Profile</h3>
-        <label>Username:</label>
-        <input type="text" id="edit-username" placeholder="Your name">
-        <label>Bio:</label>
-        <textarea id="edit-bio" placeholder="Short bio"></textarea>
-        <br>
-        <button onclick="saveProfile()">💾 Save</button>
-        <button onclick="closeProfileModal()">❌ Cancel</button>
       </div>
 
       <!-- Sample Post -->
@@ -220,15 +189,12 @@
     </div>
   </div>
 
-  <!-- Firebase Setup -->
+  <!-- Firebase + Auth -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, setDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -241,56 +207,24 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const signupBtn = document.getElementById("signup-btn");
     const loginBtn = document.getElementById("login-btn");
     const editBtn = document.getElementById("edit-profile-btn");
 
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         signupBtn.style.display = "none";
         loginBtn.style.display = "none";
         editBtn.style.display = "inline-block";
-
-        // Load existing profile data
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          document.getElementById("edit-username").value = data.username || "";
-          document.getElementById("edit-bio").value = data.bio || "";
-        }
-
         editBtn.onclick = () => {
-          document.getElementById("edit-profile-modal").style.display = "block";
+          window.location.href = "edit-profile.html";
         };
       }
     });
-
-    window.saveProfile = async function () {
-      const username = document.getElementById("edit-username").value.trim();
-      const bio = document.getElementById("edit-bio").value.trim();
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const docRef = doc(db, "users", user.uid);
-      await setDoc(docRef, {
-        username,
-        bio,
-        email: user.email,
-        uid: user.uid
-      }, { merge: true });
-
-      alert("✅ Profile updated!");
-      document.getElementById("edit-profile-modal").style.display = "none";
-    };
-
-    window.closeProfileModal = function () {
-      document.getElementById("edit-profile-modal").style.display = "none";
-    };
   </script>
 
+  <!-- Dark Mode Toggle -->
   <script>
     function toggleDarkMode() {
       const html = document.documentElement;
@@ -303,7 +237,6 @@
       }
     }
 
-    // Auto-load theme
     window.onload = () => {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') {
