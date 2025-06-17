@@ -2,165 +2,233 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Clixly • Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clixly • Home</title>
   <style>
     :root {
       --bg-color: #0d0d10;
-      --text-color: #fff;
+      --text-color: #ffffff;
       --accent-color: #8a2be2;
-      --card-bg: #1c1c26;
     }
 
     [data-theme='light'] {
       --bg-color: #f9f9f9;
       --text-color: #111;
       --accent-color: #8a2be2;
-      --card-bg: #fff;
     }
 
     body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
       background: var(--bg-color);
       color: var(--text-color);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 20px;
       transition: background 0.3s, color 0.3s;
     }
 
     .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      text-align: center;
+      display: flex;
+      min-height: 100vh;
     }
 
-    img.profile-pic {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid var(--accent-color);
-      margin-bottom: 10px;
+    .sidebar {
+      width: 220px;
+      padding: 20px;
+      background-color: #15151c;
+      border-right: 1px solid #2a2a35;
     }
 
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0 20px;
+    .sidebar a {
+      display: block;
+      color: #aaa;
+      text-decoration: none;
+      margin: 15px 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+
+    .sidebar a:hover {
+      background: #222;
+      color: var(--accent-color);
+    }
+
+    .main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+
+    .auth-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .auth-buttons button {
+      background: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .search-bar {
+      padding: 8px 12px;
       border-radius: 8px;
       border: none;
-      font-size: 1em;
-      background: #333;
-      color: #eee;
-      resize: vertical;
-    }
-
-    input[type="file"] {
-      margin: 10px 0 20px;
-      color: #ccc;
-    }
-
-    button {
-      background: var(--accent-color);
-      color: #fff;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin-bottom: 30px;
-    }
-
-    button:hover {
-      background: #6f21b8;
-    }
-
-    .posts {
-      text-align: left;
-    }
-
-    .post {
-      background: #22222a;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-
-    .post p {
-      margin: 0 0 8px;
-      font-size: 1.1em;
-      color: #ddd;
-    }
-
-    .post time {
-      font-size: 0.8em;
-      color: #888;
-    }
-
-    button.back-btn {
-      background: var(--accent-color);
-      color: #fff;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin-bottom: 20px;
-    }
-
-    button.back-btn:hover {
-      background: #6f21b8;
+      width: 200px;
     }
 
     .dark-toggle {
-      position: fixed;
-      top: 10px;
-      right: 10px;
       background: none;
       border: 1px solid #666;
       color: var(--text-color);
       padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
-      z-index: 100;
+    }
+
+    .post {
+      background: #1c1c26;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 20px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .post img {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .likes {
+      margin-top: 10px;
+      color: #ccc;
+    }
+
+    #edit-profile-modal {
+      display: none;
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      color: black;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      max-width: 400px;
+      z-index: 999;
+    }
+
+    #edit-profile-modal input, #edit-profile-modal textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+        border-right: none;
+        border-bottom: 1px solid #333;
+      }
+
+      .main {
+        padding: 10px;
+      }
+
+      .search-bar {
+        width: 100%;
+        margin: 10px 0;
+      }
+
+      .auth-buttons {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="sidebar">
+      <a href="clix.html">📹 Clix</a>
+      <a href="upload.html">📤 Upload</a>
+      <a href="abc.html">🔤 Abc</a>
+      <a href="explore.html">🧭 Explore</a>
+      <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
+    </div>
 
-  <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
+    <div class="main">
+      <div class="top-bar">
+        <div class="logo">Clixly</div>
+        <input type="text" placeholder="Search..." class="search-bar">
+        <div class="auth-buttons">
+          <button id="signup-btn" onclick="window.location.href='signup.html'">Sign Up</button>
+          <button id="login-btn" onclick="window.location.href='login.html'">Login</button>
+          <button id="edit-profile-btn" style="display:none;">Edit Profile</button>
+        </div>
+      </div>
 
-  <div class="container" id="profile-container">
-    <button class="back-btn" onclick="goBack()">← Back to Home</button>
+      <!-- Edit Profile Modal -->
+      <div id="edit-profile-modal">
+        <h3>Edit Your Profile</h3>
+        <label>Username:</label>
+        <input type="text" id="edit-username" placeholder="Your name">
+        <label>Bio:</label>
+        <textarea id="edit-bio" placeholder="Short bio"></textarea>
+        <br>
+        <button onclick="saveProfile()">💾 Save</button>
+        <button onclick="closeProfileModal()">❌ Cancel</button>
+      </div>
 
-    <img src="https://via.placeholder.com/120?text=User" alt="Profile Picture" class="profile-pic" id="profile-pic" />
+      <!-- Sample Post -->
+      <div class="post">
+        <b>alex123</b> • 2h ago
+        <img src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80" alt="Post" />
+        <div class="likes">❤️ 1,290 &nbsp; 💬 90</div>
+      </div>
 
-    <input type="file" id="photoInput" accept="image/*" />
-
-    <input type="text" id="usernameInput" placeholder="Username" />
-    <textarea id="bioInput" rows="3" placeholder="Your bio..."></textarea>
-
-    <button id="saveBtn">Save Changes</button>
-
-    <div id="message" style="margin-bottom: 20px; color: lightgreen;"></div>
-
-    <hr style="margin: 40px 0; border-color: #444;" />
-
-    <h2>User Posts</h2>
-    <div class="posts" id="postsContainer">Loading posts...</div>
+      <div class="post">
+        <b>sarah_j</b> • 4h ago
+        <img src="https://images.unsplash.com/photo-1604079628044-cac508bb11f4?auto=format&fit=crop&w=800&q=80" alt="Post" />
+        <div class="likes">❤️ 1,200 &nbsp; 💬 90</div>
+      </div>
+    </div>
   </div>
 
+  <!-- Firebase Setup -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -172,151 +240,58 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
-    function getQueryParams() {
-      const params = {};
-      location.search.slice(1).split("&").forEach(pair => {
-        const [key, val] = pair.split("=");
-        params[key] = decodeURIComponent(val);
-      });
-      return params;
-    }
+    const signupBtn = document.getElementById("signup-btn");
+    const loginBtn = document.getElementById("login-btn");
+    const editBtn = document.getElementById("edit-profile-btn");
 
-    const params = getQueryParams();
-    const uid = params.uid;
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        signupBtn.style.display = "none";
+        loginBtn.style.display = "none";
+        editBtn.style.display = "inline-block";
 
-    // Elements
-    const profilePic = document.getElementById("profile-pic");
-    const usernameInput = document.getElementById("usernameInput");
-    const bioInput = document.getElementById("bioInput");
-    const photoInput = document.getElementById("photoInput");
-    const saveBtn = document.getElementById("saveBtn");
-    const message = document.getElementById("message");
-    const postsContainer = document.getElementById("postsContainer");
-
-    if (!uid) {
-      alert("No user ID provided in URL");
-      window.location.href = "index.html";
-    }
-
-    async function loadProfile(uid) {
-      const userDoc = doc(db, "users", uid);
-      const userSnap = await getDoc(userDoc);
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-
-        profilePic.src = data.photoURL || "https://via.placeholder.com/120?text=User";
-        usernameInput.value = data.username || "";
-        bioInput.value = data.bio || "";
-      } else {
-        alert("User not found");
-        window.location.href = "index.html";
-      }
-    }
-
-    async function saveProfile() {
-      saveBtn.disabled = true;
-      message.textContent = "Saving...";
-
-      let photoURL = profilePic.src;
-
-      // If new photo selected, upload it first
-      if (photoInput.files.length > 0) {
-        const file = photoInput.files[0];
-        const storageRef = ref(storage, `profilePics/${uid}/${file.name}`);
-
-        try {
-          await uploadBytes(storageRef, file);
-          photoURL = await getDownloadURL(storageRef);
-        } catch (e) {
-          message.style.color = "red";
-          message.textContent = "Failed to upload photo: " + e.message;
-          saveBtn.disabled = false;
-          return;
-        }
-      }
-
-      // Update user doc in Firestore
-      try {
-        await db.collection("users").doc(uid).set({
-          username: usernameInput.value.trim(),
-          bio: bioInput.value.trim(),
-          photoURL,
-        }, { merge: true });
-
-        profilePic.src = photoURL;
-        message.style.color = "lightgreen";
-        message.textContent = "Profile updated successfully!";
-        photoInput.value = ""; // reset file input
-
-      } catch (e) {
-        message.style.color = "red";
-        message.textContent = "Failed to update profile: " + e.message;
-      }
-      saveBtn.disabled = false;
-    }
-
-    // Load user posts
-    async function loadPosts() {
-      postsContainer.textContent = "Loading posts...";
-      const postsQuery = query(
-        collection(db, "posts"),
-        where("userId", "==", uid),
-        orderBy("createdAt", "desc")
-      );
-
-      try {
-        const querySnapshot = await getDocs(postsQuery);
-        if (querySnapshot.empty) {
-          postsContainer.textContent = "No posts yet.";
-          return;
+        // Load existing profile data
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          document.getElementById("edit-username").value = data.username || "";
+          document.getElementById("edit-bio").value = data.bio || "";
         }
 
-        postsContainer.innerHTML = "";
-        querySnapshot.forEach(docSnap => {
-          const post = docSnap.data();
-          const postDiv = document.createElement("div");
-          postDiv.className = "post";
-
-          const postText = post.text || "(No text)";
-          const postDate = post.createdAt ? new Date(post.createdAt.seconds * 1000) : new Date();
-
-          postDiv.innerHTML = `
-            <p>${escapeHtml(postText)}</p>
-            <time>${postDate.toLocaleString()}</time>
-          `;
-
-          postsContainer.appendChild(postDiv);
-        });
-      } catch (e) {
-        postsContainer.textContent = "Failed to load posts: " + e.message;
+        editBtn.onclick = () => {
+          document.getElementById("edit-profile-modal").style.display = "block";
+        };
       }
-    }
+    });
 
-    // Escape HTML for safety
-    function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, function(m) {
-        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-      });
-    }
+    window.saveProfile = async function () {
+      const username = document.getElementById("edit-username").value.trim();
+      const bio = document.getElementById("edit-bio").value.trim();
+      const user = auth.currentUser;
+      if (!user) return;
 
-    function goBack() {
-      window.location.href = "index.html";
-    }
+      const docRef = doc(db, "users", user.uid);
+      await setDoc(docRef, {
+        username,
+        bio,
+        email: user.email,
+        uid: user.uid
+      }, { merge: true });
 
-    saveBtn.addEventListener("click", saveProfile);
+      alert("✅ Profile updated!");
+      document.getElementById("edit-profile-modal").style.display = "none";
+    };
 
-    // Initialize page
-    loadProfile(uid);
-    loadPosts();
-
+    window.closeProfileModal = function () {
+      document.getElementById("edit-profile-modal").style.display = "none";
+    };
   </script>
 
   <script>
-    // Dark mode toggle code
     function toggleDarkMode() {
       const html = document.documentElement;
       if (html.getAttribute('data-theme') === 'light') {
@@ -328,6 +303,7 @@
       }
     }
 
+    // Auto-load theme
     window.onload = () => {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') {
@@ -335,7 +311,6 @@
       }
     };
   </script>
-
 </body>
 </html>
 
