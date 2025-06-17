@@ -1,70 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User Profile • Clixly</title>
+  <title>Edit Profile • Clixly</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      max-width: 600px;
+      max-width: 500px;
       margin: auto;
-      background: #121212;
-      color: #eee;
-      padding: 20px;
+      background: #f9f9f9;
+      padding: 30px;
     }
-    img.profile-pic {
-      width: 150px;
+    h2 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 1em;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background-color: #0077ff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    img {
+      width: 100px;
       border-radius: 50%;
       display: block;
       margin: 20px auto;
-      border: 3px solid #8a2be2;
-      object-fit: cover;
-    }
-    h1, p.bio {
-      text-align: center;
-    }
-    .posts {
-      margin-top: 30px;
-    }
-    .post {
-      background: #222;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 10px;
-    }
-    .post time {
-      font-size: 0.8em;
-      color: #888;
-    }
-    button.edit-btn {
-      display: block;
-      margin: 20px auto;
-      background: #8a2be2;
-      border: none;
-      padding: 10px 25px;
-      border-radius: 10px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <img id="profilePic" src="https://via.placeholder.com/150?text=User" alt="Profile Picture" class="profile-pic" />
-  <h1 id="username">Loading...</h1>
-  <p class="bio" id="bio"></p>
+  <h2>Edit Your Profile</h2>
+  <div id="form-container">
+    <img id="profilePicPreview" src="" alt="Profile Picture">
+    <label>New Profile Picture (URL)</label>
+    <input type="text" id="profilePic">
 
-  <button id="editBtn" class="edit-btn" style="display:none;">Edit Profile</button>
+    <label>Username</label>
+    <input type="text" id="username">
 
-  <div class="posts">
-    <h2>User Posts</h2>
-    <div id="postsContainer">Loading posts...</div>
+    <label>Bio</label>
+    <textarea id="bio" rows="4"></textarea>
+
+    <button onclick="updateProfile()">💾 Save Changes</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -79,100 +83,49 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    function getQueryParams() {
-      const params = {};
-      location.search.slice(1).split("&").forEach(pair => {
-        const [key, val] = pair.split("=");
-        params[key] = decodeURIComponent(val);
-      });
-      return params;
-    }
-    const params = getQueryParams();
-    const uid = params.uid;
+    let currentUserId = null;
 
-    const profilePicEl = document.getElementById("profilePic");
-    const usernameEl = document.getElementById("username");
-    const bioEl = document.getElementById("bio");
-    const postsContainer = document.getElementById("postsContainer");
-    const editBtn = document.getElementById("editBtn");
-
-    if (!uid) {
-      alert("User ID missing in URL");
-      window.location.href = "index.html";
-    }
-
-    async function loadUser() {
-      const userDoc = doc(db, "users", uid);
-      const userSnap = await getDoc(userDoc);
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        profilePicEl.src = data.profilePic || "https://via.placeholder.com/150?text=User";
-        usernameEl.textContent = data.username || "No username";
-        bioEl.textContent = data.bio || "";
-      } else {
-        alert("User not found");
-        window.location.href = "index.html";
-      }
-    }
-
-    async function loadPosts() {
-      postsContainer.textContent = "Loading posts...";
-      const postsQuery = query(
-        collection(db, "posts"),
-        where("userId", "==", uid),
-        orderBy("createdAt", "desc")
-      );
-
-      try {
-        const snapshot = await getDocs(postsQuery);
-        if (snapshot.empty) {
-          postsContainer.textContent = "No posts yet.";
-          return;
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        const userDoc = await getDoc(doc(db, "users", currentUserId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          document.getElementById("username").value = data.username || "";
+          document.getElementById("bio").value = data.bio || "";
+          document.getElementById("profilePic").value = data.profilePic || "";
+          document.getElementById("profilePicPreview").src = data.profilePic || "";
         }
-
-        postsContainer.innerHTML = "";
-        snapshot.forEach(docSnap => {
-          const post = docSnap.data();
-          const postDiv = document.createElement("div");
-          postDiv.className = "post";
-
-          const postText = post.text || "(No content)";
-          const postDate = post.createdAt ? new Date(post.createdAt.seconds * 1000) : new Date();
-
-          postDiv.innerHTML = `
-            <p>${escapeHtml(postText)}</p>
-            <time>${postDate.toLocaleString()}</time>
-          `;
-
-          postsContainer.appendChild(postDiv);
-        });
-      } catch (e) {
-        postsContainer.textContent = "Error loading posts: " + e.message;
-      }
-    }
-
-    // Escape HTML
-    function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, function(m) {
-        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-      });
-    }
-
-    // Show Edit button if logged in user matches profile uid
-    onAuthStateChanged(auth, (user) => {
-      if (user && user.uid === uid) {
-        editBtn.style.display = "block";
-        editBtn.onclick = () => {
-          window.location.href = "edit-profile.html";
-        };
+      } else {
+        document.body.innerHTML = '<p>Please <a href="login.html">log in</a> to edit your profile.</p>';
       }
     });
 
-    // Init
-    loadUser();
-    loadPosts();
-  </script>
+    window.updateProfile = async function () {
+      const username = document.getElementById("username").value.trim();
+      const bio = document.getElementById("bio").value.trim();
+      const profilePic = document.getElementById("profilePic").value.trim();
 
+      if (!username || !profilePic) {
+        alert("Username and Profile Picture URL are required.");
+        return;
+      }
+
+      await updateDoc(doc(db, "users", currentUserId), {
+        username,
+        bio,
+        profilePic
+      });
+
+      alert("✅ Profile updated!");
+      document.getElementById("profilePicPreview").src = profilePic;
+    };
+
+    // Live preview for profile picture
+    document.getElementById("profilePic").addEventListener("input", (e) => {
+      document.getElementById("profilePicPreview").src = e.target.value.trim();
+    });
+  </script>
 </body>
 </html>
+
