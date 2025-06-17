@@ -2,168 +2,214 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clix • Transparent Overlay Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #000;
       color: #fff;
       overflow-x: hidden;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
     .feed-container {
-      flex: 1;
-      overflow-y: auto;
-      scroll-behavior: smooth;
-      padding: 10px;
+      max-width: 600px;
+      margin: 16px auto;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 30px;
+      padding: 0 12px;
     }
-
     .post {
       position: relative;
-      max-width: 500px;
-      margin: 0 auto;
+      width: 100%;
       border-radius: 16px;
       overflow: hidden;
-      background: #111;
-      aspect-ratio: 9 / 16;
-      box-shadow: 0 0 15px #ff0050;
+      background: transparent;
     }
-
     .media-container {
       position: relative;
       width: 100%;
-      height: 100%;
+      aspect-ratio: 9 / 16;
       overflow: hidden;
       border-radius: 16px;
       background: #000;
-      z-index: 1; /* base stacking */
+      z-index: 0; /* Base z-index for media container */
     }
-
-    video.media,
-    img.media {
-      position: relative;  /* key to keep overlays above */
-      z-index: 1;
+    video, img.media {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      user-select: none;
       display: block;
+      user-select: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1; /* Ensure media is behind overlays */
     }
 
-    /* Username inside video top-left */
+    /* Username inside video bottom-left */
     .username-overlay {
       position: absolute;
-      top: 10px;
+      bottom: 12px;
       left: 12px;
-      z-index: 10;
-      font-weight: 700;
-      font-size: 1em;
-      color: rgba(255,255,255,0.85);
-      text-shadow: 0 0 5px rgba(0,0,0,0.7);
-      pointer-events: none;
+      font-weight: 600;
+      font-size: 1.1em;
+      color: white;
+      text-shadow:
+        0 0 4px rgba(0,0,0,0.9),
+        0 0 6px rgba(0,0,0,0.8);
+      pointer-events: none; /* let clicks go through */
       user-select: none;
+      background: transparent;
+      z-index: 20; /* Higher z-index to stay above media */
     }
 
-    /* Actions bottom-right inside video */
-    .actions {
+    /* Buttons stacked vertically on right inside video */
+    .action-overlay {
       position: absolute;
-      right: 12px;
       bottom: 12px;
-      z-index: 10;
+      right: 12px;
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 14px;
+      z-index: 20; /* Higher z-index to stay above media */
+      user-select: none;
     }
-
     .action-btn {
-      font-size: 1.8em;
-      background: rgba(0,0,0,0.3);
+      background: transparent;
       border: none;
-      color: #fff;
+      font-size: 1.9em;
+      color: rgba(255 255 255 / 0.85);
       cursor: pointer;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 0 6px #ff0050;
-      transition: background 0.3s ease;
+      padding: 6px;
+      user-select: none;
+      transition: color 0.25s ease;
     }
     .action-btn:hover {
-      background: rgba(255, 0, 80, 0.8);
-    }
-
-    .like-count {
       color: #ff0050;
-      font-weight: 700;
-      font-size: 0.9em;
-      user-select: none;
-      pointer-events: none;
-      margin-top: -8px;
-      text-align: center;
-      text-shadow: 0 0 5px rgba(0,0,0,0.7);
-      width: 44px;
     }
 
-    /* Caption below video */
+    /* Caption below video - fully transparent background */
     .caption {
-      padding: 10px 12px;
+      margin-top: 8px;
       font-size: 0.95em;
-      color: #eee;
-      max-width: 500px;
-      margin: 6px auto 0;
-      text-align: center;
-      user-select: none;
+      color: rgba(255 255 255 / 0.85);
+      text-shadow:
+        0 0 4px rgba(0,0,0,0.8);
+      background: transparent;
+      user-select: text;
     }
 
+    /* Likes count below caption */
+    .likes {
+      font-size: 0.85em;
+      color: rgba(255 255 255 / 0.6);
+      margin-top: 4px;
+      user-select: none;
+      text-shadow:
+        0 0 3px rgba(0,0,0,0.7);
+    }
+
+    /* Upload Button fixed bottom right */
     .upload-btn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 22px;
+      right: 22px;
       background: #ff0050;
       color: white;
-      font-size: 2em;
+      font-size: 2.4em;
       border: none;
       border-radius: 50%;
-      width: 60px;
-      height: 60px;
+      width: 64px;
+      height: 64px;
       z-index: 100;
       cursor: pointer;
-      box-shadow: 0 0 10px #ff0050;
-      transition: background 0.3s ease;
+      box-shadow: 0 4px 12px rgba(255, 0, 80, 0.7);
+      transition: background-color 0.3s ease;
     }
     .upload-btn:hover {
-      background: #e00048;
+      background: #e60044;
     }
 
-    /* Scrollbar style for feed container */
-    .feed-container::-webkit-scrollbar {
-      width: 8px;
+    /* Comment Popup styles remain same */
+    #commentModal {
+      display:none;
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:#000000dd;
+      z-index:9999;
+      padding:20px;
     }
-    .feed-container::-webkit-scrollbar-thumb {
-      background: #ff0050;
-      border-radius: 4px;
+    #commentModal .popup {
+      max-width:500px;
+      margin:auto;
+      background:#111;
+      border-radius:12px;
+      padding:16px;
+      height:80%;
+      display:flex;
+      flex-direction:column;
+    }
+    #commentList {
+      flex:1;
+      overflow-y:auto;
+      margin-bottom:10px;
+    }
+    #commentList div {
+      margin-bottom:8px;
+      border-bottom:1px solid #333;
+      padding-bottom:6px;
+      color: white;
+    }
+    input, button {
+      font-family: inherit;
+    }
+
+    /* Mobile Adjustments */
+    @media (max-width: 600px) {
+      .action-overlay {
+        bottom: 10px;
+        right: 10px;
+      }
+      .username-overlay {
+        bottom: 10px;
+        left: 10px;
+      }
+      .upload-btn {
+        bottom: 15px;
+        right: 15px;
+      }
     }
   </style>
 </head>
 <body>
 
 <div class="feed-container" id="feed"></div>
+
 <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
+
+<!-- Comment Popup -->
+<div id="commentModal">
+  <div class="popup">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3>Comments</h3>
+      <button onclick="closeCommentModal()" style="background:none;border:none;font-size:1.5em;color:#fff;cursor:pointer;">✖</button>
+    </div>
+    <div id="commentList"></div>
+    <input id="commentInput" type="text" placeholder="Add a comment..." style="padding:8px; border-radius:8px; border:none; margin-bottom:10px;" />
+    <button onclick="submitComment()" style="padding:8px; background:#ff0050; color:white; border:none; border-radius:8px; cursor:pointer;">Post</button>
+  </div>
+</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc, updateDoc, increment
+    getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment,
+    addDoc, serverTimestamp, onSnapshot, startAfter, limit
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -180,131 +226,176 @@
   const db = getFirestore(app);
   const feed = document.getElementById("feed");
 
+  let currentPostId = null;
   let lastVisible = null;
-  let isLoading = false;
+  const PAGE_SIZE = 4;
+  let loading = false;
 
-  async function loadFeed(initial = false) {
-    if (isLoading) return;
-    isLoading = true;
-
-    const q = initial
-      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
-      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
-
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      if (initial) {
-        feed.innerHTML = "<p style='text-align:center; color:#fff;'>No posts yet.</p>";
-      }
-      isLoading = false;
-      return;
-    }
-
-    lastVisible = snapshot.docs[snapshot.docs.length - 1];
-
-    snapshot.forEach(docSnap => {
-      const post = docSnap.data();
-      const postId = docSnap.id;
-
-      const postEl = document.createElement("div");
-      postEl.className = "post";
-
-      // Media container for proper layering
-      const mediaContainer = document.createElement("div");
-      mediaContainer.className = "media-container";
-
-      let mediaEl;
-      if (post.type === "video") {
-        mediaEl = document.createElement("video");
-        mediaEl.src = post.mediaURL || "";
-        mediaEl.autoplay = true;
-        mediaEl.muted = true;
-        mediaEl.loop = true;
-        mediaEl.playsInline = true;
-        mediaEl.className = "media";
-
-        mediaEl.addEventListener("click", () => {
-          mediaEl.muted = !mediaEl.muted;
-        });
-
-      } else {
-        mediaEl = document.createElement("img");
-        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
-        mediaEl.alt = post.caption || "Image Post";
-        mediaEl.className = "media";
-      }
-
-      mediaContainer.appendChild(mediaEl);
-
-      // Username overlay inside video frame
-      const usernameOverlay = document.createElement("div");
-      usernameOverlay.className = "username-overlay";
-      usernameOverlay.textContent = `@${post.username || 'user'}`;
-      mediaContainer.appendChild(usernameOverlay);
-
-      // Actions overlay (like, comment, save)
-      const actions = document.createElement("div");
-      actions.className = "actions";
-
-      const likeBtn = document.createElement("button");
-      likeBtn.className = "action-btn";
-      likeBtn.textContent = "❤️";
-
-      const commentBtn = document.createElement("button");
-      commentBtn.className = "action-btn";
-      commentBtn.textContent = "🗨️";
-
-      const saveBtn = document.createElement("button");
-      saveBtn.className = "action-btn";
-      saveBtn.textContent = "🔖";
-
-      const likeCount = document.createElement("div");
-      likeCount.className = "like-count";
-      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
-
-      likeBtn.addEventListener("click", async () => {
-        try {
-          const newLikes = parseInt(likeCount.textContent) + 1;
-          likeCount.textContent = newLikes;
-          await updateDoc(doc(db, "clixPosts", postId), {
-            likes: increment(1)
-          });
-        } catch (e) {
-          alert("Failed to like post. Try again.");
-        }
+  // Comment modal handlers
+  window.openCommentModal = function(postId) {
+    currentPostId = postId;
+    document.getElementById('commentModal').style.display = 'block';
+    document.getElementById('commentInput').value = '';
+    loadComments(postId);
+  };
+  window.closeCommentModal = function() {
+    document.getElementById('commentModal').style.display = 'none';
+  };
+  window.submitComment = async function() {
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    if (!text) return;
+    try {
+      const commentRef = collection(db, "clixPosts", currentPostId, "comments");
+      await addDoc(commentRef, {
+        text,
+        createdAt: serverTimestamp(),
+        username: localStorage.getItem("username") || "Anonymous"
       });
+      input.value = '';
+    } catch (e) {
+      alert("Failed to add comment. Try again.");
+    }
+  };
 
-      // You can later add commentBtn & saveBtn listeners here...
-
-      actions.appendChild(likeBtn);
-      actions.appendChild(commentBtn);
-      actions.appendChild(saveBtn);
-      actions.appendChild(likeCount);
-
-      postEl.appendChild(mediaContainer);
-      postEl.appendChild(actions);
-
-      // Caption below
-      const caption = document.createElement("div");
-      caption.className = "caption";
-      caption.innerHTML = post.caption ? post.caption : '';
-      postEl.appendChild(caption);
-
-      feed.appendChild(postEl);
+  async function loadComments(postId) {
+    const commentList = document.getElementById('commentList');
+    commentList.innerHTML = '<p style="text-align:center;">Loading...</p>';
+    const commentRef = collection(db, "clixPosts", postId, "comments");
+    const q = query(commentRef, orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      commentList.innerHTML = '';
+      snapshot.forEach(doc => {
+        const c = doc.data();
+        const div = document.createElement('div');
+        div.innerHTML = `<strong>@${sanitize(c.username)}</strong><br>${sanitize(c.text)}`;
+        commentList.appendChild(div);
+      });
     });
-
-    isLoading = false;
   }
 
-  // Initial load
-  loadFeed(true);
+  function sanitize(str) {
+    if (!str) return '';
+    return str.replace(/,uLetCRgPbSOz6Te2vTfbsF3Fh3F3,iHThDpcSvFWUXk57YLE2RJMdDfp1/g, '').trim();
+  }
 
-  // Infinite scroll handler
-  feed.addEventListener('scroll', () => {
-    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
-      loadFeed();
+  function createPostElement(post, postId) {
+    const postEl = document.createElement("div");
+    postEl.className = "post";
+
+    const mediaWrapper = document.createElement("div");
+    mediaWrapper.className = "media-container";
+
+    let mediaEl;
+    if (post.type === "video") {
+      mediaEl = document.createElement("video");
+      mediaEl.src = post.mediaURL;
+      mediaEl.autoplay = true;
+      mediaEl.loop = true;
+      mediaEl.muted = true;
+      mediaEl.playsInline = true;
+      mediaEl.className = "media";
+      mediaEl.addEventListener("click", () => {
+        mediaEl.muted = !mediaEl.muted;
+      });
+    } else {
+      mediaEl = document.createElement("img");
+      mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+      mediaEl.alt = post.caption || "Image Post";
+      mediaEl.className = "media";
+    }
+
+    // Username overlay inside video frame bottom-left
+    const usernameOverlay = document.createElement("div");
+    usernameOverlay.className = "username-overlay";
+    usernameOverlay.textContent = "@" + sanitize(post.username || "user");
+
+    // Action buttons vertical stack on bottom-right
+    const actionOverlay = document.createElement("div");
+    actionOverlay.className = "action-overlay";
+
+    const likeBtn = document.createElement("button");
+    likeBtn.className = "action-btn";
+    likeBtn.textContent = "❤️";
+
+    const commentBtn = document.createElement("button");
+    commentBtn.className = "action-btn";
+    commentBtn.textContent = "💬";
+    commentBtn.onclick = () => openCommentModal(postId);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "action-btn";
+    saveBtn.textContent = "🔖";
+
+    const shareBtn = document.createElement("button");
+    shareBtn.className = "action-btn";
+    shareBtn.textContent = "📤";
+
+    likeBtn.onclick = async () => {
+      try {
+        await updateDoc(doc(db, "clixPosts", postId), {
+          likes: increment(1)
+        });
+        likeCount.textContent = (parseInt(likeCount.textContent) || 0) + 1;
+      } catch (e) {
+        alert("Failed to like post");
+      }
+    };
+
+    actionOverlay.appendChild(likeBtn);
+    actionOverlay.appendChild(commentBtn);
+    actionOverlay.appendChild(saveBtn);
+    actionOverlay.appendChild(shareBtn);
+
+    // Caption below video frame
+    const caption = document.createElement("div");
+    caption.className = "caption";
+    caption.textContent = sanitize(post.caption || "");
+
+    // Likes count below caption
+    const likeCount = document.createElement("div");
+    likeCount.className = "likes";
+    likeCount.textContent = post.likes || 0;
+
+    mediaWrapper.appendChild(mediaEl);
+    mediaWrapper.appendChild(usernameOverlay);
+    mediaWrapper.appendChild(actionOverlay);
+
+    postEl.appendChild(mediaWrapper);
+    postEl.appendChild(caption);
+    postEl.appendChild(likeCount);
+
+    return postEl;
+  }
+
+  async function loadFeedPage() {
+    if (loading) return;
+    loading = true;
+    let q;
+    if (lastVisible) {
+      q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(PAGE_SIZE));
+    } else {
+      q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+    }
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      lastVisible = snapshot.docs[snapshot.docs.length - 1];
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        const postId = docSnap.id;
+        feed.appendChild(createPostElement(post, postId));
+      });
+    }
+    loading = false;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
+      loadFeedPage();
     }
   });
+
+  loadFeedPage();
 </script>
 
 </body>
