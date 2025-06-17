@@ -145,23 +145,21 @@
         }
       };
 
-      // Load this user's posts (optional: from Firestore `posts` where userId == uid)
+      // Load this user's posts (optional: from Firestore posts where userId == uid)
       const q = query(collection(db, "posts"), where("userId", "==", uid));
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach((doc) => {
         const post = doc.data();
         const postEl = document.createElement("div");
         postEl.className = "post";
-        postEl.innerHTML = `
+        postEl.innerHTML = 
           <b>${data.username}</b>
           <img src="${post.imageUrl}" alt="Post" />
           <div class="likes">❤️ ${post.likes || 0}</div>
-        `;
+        ;
         postsDiv.appendChild(postEl);
       });
     });
   </script>
 </body>
 </html>
-
-
