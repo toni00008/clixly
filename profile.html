@@ -57,7 +57,7 @@
 
   <div id="posts"></div>
 
-  <!-- Firebase -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -69,12 +69,12 @@
       query,
       where,
       getDocs,
-      setDoc,
       updateDoc,
       arrayUnion,
       arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -84,16 +84,19 @@
       appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // Get UID from URL
     const uid = new URLSearchParams(window.location.search).get("uid");
     if (!uid) {
       document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
-      throw new Error("No UID provided in URL.");
+      throw new Error("No UID in URL");
     }
 
+    // DOM Elements
     const usernameEl = document.getElementById("username");
     const bioEl = document.getElementById("bio");
     const picEl = document.getElementById("profile-pic");
@@ -111,9 +114,10 @@
 
       currentUserUid = user.uid;
 
-      // Load target user data
+      // Load user being viewed
       const userRef = doc(db, "users", uid);
       const userSnap = await getDoc(userRef);
+
       if (!userSnap.exists()) {
         document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
         return;
@@ -124,36 +128,43 @@
       bioEl.textContent = data.bio || "";
       picEl.src = data.profilePicture || "https://via.placeholder.com/80";
 
-      // Check if you're already following
+      // Follow/unfollow button
       const currentUserRef = doc(db, "users", currentUserUid);
       const currentSnap = await getDoc(currentUserRef);
       const currentData = currentSnap.data();
-      const isFollowing = (currentData.following || []).includes(uid);
+      let isFollowing = (currentData.following || []).includes(uid);
 
-      followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
+      const updateFollowBtn = () => {
+        followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
+      };
+
+      updateFollowBtn();
+
       followBtn.onclick = async () => {
         if (isFollowing) {
           await updateDoc(currentUserRef, {
             following: arrayRemove(uid)
           });
-          followBtn.textContent = "Follow";
+          isFollowing = false;
         } else {
           await updateDoc(currentUserRef, {
             following: arrayUnion(uid)
           });
-          followBtn.textContent = "Unfollow";
+          isFollowing = true;
         }
+        updateFollowBtn();
       };
 
-      // Load this user's posts (optional: from Firestore `posts` where userId == uid)
-      const q = query(collection(db, "posts"), where("userId", "==", uid));
-      const querySnapshot = await getDocs(q);
-      querySnapshot.forEach((doc) => {
+      // Show user’s posts
+      const postQuery = query(collection(db, "posts"), where("userId", "==", uid));
+      const postSnap = await getDocs(postQuery);
+
+      postSnap.forEach((doc) => {
         const post = doc.data();
         const postEl = document.createElement("div");
         postEl.className = "post";
         postEl.innerHTML = `
-          <b>${data.username}</b>
+          <b>${data.username}</b><br>
           <img src="${post.imageUrl}" alt="Post" />
           <div class="likes">❤️ ${post.likes || 0}</div>
         `;
