@@ -121,29 +121,6 @@
       color: #ccc;
     }
 
-    #edit-profile-modal {
-      display: none;
-      position: fixed;
-      top: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      max-width: 400px;
-      z-index: 999;
-    }
-
-    #edit-profile-modal input, #edit-profile-modal textarea {
-      width: 100%;
-      padding: 8px;
-      margin: 6px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
@@ -185,24 +162,12 @@
     <div class="main">
       <div class="top-bar">
         <div class="logo">Clixly</div>
-        <input type="text" placeholder="Search..." class="search-bar">
+        <input type="text" placeholder="Search..." class="search-bar" />
         <div class="auth-buttons">
           <button id="signup-btn" onclick="window.location.href='signup.html'">Sign Up</button>
           <button id="login-btn" onclick="window.location.href='login.html'">Login</button>
-          <button id="edit-profile-btn" style="display:none;">Edit Profile</button>
+          <button id="edit-profile-btn" style="display:none;">Profile</button>
         </div>
-      </div>
-
-      <!-- Edit Profile Modal -->
-      <div id="edit-profile-modal">
-        <h3>Edit Your Profile</h3>
-        <label>Username:</label>
-        <input type="text" id="edit-username" placeholder="Your name">
-        <label>Bio:</label>
-        <textarea id="edit-bio" placeholder="Short bio"></textarea>
-        <br>
-        <button onclick="saveProfile()">💾 Save</button>
-        <button onclick="closeProfileModal()">❌ Cancel</button>
       </div>
 
       <!-- Sample Post -->
@@ -227,7 +192,7 @@
       getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, setDoc
+      getFirestore, doc, getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -253,42 +218,24 @@
         loginBtn.style.display = "none";
         editBtn.style.display = "inline-block";
 
-        // Load existing profile data
+        // Fetch username to build profile URL
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
+        let username = "";
         if (docSnap.exists()) {
-          const data = docSnap.data();
-          document.getElementById("edit-username").value = data.username || "";
-          document.getElementById("edit-bio").value = data.bio || "";
+          username = docSnap.data().username || "";
         }
 
+        // Redirect to profile page on button click
         editBtn.onclick = () => {
-          document.getElementById("edit-profile-modal").style.display = "block";
+          window.location.href = `profile.html?uid=${user.uid}&username=${encodeURIComponent(username)}`;
         };
+      } else {
+        signupBtn.style.display = "inline-block";
+        loginBtn.style.display = "inline-block";
+        editBtn.style.display = "none";
       }
     });
-
-    window.saveProfile = async function () {
-      const username = document.getElementById("edit-username").value.trim();
-      const bio = document.getElementById("edit-bio").value.trim();
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const docRef = doc(db, "users", user.uid);
-      await setDoc(docRef, {
-        username,
-        bio,
-        email: user.email,
-        uid: user.uid
-      }, { merge: true });
-
-      alert("✅ Profile updated!");
-      document.getElementById("edit-profile-modal").style.display = "none";
-    };
-
-    window.closeProfileModal = function () {
-      document.getElementById("edit-profile-modal").style.display = "none";
-    };
   </script>
 
   <script>
@@ -313,6 +260,7 @@
   </script>
 </body>
 </html>
+
 
 
 
