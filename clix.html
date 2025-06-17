@@ -5,194 +5,166 @@
   <title>Clix • Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html {
-      height: 100%;
-      background: #000;
-      font-family: 'Segoe UI', sans-serif;
-      color: #fff;
-      overflow: hidden;
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body, html { height:100%; background:#000; color:#fff; font-family:'Segoe UI'; overflow:hidden; }
+    .feed { height:100vh; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; }
+    .post { scroll-snap-align:start; position:relative; height:100vh; width:100%; display:flex; align-items:center; justify-content:center; background:#000; }
+    .media { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; }
+    .info {
+      position:absolute; bottom:80px; left:20px;
+      display:flex; flex-direction:column; gap:8px;
+      background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:12px;
     }
-    .feed-container {
-      height: 100vh;
-      overflow-y: scroll;
-      scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-    .post {
-      scroll-snap-align: start;
-      position: relative;
-      height: 100vh;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #000;
-    }
-    .media {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #000;
-    }
-    .caption {
-      position: absolute;
-      bottom: 90px;
-      left: 16px;
-      right: 90px;
-      font-size: 1em;
-      background: rgba(0,0,0,0.6);
-      padding: 10px 14px;
-      border-radius: 12px;
-    }
+    .username { font-weight:bold; font-size:1em; }
+    .caption { font-size:0.9em; }
     .actions {
-      position: absolute;
-      bottom: 90px;
-      right: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
+      position:absolute; right:16px; bottom:80px;
+      display:flex; flex-direction:column; align-items:center; gap:18px;
     }
-    .action-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      color: white;
-      border: none;
-      font-size: 1.4em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
+    .btn { background:rgba(255,255,255,0.1); border:none; width:50px; height:50px; border-radius:50%; font-size:1.3em; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .btn.liked { color:#ff0050; }
+    .count { font-size:0.8em; margin-top:4px; }
+    .upload { position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; background:#ff0050; font-size:2em; border:none; cursor:pointer; }
+    .comment-modal {
+      position:fixed; bottom:0; left:0; width:100%; max-height:60%;
+      background:#111; color:#fff; padding:16px; display:none; flex-direction:column; overflow-y:auto;
     }
-    .like-count {
-      font-size: 0.75em;
-      text-align: center;
-    }
-    .upload-btn {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #ff0050;
-      color: #fff;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      font-size: 2em;
-      border: none;
-      z-index: 10;
-      cursor: pointer;
-    }
+    .comment-modal-header { font-weight:bold; margin-bottom:12px; }
+    .comment { padding:8px 0; border-bottom:1px solid #333; }
+    .comment-input { display:flex; margin-top:12px; }
+    .comment-input input { flex:1; padding:8px; border:none; border-radius:6px; margin-right:8px; }
+    .comment-input button { padding:8px 12px; background:#ff0050; border:none; border-radius:6px; color:#fff; cursor:pointer; }
   </style>
 </head>
 <body>
-  <div class="feed-container" id="feed"></div>
-  <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<div class="feed" id="feed"></div>
+<button class="upload" onclick="location.href='upload.html'">＋</button>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-    };
+<div class="comment-modal" id="commentModal">
+  <div class="comment-modal-header">Comments</div>
+  <div id="commentList"></div>
+  <div class="comment-input">
+    <input id="commentText" placeholder="Add a comment..." />
+    <button id="sendComment">Send</button>
+  </div>
+</div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+  };
+  
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const feedEl = document.getElementById("feed");
+  const commentModal = document.getElementById("commentModal");
+  const commentList = document.getElementById("commentList");
+  const commentText = document.getElementById("commentText");
+  const sendComment = document.getElementById("sendComment");
 
-    const feedContainer = document.getElementById("feed");
+  let activePostId = null;
 
-    async function loadFeed() {
-      try {
-        const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
+  const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
 
-        if (snapshot.empty) {
-          feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
-          return;
-        }
+  onSnapshot(q, snapshot => {
+    feedEl.innerHTML = "";
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data(); const id = docSnap.id;
 
-        snapshot.forEach(docSnap => {
-          const post = docSnap.data();
-          const postId = docSnap.id;
+      // Post container
+      const postEl = document.createElement("div");
+      postEl.className = "post";
 
-          const postEl = document.createElement("div");
-          postEl.className = "post";
-
-          const mediaEl = post.type === "video"
-            ? Object.assign(document.createElement("video"), {
-                src: post.mediaURL || "",
-                autoplay: true,
-                muted: true,
-                loop: true,
-                playsInline: true,
-                className: "media"
-              })
-            : Object.assign(document.createElement("img"), {
-                src: post.mediaURL || "https://via.placeholder.com/300x600",
-                alt: post.caption || "Image Post",
-                className: "media"
-              });
-
-          if (post.type === "video") {
-            mediaEl.addEventListener("click", () => {
-              mediaEl.muted = !mediaEl.muted;
-            });
-          }
-
-          const caption = document.createElement("div");
-          caption.className = "caption";
-          caption.textContent = post.caption || "";
-
-          const actions = document.createElement("div");
-          actions.className = "actions";
-
-          const likeBtn = document.createElement("button");
-          likeBtn.className = "action-btn";
-          likeBtn.innerHTML = "❤️";
-
-          const likeCount = document.createElement("div");
-          likeCount.className = "like-count";
-          likeCount.textContent = post.likes || 0;
-
-          likeBtn.addEventListener("click", async () => {
-            const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
-            likeCount.textContent = newLikes;
-            await updateDoc(doc(db, "clixPosts", postId), {
-              likes: increment(1)
-            });
-          });
-
-          actions.appendChild(likeBtn);
-          actions.appendChild(likeCount);
-
-          postEl.appendChild(mediaEl);
-          postEl.appendChild(caption);
-          postEl.appendChild(actions);
-          feedContainer.appendChild(postEl);
-        });
-
-      } catch (err) {
-        console.error("❌ Feed error:", err);
-        feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>Error loading posts.</p>";
+      // Media
+      const media = document.createElement(post.type === "video" ? "video" : "img");
+      media.src = post.mediaURL;
+      media.className = "media";
+      if (post.type === "video") {
+        media.autoplay = true; media.loop = true; media.muted = true;
+        media.playsInline = true;
+        media.addEventListener("click", () => media.muted = !media.muted);
       }
-    }
 
-    loadFeed();
-  </script>
+      // Info (Username, Caption, Follow)
+      const info = document.createElement("div");
+      info.className = "info";
+      info.innerHTML = `<div class="username">@${post.username}</div><div class="caption">${post.caption}</div>`;
+      const followBtn = document.createElement("button");
+      followBtn.textContent = post.isFollowing ? "Unfollow" : "Follow";
+      followBtn.className = "btn";
+      followBtn.onclick = () => alert("Follow logic coming soon");
+      info.appendChild(followBtn);
+
+      // Actions (Like, comment, share)
+      const actions = document.createElement("div"); actions.className = "actions";
+      const likeBtn = document.createElement("button"); likeBtn.className = "btn"; likeBtn.innerHTML = "❤️";
+      if (post.myLiked) likeBtn.classList.add("liked");
+
+      const likeCount = document.createElement("div"); likeCount.className = "count"; likeCount.textContent = post.likes || 0;
+      likeBtn.onclick = async () => {
+        if (!post.myLiked) {
+          await updateDoc(doc(db, "clixPosts", id), {
+            likes: arrayUnion("USERID"), // mock current user
+            myLiked: true
+          });
+        }
+      };
+
+      const commentBtn = document.createElement("button"); commentBtn.className = "btn"; commentBtn.innerHTML = "💬";
+      commentBtn.onclick = () => openComments(id);
+
+      const shareBtn = document.createElement("button"); shareBtn.className = "btn"; shareBtn.innerHTML = "🔗";
+      shareBtn.onclick = () => {
+        navigator.clipboard.writeText(window.location + "?post=" + id);
+        alert("Link copied!");
+      };
+
+      actions.append(likeBtn, likeCount, commentBtn, shareBtn);
+
+      postEl.append(media, info, actions);
+      feedEl.append(postEl);
+    });
+  });
+
+  function openComments(postId) {
+    activePostId = postId;
+    commentModal.style.display = "flex";
+    commentList.innerHTML = "";
+    const commentsRef = collection(db, "clixPosts", postId, "comments");
+    onSnapshot(query(commentsRef, orderBy("createdAt")), snap => {
+      commentList.innerHTML = "";
+      snap.forEach(c => {
+        const d = c.data();
+        const div = document.createElement("div"); div.className = "comment";
+        div.innerHTML = `<strong>@${d.username}:</strong> ${d.text}`;
+        commentList.append(div);
+      });
+    });
+  }
+
+  sendComment.onclick = async () => {
+    if (!commentText.value.trim() || !activePostId) return;
+    const commentsRef = collection(db, "clixPosts", activePostId, "comments");
+    await updateDoc(doc(commentsRef), {
+      username: "user123", // YOUR USER
+      text: commentText.value,
+      createdAt: Timestamp.now()
+    });
+    commentText.value = "";
+  };
+
+  commentModal.onclick = e => { if (e.target === commentModal) commentModal.style.display = "none"; };
+
+</script>
 </body>
 </html>
 
