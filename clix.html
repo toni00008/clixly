@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -15,73 +15,66 @@
     }
     .feed-container {
       height: 100vh;
-      overflow-y: scroll;
+      overflow-y: auto;
       scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch;
     }
     .post {
       scroll-snap-align: start;
       position: relative;
       height: 100vh;
-      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       background: #000;
-      flex-direction: column;
     }
     .media {
+      position: absolute;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      background: #000;
     }
     .caption {
       position: absolute;
-      bottom: 70px;
+      bottom: 100px;
       left: 16px;
       right: 90px;
-      font-size: 0.95em;
-      background: rgba(0,0,0,0.6);
+      font-size: 0.9em;
+      background: rgba(0, 0, 0, 0.6);
       padding: 8px 12px;
-      border-radius: 12px;
+      border-radius: 10px;
     }
     .actions {
       position: absolute;
-      bottom: 70px;
+      bottom: 100px;
       right: 16px;
       display: flex;
       flex-direction: column;
+      gap: 14px;
       align-items: center;
-      gap: 10px;
     }
     .action-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
       background: rgba(255,255,255,0.1);
       color: white;
       border: none;
-      font-size: 1.3em;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 1.4em;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
     }
-    .like-count {
-      font-size: 0.75em;
-      text-align: center;
-    }
     .upload-btn {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 20px;
+      right: 20px;
       background: #ff0050;
-      color: #fff;
+      color: white;
       width: 60px;
       height: 60px;
-      border-radius: 50%;
       font-size: 2em;
+      border-radius: 50%;
       border: none;
       z-index: 10;
       cursor: pointer;
@@ -95,7 +88,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment
+      getFirestore, collection, query, orderBy, getDocs, doc,
+      updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -111,82 +105,103 @@
     const db = getFirestore(app);
     const feedContainer = document.getElementById("feed");
 
-    async function loadFeed() {
-      try {
-        const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
+    let lastVisible = null;
+    let isLoading = false;
 
-        if (snapshot.empty) {
-          feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No posts yet. Upload something!</p>";
-          return;
+    async function loadFeed(limitCount = 5) {
+      if (isLoading) return;
+      isLoading = true;
+
+      let q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) return;
+
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        const postId = docSnap.id;
+
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+
+        const mediaEl = post.type === "video"
+          ? Object.assign(document.createElement("video"), {
+              src: post.mediaURL,
+              autoplay: true,
+              muted: true,
+              loop: true,
+              playsInline: true,
+              className: "media"
+            })
+          : Object.assign(document.createElement("img"), {
+              src: post.mediaURL,
+              className: "media"
+            });
+
+        // Toggle sound
+        if (post.type === "video") {
+          mediaEl.addEventListener("click", () => {
+            mediaEl.muted = !mediaEl.muted;
+          });
         }
 
-        snapshot.forEach(docSnap => {
-          const post = docSnap.data();
-          const postId = docSnap.id;
+        const caption = document.createElement("div");
+        caption.className = "caption";
+        caption.textContent = post.caption || "";
 
-          const postEl = document.createElement("div");
-          postEl.className = "post";
+        const actions = document.createElement("div");
+        actions.className = "actions";
 
-          const mediaEl = post.type === "video"
-            ? Object.assign(document.createElement("video"), {
-                src: post.mediaURL || "",
-                autoplay: true,
-                muted: true,
-                loop: true,
-                playsInline: true,
-                className: "media"
-              })
-            : Object.assign(document.createElement("img"), {
-                src: post.mediaURL || "https://via.placeholder.com/300x600",
-                alt: post.caption || "Image Post",
-                className: "media"
-              });
+        const likeBtn = document.createElement("button");
+        likeBtn.className = "action-btn";
+        likeBtn.textContent = "❤️";
+        const likeCount = document.createElement("div");
+        likeCount.style.fontSize = "0.75em";
+        likeCount.textContent = post.likes || 0;
 
-          // 🟢 Click to toggle mute on videos
-          if (post.type === "video") {
-            mediaEl.addEventListener("click", () => {
-              mediaEl.muted = !mediaEl.muted;
-            });
-          }
-
-          const caption = document.createElement("div");
-          caption.className = "caption";
-          caption.textContent = post.caption || "";
-
-          const actions = document.createElement("div");
-          actions.className = "actions";
-
-          const likeBtn = document.createElement("button");
-          likeBtn.className = "action-btn";
-          likeBtn.innerHTML = "❤️";
-
-          const likeCount = document.createElement("div");
-          likeCount.className = "like-count";
-          likeCount.textContent = typeof post.likes === "number" ? post.likes : 0;
-
-          likeBtn.addEventListener("click", async () => {
-            const newLikes = (parseInt(likeCount.textContent) || 0) + 1;
-            likeCount.textContent = newLikes;
-            await updateDoc(doc(db, "clixPosts", postId), {
-              likes: increment(1)
-            });
+        likeBtn.addEventListener("click", async () => {
+          likeCount.textContent = parseInt(likeCount.textContent) + 1;
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
           });
-
-          actions.appendChild(likeBtn);
-          actions.appendChild(likeCount);
-
-          postEl.appendChild(mediaEl);
-          postEl.appendChild(caption);
-          postEl.appendChild(actions);
-          feedContainer.appendChild(postEl);
         });
 
-      } catch (err) {
-        console.error("❌ Feed error:", err);
-        feedContainer.innerHTML = "<p style='text-align:center;margin-top:2rem;'>Error loading posts.</p>";
-      }
+        const commentBtn = document.createElement("button");
+        commentBtn.className = "action-btn";
+        commentBtn.textContent = "🗨️";
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "action-btn";
+        saveBtn.textContent = "🔖";
+
+        const profileBtn = document.createElement("button");
+        profileBtn.className = "action-btn";
+        profileBtn.textContent = "👤";
+        profileBtn.onclick = () => {
+          location.href = `profile.html?user=${post.username || 'unknown'}`;
+        };
+
+        actions.appendChild(likeBtn);
+        actions.appendChild(likeCount);
+        actions.appendChild(commentBtn);
+        actions.appendChild(saveBtn);
+        actions.appendChild(profileBtn);
+
+        postEl.appendChild(mediaEl);
+        postEl.appendChild(caption);
+        postEl.appendChild(actions);
+        feedContainer.appendChild(postEl);
+      });
+
+      isLoading = false;
     }
+
+    // Infinite scroll
+    feedContainer.addEventListener("scroll", () => {
+      if (feedContainer.scrollTop + feedContainer.clientHeight >= feedContainer.scrollHeight - 300) {
+        loadFeed();
+      }
+    });
 
     loadFeed();
   </script>
