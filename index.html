@@ -2,198 +2,113 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clixly • Profile</title>
   <style>
     :root {
       --bg-color: #0d0d10;
-      --text-color: #ffffff;
+      --text-color: #fff;
       --accent-color: #8a2be2;
+      --card-bg: #1c1c26;
     }
 
     [data-theme='light'] {
       --bg-color: #f9f9f9;
       --text-color: #111;
       --accent-color: #8a2be2;
+      --card-bg: #fff;
     }
 
     body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
       background: var(--bg-color);
       color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
       transition: background 0.3s, color 0.3s;
     }
 
     .container {
-      display: flex;
-      min-height: 100vh;
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      text-align: center;
     }
 
-    .sidebar {
-      width: 220px;
-      padding: 20px;
-      background-color: #15151c;
-      border-right: 1px solid #2a2a35;
+    img.profile-pic {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--accent-color);
+      margin-bottom: 20px;
     }
 
-    .sidebar a {
-      display: block;
+    h1 {
+      margin: 10px 0 5px;
+      font-size: 2em;
+      color: var(--accent-color);
+    }
+
+    p.bio {
+      font-style: italic;
+      margin-bottom: 20px;
+      color: #ccc;
+    }
+
+    .info {
+      margin-bottom: 30px;
+      font-size: 1em;
       color: #aaa;
-      text-decoration: none;
-      margin: 15px 0;
-      padding: 8px 12px;
-      border-radius: 10px;
-      transition: background 0.2s;
     }
 
-    .sidebar a:hover {
-      background: #222;
-      color: var(--accent-color);
-    }
-
-    .main {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      font-size: 1.8em;
-      font-weight: bold;
-      color: var(--accent-color);
-    }
-
-    .auth-buttons {
-      display: flex;
-      gap: 10px;
-    }
-
-    .auth-buttons button {
+    button.back-btn {
       background: var(--accent-color);
       color: #fff;
       border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
+      padding: 12px 24px;
+      border-radius: 10px;
       font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
     }
 
-    .search-bar {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: none;
-      width: 200px;
+    button.back-btn:hover {
+      background: #6f21b8;
     }
 
     .dark-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
       background: none;
       border: 1px solid #666;
       color: var(--text-color);
       padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
-    }
-
-    .post {
-      background: #1c1c26;
-      border-radius: 12px;
-      padding: 16px;
-      margin: 20px 0;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    .post img {
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
-
-    .likes {
-      margin-top: 10px;
-      color: #ccc;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        width: 100%;
-        display: flex;
-        justify-content: space-around;
-        border-right: none;
-        border-bottom: 1px solid #333;
-      }
-
-      .main {
-        padding: 10px;
-      }
-
-      .search-bar {
-        width: 100%;
-        margin: 10px 0;
-      }
-
-      .auth-buttons {
-        flex-direction: column;
-      }
+      z-index: 100;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <a href="clix.html">📹 Clix</a>
-      <a href="upload.html">📤 Upload</a>
-      <a href="abc.html">🔤 Abc</a>
-      <a href="explore.html">🧭 Explore</a>
-      <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
-    </div>
 
-    <div class="main">
-      <div class="top-bar">
-        <div class="logo">Clixly</div>
-        <input type="text" placeholder="Search..." class="search-bar" />
-        <div class="auth-buttons">
-          <button id="signup-btn" onclick="window.location.href='signup.html'">Sign Up</button>
-          <button id="login-btn" onclick="window.location.href='login.html'">Login</button>
-          <button id="edit-profile-btn" style="display:none;">Profile</button>
-        </div>
-      </div>
+  <button class="dark-toggle" onclick="toggleDarkMode()">🌓 Toggle</button>
 
-      <!-- Sample Post -->
-      <div class="post">
-        <b>alex123</b> • 2h ago
-        <img src="https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80" alt="Post" />
-        <div class="likes">❤️ 1,290 &nbsp; 💬 90</div>
-      </div>
-
-      <div class="post">
-        <b>sarah_j</b> • 4h ago
-        <img src="https://images.unsplash.com/photo-1604079628044-cac508bb11f4?auto=format&fit=crop&w=800&q=80" alt="Post" />
-        <div class="likes">❤️ 1,200 &nbsp; 💬 90</div>
-      </div>
-    </div>
+  <div class="container" id="profile-container">
+    <img src="https://via.placeholder.com/120?text=User" alt="Profile Picture" class="profile-pic" id="profile-pic" />
+    <h1 id="username">Loading...</h1>
+    <p class="bio" id="bio">Loading bio...</p>
+    <div class="info" id="additional-info"></div>
+    <button class="back-btn" onclick="goBack()">← Back to Home</button>
   </div>
 
-  <!-- Firebase Setup -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -205,40 +120,61 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const signupBtn = document.getElementById("signup-btn");
-    const loginBtn = document.getElementById("login-btn");
-    const editBtn = document.getElementById("edit-profile-btn");
+    function getQueryParams() {
+      const params = {};
+      location.search.slice(1).split("&").forEach(pair => {
+        const [key, val] = pair.split("=");
+        params[key] = decodeURIComponent(val);
+      });
+      return params;
+    }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        signupBtn.style.display = "none";
-        loginBtn.style.display = "none";
-        editBtn.style.display = "inline-block";
+    async function loadProfile(uid) {
+      const userDoc = doc(db, "users", uid);
+      const userSnap = await getDoc(userDoc);
 
-        // Fetch username to build profile URL
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        let username = "";
-        if (docSnap.exists()) {
-          username = docSnap.data().username || "";
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+
+        document.getElementById("username").textContent = data.username || "Unknown User";
+        document.getElementById("bio").textContent = data.bio || "This user has no bio yet.";
+        document.getElementById("profile-pic").src = data.photoURL || "https://via.placeholder.com/120?text=User";
+
+        // Add more info if available, e.g. join date or social links
+        let additionalInfo = "";
+        if(data.joinDate) {
+          additionalInfo += `<div>Joined: ${new Date(data.joinDate.seconds * 1000).toLocaleDateString()}</div>`;
         }
+        if(data.location) {
+          additionalInfo += `<div>Location: ${data.location}</div>`;
+        }
+        document.getElementById("additional-info").innerHTML = additionalInfo;
 
-        // Redirect to profile page on button click
-        editBtn.onclick = () => {
-          window.location.href = `profile.html?uid=${user.uid}&username=${encodeURIComponent(username)}`;
-        };
       } else {
-        signupBtn.style.display = "inline-block";
-        loginBtn.style.display = "inline-block";
-        editBtn.style.display = "none";
+        document.getElementById("username").textContent = "User Not Found";
+        document.getElementById("bio").textContent = "";
       }
-    });
+    }
+
+    function goBack() {
+      window.location.href = "index.html"; // change to your home page file
+    }
+
+    // Initialize
+    const params = getQueryParams();
+    if (params.uid) {
+      loadProfile(params.uid);
+    } else {
+      document.getElementById("username").textContent = "No User ID Provided";
+      document.getElementById("bio").textContent = "";
+    }
+
   </script>
 
   <script>
+    // Dark mode toggle code
     function toggleDarkMode() {
       const html = document.documentElement;
       if (html.getAttribute('data-theme') === 'light') {
@@ -250,7 +186,6 @@
       }
     }
 
-    // Auto-load theme
     window.onload = () => {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') {
@@ -258,9 +193,9 @@
       }
     };
   </script>
+
 </body>
 </html>
-
 
 
 
