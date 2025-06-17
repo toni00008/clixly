@@ -2,422 +2,201 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • TikTok-Inspired Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background-color: #000;
+      font-family: 'Segoe UI', sans-serif;
+      background: #000;
       color: #fff;
+      height: 100vh;
+      overflow: hidden;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      overflow: hidden;
+      flex-direction: column;
     }
-
     .feed-container {
-      width: 375px;
-      height: 667px;
-      background-color: #000;
-      position: relative;
+      flex: 1;
       overflow-y: auto;
-      border: 1px solid #333;
+      scroll-behavior: smooth;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
-
-    .video-post {
-      width: 100%;
-      height: 667px; /* Full height of container */
+    .post {
       position: relative;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 16px;
       overflow: hidden;
+      background: #111;
+      aspect-ratio: 9/16;
+      box-shadow: 0 0 15px #ff0050;
     }
-
     .media-container {
       width: 100%;
       height: 100%;
       position: relative;
+      border-radius: 16px;
       overflow: hidden;
-      z-index: 0; /* Base z-index for media container */
+      background: #000;
     }
-    video, img.media {
+    video.media,
+    img.media {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
-      user-select: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1; /* Ensure media is behind overlays */
+      z-index: 1;
     }
-
-    .status-bar {
+    .username-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      padding: 5px 10px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #fff;
-      background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
-      z-index: 20;
+      top: 12px;
+      left: 12px;
+      font-weight: bold;
+      color: rgba(255,255,255,0.85);
+      z-index: 10;
+      text-shadow: 0 0 5px rgba(0,0,0,0.7);
     }
-
-    .overlay {
+    .actions {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      bottom: 12px;
+      right: 12px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 15px;
-      z-index: 20;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
-      background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
-      padding: 10px;
-      z-index: 20;
+      gap: 14px;
+      z-index: 10;
     }
-
-    .top-bar .left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .top-bar .left span {
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .top-bar .right .icon {
-      width: 28px;
-      height: 28px;
-      background-color: rgba(255, 255, 255, 0.3);
+    .action-btn {
+      background: rgba(0,0,0,0.3);
+      border: none;
+      color: white;
+      font-size: 1.8em;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       display: flex;
+      align-items: center;
       justify-content: center;
-      align-items: center;
-      font-size: 16px;
       cursor: pointer;
+      box-shadow: 0 0 6px #ff0050;
     }
-
-    .bottom-bar {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
-      padding: 10px;
-      z-index: 20;
+    .action-btn:hover {
+      background: rgba(255, 0, 80, 0.8);
     }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .like-count {
+      color: #ff0050;
+      font-size: 0.9em;
+      font-weight: bold;
+      text-align: center;
+      margin-top: -6px;
     }
-
-    .user-info img {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-    }
-
-    .user-info .username {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .user-info .follow {
-      font-size: 12px;
-      background-color: #ff2d55;
-      color: #fff;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
     .caption {
-      font-size: 14px;
-      line-height: 18px;
-      max-height: 54px;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      text-align: center;
+      padding: 10px 12px;
+      font-size: 0.95em;
+      color: #eee;
+      max-width: 500px;
+      margin: 6px auto 0;
     }
-
-    .hashtags {
-      font-size: 12px;
-      color: #aaa;
-    }
-
-    .audio-info {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12px;
-    }
-
-    .audio-info .icon {
-      width: 16px;
-      height: 16px;
-      background-color: #fff;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 10px;
-    }
-
-    .right-bar {
-      position: absolute;
-      right: 10px;
-      bottom: 120px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 18px;
-      z-index: 20;
-    }
-
-    .right-bar .action {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .right-bar .action .icon {
-      width: 32px;
-      height: 32px;
-      background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 18px;
-      cursor: pointer;
-    }
-
-    .right-bar .action span {
-      font-size: 12px;
-      color: #fff;
-    }
-
-    .profile-pic {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      position: relative;
-    }
-
-    .profile-pic::after {
-      content: '+';
-      position: absolute;
-      bottom: -2px;
-      right: -2px;
-      width: 16px;
-      height: 16px;
-      background-color: #ff2d55;
-      color: #fff;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 12px;
-    }
-
-    /* Upload Button fixed bottom right */
     .upload-btn {
       position: fixed;
-      bottom: 22px;
-      right: 22px;
+      bottom: 20px;
+      right: 20px;
       background: #ff0050;
       color: white;
-      font-size: 2.4em;
+      font-size: 2em;
       border: none;
       border-radius: 50%;
-      width: 64px;
-      height: 64px;
+      width: 60px;
+      height: 60px;
       z-index: 100;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 0, 80, 0.7);
-      transition: background-color 0.3s ease;
+      box-shadow: 0 0 10px #ff0050;
     }
-    .upload-btn:hover {
-      background: #e60044;
+    .feed-container::-webkit-scrollbar {
+      width: 8px;
     }
-
-    /* Comment Popup styles */
-    #commentModal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #000000dd;
-      z-index: 9999;
-      padding: 20px;
-    }
-    #commentModal .popup {
-      max-width: 500px;
-      margin: auto;
-      background: #111;
-      border-radius: 12px;
-      padding: 16px;
-      height: 80%;
-      display: flex;
-      flex-direction: column;
-    }
-    #commentList {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 10px;
-    }
-    #commentList div {
-      margin-bottom: 8px;
-      border-bottom: 1px solid #333;
-      padding-bottom: 6px;
-      color: white;
-    }
-    input, button {
-      font-family: inherit;
-    }
-
-    /* Mobile Adjustments */
-    @media (max-width: 600px) {
-      .right-bar {
-        bottom: 100px;
-      }
-      .upload-btn {
-        bottom: 15px;
-        right: 15px;
-      }
+    .feed-container::-webkit-scrollbar-thumb {
+      background: #ff0050;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="feed-container" id="feed"></div>
-  <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  <!-- Comment Popup -->
-  <div id="commentModal">
-    <div class="popup">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h3>Comments</h3>
-        <button onclick="closeCommentModal()" style="background:none;border:none;font-size:1.5em;color:#fff;cursor:pointer;">✖</button>
-      </div>
-      <div id="commentList"></div>
-      <input id="commentInput" type="text" placeholder="Add a comment..." style="padding:8px; border-radius:8px; border:none; margin-bottom:10px;" />
-      <button onclick="submitComment()" style="padding:8px; background:#ff0050; color:white; border:none; border-radius:8px; cursor:pointer;">Post</button>
-    </div>
-  </div>
+<div class="feed-container" id="feed"></div>
+<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, increment,
-      addDoc, serverTimestamp, onSnapshot, startAfter, limit
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const feed = document.getElementById("feed");
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const feed = document.getElementById("feed");
 
-    let currentPostId = null;
-    let lastVisible = null;
-    const PAGE_SIZE = 4;
-    let loading = false;
+  let lastVisible = null;
+  let isLoading = false;
 
-    // Comment modal handlers
-    window.openCommentModal = function(postId) {
-      currentPostId = postId;
-      document.getElementById('commentModal').style.display = 'block';
-      document.getElementById('commentInput').value = '';
-      loadComments(postId);
-    };
-    window.closeCommentModal = function() {
-      document.getElementById('commentModal').style.display = 'none';
-    };
-    window.submitComment = async function() {
-      const input = document.getElementById('commentInput');
-      const text = input.value.trim();
-      if (!text) return;
-      try {
-        const commentRef = collection(db, "clixPosts", currentPostId, "comments");
-        await addDoc(commentRef, {
-          text,
-          createdAt: serverTimestamp(),
-          username: localStorage.getItem("username") || "Anonymous"
-        });
-        input.value = '';
-      } catch (e) {
-        alert("Failed to add comment. Try again.");
+  async function loadFeed(initial = false) {
+    if (isLoading) return;
+    isLoading = true;
+
+    const q = initial
+      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
+      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      if (initial) {
+        feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
       }
-    };
-
-    async function loadComments(postId) {
-      const commentList = document.getElementById('commentList');
-      commentList.innerHTML = '<p style="text-align:center;">Loading...</p>';
-      const commentRef = collection(db, "clixPosts", postId, "comments");
-      const q = query(commentRef, orderBy("createdAt", "desc"));
-      onSnapshot(q, (snapshot) => {
-        commentList.innerHTML = '';
-        snapshot.forEach(doc => {
-          const c = doc.data();
-          const div = document.createElement('div');
-          div.innerHTML = `<strong>@${sanitize(c.username)}</strong><br>${sanitize(c.text)}`;
-          commentList.appendChild(div);
-        });
-      });
+      isLoading = false;
+      return;
     }
 
-    function sanitize(str) {
-      if (!str) return '';
-      return str.replace(/,uLetCRgPbSOz6Te2vTfbsF3Fh3F3,iHThDpcSvFWUXk57YLE2RJMdDfp1/g, '').trim();
-    }
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
 
-    function createPostElement(post, postId) {
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const postId = docSnap.id;
+
       const postEl = document.createElement("div");
-      postEl.className = "video-post";
+      postEl.className = "post";
 
-      const mediaWrapper = document.createElement("div");
-      mediaWrapper.className = "media-container";
+      const mediaContainer = document.createElement("div");
+      mediaContainer.className = "media-container";
 
       let mediaEl;
       if (post.type === "video") {
         mediaEl = document.createElement("video");
-        mediaEl.src = post.mediaURL;
+        mediaEl.src = post.mediaURL || "";
+        mediaEl.autoplay = true;
+        mediaEl.muted = true;
         mediaEl.loop = true;
         mediaEl.playsInline = true;
         mediaEl.className = "media";
-        mediaEl.muted = true; // Start muted, user can unmute
+
+        // Tap to toggle mute
+        mediaEl.addEventListener("click", () => {
+          mediaEl.muted = !mediaEl.muted;
+        });
+
       } else {
         mediaEl = document.createElement("img");
         mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
@@ -425,157 +204,71 @@
         mediaEl.className = "media";
       }
 
-      // Status Bar
-      const statusBar = document.createElement("div");
-      statusBar.className = "status-bar";
-      statusBar.innerHTML = `<span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><span>📶</span>`;
+      mediaContainer.appendChild(mediaEl);
 
-      // Overlay
-      const overlay = document.createElement("div");
-      overlay.className = "overlay";
+      const usernameOverlay = document.createElement("div");
+      usernameOverlay.className = "username-overlay";
+      usernameOverlay.textContent = `@${post.username || 'user'}`;
+      mediaContainer.appendChild(usernameOverlay);
 
-      // Top Bar
-      const topBar = document.createElement("div");
-      topBar.className = "top-bar";
-      topBar.innerHTML = `
-        <div class="left"><span>For You</span></div>
-        <div class="right"><div class="icon">🔍</div></div>
-      `;
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
-      // Bottom Bar
-      const bottomBar = document.createElement("div");
-      bottomBar.className = "bottom-bar";
-      bottomBar.innerHTML = `
-        <div class="user-info">
-          <img src="https://source.unsplash.com/random/36x36" alt="Profile">
-          <span class="username">${sanitize(post.username || "user")}</span>
-          <span class="follow">Follow</span>
-        </div>
-        <div class="caption">${sanitize(post.caption || "")}</div>
-        <div class="hashtags">#TikTok #Reels #Video</div>
-        <div class="audio-info">
-          <div class="icon">🎵</div>
-          <span>Original Sound • ${sanitize(post.username || "user")}</span>
-        </div>
-      `;
+      const likeBtn = document.createElement("button");
+      likeBtn.className = "action-btn";
+      likeBtn.textContent = "❤️";
 
-      // Right Bar
-      const rightBar = document.createElement("div");
-      rightBar.className = "right-bar";
+      const commentBtn = document.createElement("button");
+      commentBtn.className = "action-btn";
+      commentBtn.textContent = "🗨️";
 
-      const profileAction = document.createElement("div");
-      profileAction.className = "action";
-      profileAction.innerHTML = `
-        <div class="profile-pic">
-          <img src="https://source.unsplash.com/random/48x48" alt="Profile">
-        </div>
-      `;
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "action-btn";
+      saveBtn.textContent = "🔖";
 
-      const likeAction = document.createElement("div");
-      likeAction.className = "action";
-      likeAction.innerHTML = `
-        <div class="icon">❤️</div>
-        <span>${post.likes || 0}</span>
-      `;
+      const likeCount = document.createElement("div");
+      likeCount.className = "like-count";
+      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
 
-      const commentAction = document.createElement("div");
-      commentAction.className = "action";
-      commentAction.innerHTML = `
-        <div class="icon">💬</div>
-        <span>0</span> <!-- Placeholder, update dynamically if needed -->
-      `;
-
-      const shareAction = document.createElement("div");
-      shareAction.className = "action";
-      shareAction.innerHTML = `
-        <div class="icon">➡️</div>
-        <span>0</span> <!-- Placeholder, update dynamically if needed -->
-      `;
-
-      const moreAction = document.createElement("div");
-      moreAction.className = "action";
-      moreAction.innerHTML = `<div class="icon">⋮</div>`;
-
-      const playUnmuteBtn = document.createElement("button");
-      playUnmuteBtn.className = "play-unmute-btn";
-      playUnmuteBtn.textContent = "▶"; // Play icon
-      playUnmuteBtn.onclick = () => {
-        if (mediaEl.paused) {
-          mediaEl.play().then(() => {
-            mediaEl.muted = false; // Unmute after successful play
-            playUnmuteBtn.textContent = "🔊"; // Unmute icon
-          }).catch(error => {
-            console.warn("Play blocked, ensure user interaction:", error);
-          });
-        } else {
-          mediaEl.muted = !mediaEl.muted;
-          playUnmuteBtn.textContent = mediaEl.muted ? "▶" : "🔊"; // Toggle between play and unmute
-        }
-      };
-
-      rightBar.appendChild(profileAction);
-      rightBar.appendChild(likeAction);
-      rightBar.appendChild(commentAction);
-      rightBar.appendChild(shareAction);
-      rightBar.appendChild(moreAction);
-      rightBar.appendChild(playUnmuteBtn); // Add play/unmute button
-
-      // Add event listeners for actions
-      likeAction.querySelector(".icon").onclick = async () => {
+      likeBtn.addEventListener("click", async () => {
         try {
+          const newLikes = parseInt(likeCount.textContent) + 1;
+          likeCount.textContent = newLikes;
           await updateDoc(doc(db, "clixPosts", postId), {
             likes: increment(1)
           });
-          likeAction.querySelector("span").textContent = (parseInt(likeAction.querySelector("span").textContent) || 0) + 1;
         } catch (e) {
-          alert("Failed to like post");
+          alert("Failed to like post. Try again.");
         }
-      };
+      });
 
-      commentAction.querySelector(".icon").onclick = () => openCommentModal(postId);
+      actions.appendChild(likeBtn);
+      actions.appendChild(commentBtn);
+      actions.appendChild(saveBtn);
+      actions.appendChild(likeCount);
 
-      overlay.appendChild(topBar);
-      overlay.appendChild(bottomBar);
-      mediaWrapper.appendChild(mediaEl);
-      mediaWrapper.appendChild(statusBar);
-      mediaWrapper.appendChild(overlay);
-      mediaWrapper.appendChild(rightBar);
+      postEl.appendChild(mediaContainer);
+      postEl.appendChild(actions);
 
-      postEl.appendChild(mediaWrapper);
+      const caption = document.createElement("div");
+      caption.className = "caption";
+      caption.innerHTML = post.caption ? post.caption : '';
+      postEl.appendChild(caption);
 
-      return postEl;
-    }
-
-    async function loadFeedPage() {
-      if (loading) return;
-      loading = true;
-      let q;
-      if (lastVisible) {
-        q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(PAGE_SIZE));
-      } else {
-        q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(PAGE_SIZE));
-      }
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        lastVisible = snapshot.docs[snapshot.docs.length - 1];
-        snapshot.forEach(docSnap => {
-          const post = docSnap.data();
-          const postId = docSnap.id;
-          feed.appendChild(createPostElement(post, postId));
-        });
-      }
-      loading = false;
-    }
-
-    window.addEventListener('scroll', () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
-        loadFeedPage();
-      }
+      feed.appendChild(postEl);
     });
 
-    loadFeedPage();
-  </script>
+    isLoading = false;
+  }
+
+  loadFeed(true);
+  feed.addEventListener('scroll', () => {
+    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
+      loadFeed();
+    }
+  });
+</script>
+
 </body>
 </html>
-
 
