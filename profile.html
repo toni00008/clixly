@@ -59,7 +59,7 @@
 </head>
 <body>
   <div class="profile-header">
-    <img id="profile-pic" src="https://via.placeholder.com/80" alt="Profile" />
+    <img id="profile-pic" src="" alt="Profile" />
     <div>
       <h2 id="username">Loading...</h2>
       <p id="bio"></p>
@@ -85,7 +85,6 @@
       arrayRemove
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -99,14 +98,12 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Get UID from URL params
     const uid = new URLSearchParams(window.location.search).get("uid");
     if (!uid) {
       document.body.innerHTML = "<h2 style='color:red;'>User not found (no UID in URL).</h2>";
       throw new Error("UID not provided in URL");
     }
 
-    // Elements
     const usernameEl = document.getElementById("username");
     const bioEl = document.getElementById("bio");
     const picEl = document.getElementById("profile-pic");
@@ -116,23 +113,19 @@
     let currentUserUid = null;
     let isFollowing = false;
 
-    // Helper to set follow button text
     function updateFollowButton() {
       followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
     }
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        console.log("User not logged in, redirecting to login...");
         window.location.href = "login.html";
         return;
       }
 
       currentUserUid = user.uid;
-      console.log("Logged in as:", currentUserUid);
 
       try {
-        // Fetch profile user data
         const profileRef = doc(db, "users", uid);
         const profileSnap = await getDoc(profileRef);
 
@@ -142,81 +135,50 @@
         }
 
         const userData = profileSnap.data();
-        console.log("Profile data:", userData);
 
         usernameEl.textContent = userData.username || "Unnamed User";
         bioEl.textContent = userData.bio || "";
 
-        console.log("Profile picture URL from Firestore:", userData.profilePicture);
-        if (userData.profilePicture) {
-          // Add cache-busting query param to force reload
-          const cacheBustedUrl = `${userData.profilePicture}?t=${Date.now()}`;
-          picEl.src = cacheBustedUrl;
-          console.log("Using cache-busted profile pic URL:", cacheBustedUrl);
-        } else {
-          picEl.src = "https://via.placeholder.com/80";
-          console.log("No profile picture found, using placeholder.");
-        }
+        // ✅ Auto-generate avatar if no profilePicture set
+        picEl.src = userData.profilePicture
+          ? userData.profilePicture
+          : `https://api.dicebear.com/7.x/initials/svg?seed=${uid}&backgroundColor=000`;
 
-        // Handle profile pic load errors gracefully
-        picEl.onerror = () => {
-          console.error("Failed to load profile picture from URL:", picEl.src);
-          picEl.src = "https://via.placeholder.com/80"; // fallback image
-        };
-
-        // Check follow state
         const currentUserRef = doc(db, "users", currentUserUid);
         const currentSnap = await getDoc(currentUserRef);
-        if (!currentSnap.exists()) {
-          console.warn("Current user data missing in Firestore");
-          isFollowing = false;
-        } else {
-          const followingArr = currentSnap.data().following || [];
-          isFollowing = followingArr.includes(uid);
-        }
+        const followingArr = currentSnap.exists() ? currentSnap.data().following || [] : [];
+        isFollowing = followingArr.includes(uid);
         updateFollowButton();
 
         followBtn.onclick = async () => {
           try {
             if (isFollowing) {
-              await updateDoc(currentUserRef, {
-                following: arrayRemove(uid)
-              });
+              await updateDoc(currentUserRef, { following: arrayRemove(uid) });
               isFollowing = false;
             } else {
-              await updateDoc(currentUserRef, {
-                following: arrayUnion(uid)
-              });
+              await updateDoc(currentUserRef, { following: arrayUnion(uid) });
               isFollowing = true;
             }
             updateFollowButton();
           } catch (err) {
-            console.error("Error updating follow status:", err);
-            alert("Failed to update follow status. Try again.");
+            console.error("Follow toggle error:", err);
           }
         };
 
-        // Fetch user posts
         const postsQuery = query(collection(db, "clixPosts"), where("userId", "==", uid));
         const snapshot = await getDocs(postsQuery);
-        console.log(`Posts found for user ${uid}:`, snapshot.size);
 
         if (snapshot.empty) {
           postsDiv.innerHTML = `<p class="no-posts">No posts to show yet.</p>`;
           return;
         }
 
-        postsDiv.innerHTML = ""; // clear existing posts
-
+        postsDiv.innerHTML = "";
         snapshot.forEach(docSnap => {
           const post = docSnap.data();
-          console.log("Post data:", post);
           const mediaUrl = post.imageUrl || post.videoUrl;
 
-          if (!mediaUrl) {
-            console.warn("Post missing media URL, skipping", docSnap.id);
-            return;
-          }
+          if (!mediaUrl) return;
 
           const postEl = document.createElement("div");
           postEl.className = "post-item";
@@ -224,17 +186,18 @@
           if (mediaUrl.toLowerCase().includes(".mp4")) {
             postEl.innerHTML = `<video src="${mediaUrl}" controls muted playsinline></video>`;
           } else {
-            postEl.innerHTML = `<img src="${mediaUrl}" alt="Post image" />`;
+            postEl.innerHTML = `<img src="${mediaUrl}" alt="Post" />`;
           }
 
           postsDiv.appendChild(postEl);
         });
-      } catch (error) {
-        console.error("Error loading profile or posts:", error);
-        document.body.innerHTML = `<h2 style="color:red;">Failed to load profile data. Please try again later.</h2>`;
+      } catch (err) {
+        console.error("Profile load error:", err);
+        document.body.innerHTML = `<h2 style="color:red;">Failed to load profile.</h2>`;
       }
     });
   </script>
 </body>
 </html>
+
 
