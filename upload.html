@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Upload • Clix</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       background: #000;
@@ -17,6 +17,7 @@
       margin: 10px 0;
       border: none;
       border-radius: 8px;
+      box-sizing: border-box;
     }
     input[type="file"] {
       background: #222;
@@ -27,6 +28,7 @@
       color: white;
       font-size: 1.2em;
       cursor: pointer;
+      border: none;
     }
     #progress {
       height: 10px;
@@ -37,13 +39,15 @@
     }
     #progressBar {
       height: 100%;
-      width: 0;
+      width: 0%;
       background: #ff0050;
+      transition: width 0.3s ease;
     }
     video, img {
       max-width: 100%;
       margin-top: 10px;
       border-radius: 10px;
+      display: block;
     }
   </style>
 </head>
@@ -52,14 +56,15 @@
   <h2>Upload to Clix</h2>
   <input type="file" id="mediaFile" accept="video/*,image/*" required />
   <textarea id="caption" placeholder="Write a caption..."></textarea>
-  <button id="uploadBtn">Upload</button>  <!-- Changed here -->
+  <button id="uploadBtn">Upload</button>
   <div id="progress"><div id="progressBar"></div></div>
   <div id="preview"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -75,75 +80,124 @@
     const auth = getAuth(app);
 
     let currentUser = null;
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        currentUser.username = userDoc.exists() ? userDoc.data().username : "anonymous";
+
+        // Fetch username from Firestore 'users' collection
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            currentUser.username = userDocSnap.data().username || "anonymous";
+          } else {
+            currentUser.username = "anonymous";
+          }
+        } catch (err) {
+          console.error("Error fetching user document:", err);
+          currentUser.username = "anonymous";
+        }
       } else {
         alert("You must be logged in to upload.");
         window.location.href = "login.html";
       }
     });
 
+    document.getElementById("uploadBtn").addEventListener("click", handleUpload);
+
     async function handleUpload() {
+      if (!currentUser) {
+        alert("You must be logged in to upload.");
+        return;
+      }
+
       const fileInput = document.getElementById("mediaFile");
       const caption = document.getElementById("caption").value.trim();
       const progressBar = document.getElementById("progressBar");
       const preview = document.getElementById("preview");
 
       const file = fileInput.files[0];
-      if (!file || !currentUser) return alert("Please select a file and make sure you're logged in.");
+      if (!file) {
+        alert("Please select a file to upload.");
+        return;
+      }
+
+      // Reset progress bar & preview
+      progressBar.style.width = "0%";
+      preview.innerHTML = "";
+
+      // Cloudinary settings
+      const cloudName = "dd1xg9duv";  // Replace with your actual cloud name
+      const unsignedUploadPreset = "clixly_upload"; // Your unsigned preset name
+
+      const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "clixly_upload"); // Your Cloudinary preset
+      formData.append("upload_preset", unsignedUploadPreset);
 
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload");
+      try {
+        // Upload to Cloudinary using fetch + XMLHttpRequest for progress
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", url);
 
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const percent = (e.loaded / e.total) * 100;
-          progressBar.style.width = percent + "%";
-        }
-      };
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = (event.loaded / event.total) * 100;
+              progressBar.style.width = percent + "%";
+            }
+          };
 
-      xhr.onload = async () => {
-        if (xhr.status === 200) {
-          const res = JSON.parse(xhr.responseText);
-          const mediaURL = res.secure_url;
-          const type = file.type.startsWith("video") ? "video" : "image";
+          xhr.onload = async () => {
+            if (xhr.status === 200) {
+              const res = JSON.parse(xhr.responseText);
+              const mediaURL = res.secure_url;
+              const type = file.type.startsWith("video") ? "video" : "image";
 
-          if (type === "video") {
-            preview.innerHTML = `<video src="${mediaURL}" controls autoplay muted></video>`;
-          } else {
-            preview.innerHTML = `<img src="${mediaURL}" alt="Preview" />`;
-          }
+              // Show preview
+              if (type === "video") {
+                preview.innerHTML = `<video src="${mediaURL}" controls autoplay muted></video>`;
+              } else {
+                preview.innerHTML = `<img src="${mediaURL}" alt="Preview" />`;
+              }
 
-          await addDoc(collection(db, "clixPosts"), {
-            mediaURL,
-            caption,
-            createdAt: serverTimestamp(),
-            username: currentUser.username,
-            userId: currentUser.uid,
-            type,
-            likes: 0
-          });
+              // Save to Firestore
+              try {
+                await addDoc(collection(db, "clixPosts"), {
+                  mediaURL,
+                  caption,
+                  createdAt: serverTimestamp(),
+                  username: currentUser.username,
+                  userId: currentUser.uid,
+                  type,
+                  likes: 0
+                });
+                alert("Upload successful! Redirecting to feed...");
+                window.location.href = "index.html";
+                resolve();
+              } catch (firestoreError) {
+                alert("Error saving post to database: " + firestoreError.message);
+                reject(firestoreError);
+              }
+            } else {
+              alert("Upload failed with status: " + xhr.status);
+              reject(new Error("Upload failed"));
+            }
+          };
 
-          alert("Upload successful! Redirecting to feed...");
-          window.location.href = "index.html";
-        } else {
-          alert("Upload failed.");
-        }
-      };
+          xhr.onerror = () => {
+            alert("Upload error occurred.");
+            reject(new Error("Upload error"));
+          };
 
-      xhr.onerror = () => alert("Upload error.");
-      xhr.send(formData);
+          xhr.send(formData);
+        });
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
     }
-
-    // Attach event listener here (fixes the missing handleUpload error)
-    document.getElementById("uploadBtn").addEventListener("click", handleUpload);
   </script>
 </body>
 </html>
