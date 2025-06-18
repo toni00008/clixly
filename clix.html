@@ -1,272 +1,485 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Clix • Reels</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #000;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
-    }
+<meta charset="UTF-8" />
+<title>Clix • Reels Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000;
+    color: #fff;
+    height: 100vh;
+    overflow: hidden;
+  }
 
-    .reels-container {
-      height: 100vh;
-      overflow-y: scroll;
-      scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
+  .reels-container {
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
 
-    .reel {
-      position: relative;
-      height: 100vh;
-      scroll-snap-align: start;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #000;
-    }
+  .reel {
+    position: relative;
+    height: 100vh;
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
 
-    .media {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+  .media {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 
-    .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 16px;
-      pointer-events: none;
-    }
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0; bottom: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px;
+    pointer-events: none;
+  }
 
-    .top-info {
-      color: white;
-      font-weight: bold;
-      font-size: 1rem;
-      text-shadow: 0 0 5px #000;
-    }
+  .top-info {
+    font-weight: bold;
+    font-size: 1rem;
+    text-shadow: 0 0 5px #000;
+  }
 
-    .bottom-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
+  .bottom-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
 
-    .caption {
-      flex: 1;
-      color: white;
-      font-size: 0.9rem;
-      max-width: 70%;
-      text-shadow: 0 0 5px #000;
-    }
+  .caption {
+    flex: 1;
+    font-size: 0.95rem;
+    max-width: 70%;
+    white-space: pre-wrap;
+    text-shadow: 0 0 5px #000;
+  }
 
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      align-items: center;
-      margin-left: 10px;
-      pointer-events: auto;
-    }
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+    margin-left: 10px;
+    pointer-events: auto;
+  }
 
-    .action-btn {
-      background: rgba(0, 0, 0, 0.5);
-      border: none;
-      color: white;
-      font-size: 1.5rem;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
+  .action-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
 
-    .action-btn:hover {
-      background: rgba(255, 0, 80, 0.8);
-    }
+  .action-btn:hover {
+    background: rgba(255, 0, 80, 0.8);
+  }
 
-    .upload-btn {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #ff0050;
-      color: white;
-      border: none;
-      font-size: 2rem;
-      border-radius: 50%;
-      width: 56px;
-      height: 56px;
-      z-index: 100;
-      cursor: pointer;
-    }
-  </style>
+  .like-count {
+    font-size: 0.9rem;
+    color: #ff0050;
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  .upload-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #ff0050;
+    color: white;
+    border: none;
+    font-size: 2rem;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    z-index: 100;
+    cursor: pointer;
+  }
+
+  /* Comment popup styles */
+  #comment-popup {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+
+  #comment-popup.active {
+    display: flex;
+  }
+
+  #comment-popup textarea {
+    width: 90vw;
+    max-width: 400px;
+    height: 100px;
+    border-radius: 10px;
+    border: none;
+    padding: 12px;
+    font-size: 1rem;
+    resize: none;
+  }
+
+  #comment-popup button {
+    margin-top: 12px;
+    padding: 10px 20px;
+    background: #ff0050;
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  #comment-popup .close-btn {
+    position: absolute;
+    top: 20px; right: 20px;
+    font-size: 2rem;
+    color: white;
+    cursor: pointer;
+  }
+
+  /* Follow button */
+  .follow-btn {
+    background: rgba(255, 0, 80, 0.9);
+    border: none;
+    color: white;
+    font-size: 0.8rem;
+    border-radius: 12px;
+    padding: 4px 12px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .follow-btn.following {
+    background: gray;
+  }
+</style>
 </head>
 <body>
   <div class="reels-container" id="feed"></div>
   <button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc, updateDoc, increment
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <!-- Comment popup -->
+  <div id="comment-popup">
+    <span class="close-btn" title="Close">&times;</span>
+    <textarea id="comment-text" placeholder="Write your comment..."></textarea>
+    <button id="submit-comment">Post Comment</button>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-      databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-    };
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, orderBy, limit, startAfter, getDocs,
+    doc, updateDoc, increment, setDoc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getAuth, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const feed = document.getElementById("feed");
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+  };
 
-    let lastVisible = null;
-    let isLoading = false;
-    let globalMuted = true;
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const feed = document.getElementById("feed");
 
-    // Intersection Observer to play/pause videos in view
-    const observerOptions = {
-      root: feed,
-      rootMargin: '0px',
-      threshold: 0.75 // 75% visible
-    };
+  let lastVisible = null;
+  let isLoading = false;
+  let globalMuted = true;
+  let currentUser = null;
 
-    const videoObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const video = entry.target;
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});  // Play video when in view
-        } else {
-          video.pause(); // Pause when out of view
-        }
-      });
-    }, observerOptions);
+  // Keep track of comment popup open postId
+  let activeCommentPostId = null;
 
-    async function loadFeed(initial = false) {
-      if (isLoading) return;
-      isLoading = true;
+  // Intersection Observer to play/pause videos in view
+  const observerOptions = {
+    root: feed,
+    rootMargin: '0px',
+    threshold: 0.75 // 75% visible
+  };
 
-      const q = initial
-        ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
-        : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
-
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) {
-        if (initial) feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
-        isLoading = false;
-        return;
-      }
-
-      lastVisible = snapshot.docs[snapshot.docs.length - 1];
-
-      snapshot.forEach(docSnap => {
-        const post = docSnap.data();
-        const postId = docSnap.id;
-
-        const reel = document.createElement("div");
-        reel.className = "reel";
-
-        let media;
-        if (post.type === "video") {
-          media = document.createElement("video");
-          media.src = post.mediaURL || "";
-          media.muted = globalMuted;
-          media.autoplay = false;  // autoplay false, controlled by observer
-          media.loop = true;
-          media.playsInline = true;
-          media.className = "media";
-
-          media.addEventListener("click", () => {
-            globalMuted = !globalMuted;
-            document.querySelectorAll("video").forEach(v => {
-              v.muted = globalMuted;
-            });
-          });
-
-          // Observe this video for playing/pausing
-          videoObserver.observe(media);
-
-        } else {
-          media = document.createElement("img");
-          media.src = post.mediaURL || "https://via.placeholder.com/400x600";
-          media.alt = post.caption || "Image Post";
-          media.className = "media";
-        }
-
-        const overlay = document.createElement("div");
-        overlay.className = "overlay";
-
-        const topInfo = document.createElement("div");
-        topInfo.className = "top-info";
-        topInfo.textContent = `@${post.username || 'user'}`;
-
-        const bottomInfo = document.createElement("div");
-        bottomInfo.className = "bottom-info";
-
-        const caption = document.createElement("div");
-        caption.className = "caption";
-        caption.textContent = post.caption || "";
-
-        const actions = document.createElement("div");
-        actions.className = "actions";
-
-        const likeBtn = document.createElement("button");
-        likeBtn.className = "action-btn";
-        likeBtn.textContent = "❤️";
-        likeBtn.onclick = async () => {
-          try {
-            await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
-          } catch {
-            alert("Failed to like post.");
-          }
-        };
-
-        const commentBtn = document.createElement("button");
-        commentBtn.className = "action-btn";
-        commentBtn.textContent = "💬";
-
-        const saveBtn = document.createElement("button");
-        saveBtn.className = "action-btn";
-        saveBtn.textContent = "🔖";
-
-        actions.append(likeBtn, commentBtn, saveBtn);
-        bottomInfo.append(caption, actions);
-        overlay.append(topInfo, bottomInfo);
-
-        reel.append(media, overlay);
-        feed.appendChild(reel);
-      });
-
-      isLoading = false;
-    }
-
-    loadFeed(true);
-
-    feed.addEventListener("scroll", () => {
-      if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
-        loadFeed();
+  const videoObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const video = entry.target;
+      if (entry.isIntersecting) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
       }
     });
-  </script>
+  }, observerOptions);
+
+  // Authentication state
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+  });
+
+  // Utility: check if current user follows post creator
+  async function isFollowing(followerUid, followedUid) {
+    if (!followerUid) return false;
+    const followDoc = await getDoc(doc(db, "follows", followerUid + "_" + followedUid));
+    return followDoc.exists();
+  }
+
+  // Follow/unfollow toggle
+  async function toggleFollow(followerUid, followedUid, btn) {
+    if (!followerUid) {
+      alert("Please log in to follow users.");
+      return;
+    }
+    const followRef = doc(db, "follows", followerUid + "_" + followedUid);
+    const currentlyFollowing = await isFollowing(followerUid, followedUid);
+    if (currentlyFollowing) {
+      // Unfollow
+      try {
+        await updateDoc(followRef, { deleted: true });
+        btn.textContent = "Follow";
+        btn.classList.remove("following");
+      } catch {
+        alert("Failed to unfollow.");
+      }
+    } else {
+      // Follow
+      try {
+        await setDoc(followRef, { follower: followerUid, followed: followedUid, createdAt: new Date().toISOString() });
+        btn.textContent = "Following";
+        btn.classList.add("following");
+      } catch {
+        alert("Failed to follow.");
+      }
+    }
+  }
+
+  // Show comment popup
+  function showCommentPopup(postId) {
+    activeCommentPostId = postId;
+    document.getElementById("comment-text").value = "";
+    document.getElementById("comment-popup").classList.add("active");
+  }
+
+  // Close comment popup
+  function closeCommentPopup() {
+    activeCommentPostId = null;
+    document.getElementById("comment-popup").classList.remove("active");
+  }
+
+  // Post comment function
+  async function postComment() {
+    if (!currentUser) {
+      alert("Please log in to comment.");
+      return;
+    }
+    const text = document.getElementById("comment-text").value.trim();
+    if (!text) {
+      alert("Comment cannot be empty.");
+      return;
+    }
+    const commentRef = doc(collection(db, "clixPosts", activeCommentPostId, "comments")).withConverter(null);
+    // Firestore generated ID
+    try {
+      await setDoc(commentRef, {
+        userId: currentUser.uid,
+        username: currentUser.displayName || "user",
+        text,
+        createdAt: new Date()
+      });
+      alert("Comment posted!");
+      closeCommentPopup();
+    } catch (e) {
+      alert("Failed to post comment.");
+      console.error(e);
+    }
+  }
+
+  // Create reel post element
+  async function createReelElement(postId, post) {
+    const reel = document.createElement("div");
+    reel.className = "reel";
+
+    let media;
+    if (post.type === "video") {
+      media = document.createElement("video");
+      media.src = post.mediaURL || "";
+      media.muted = globalMuted;
+      media.autoplay = false;
+      media.loop = true;
+      media.playsInline = true;
+      media.className = "media";
+
+      media.addEventListener("click", () => {
+        globalMuted = !globalMuted;
+        document.querySelectorAll("video").forEach(v => {
+          v.muted = globalMuted;
+        });
+      });
+
+      videoObserver.observe(media);
+
+    } else {
+      media = document.createElement("img");
+      media.src = post.mediaURL || "https://via.placeholder.com/400x600";
+      media.alt = post.caption || "Image Post";
+      media.className = "media";
+    }
+
+    // Overlay container
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+
+    // Top info + Follow button
+    const topInfo = document.createElement("div");
+    topInfo.className = "top-info";
+    topInfo.textContent = `@${post.username || 'user'}`;
+
+    // Follow button
+    const followBtn = document.createElement("button");
+    followBtn.className = "follow-btn";
+    followBtn.textContent = "Follow";
+
+    // Check if user is following creator
+    if (currentUser && currentUser.uid !== post.userId) {
+      const following = await isFollowing(currentUser.uid, post.userId);
+      if (following) {
+        followBtn.textContent = "Following";
+        followBtn.classList.add("following");
+      }
+      followBtn.onclick = () => toggleFollow(currentUser.uid, post.userId, followBtn);
+    } else {
+      followBtn.style.display = "none"; // No follow button on own posts or not logged in
+    }
+
+    topInfo.appendChild(followBtn);
+
+    // Bottom info: caption and actions
+    const bottomInfo = document.createElement("div");
+    bottomInfo.className = "bottom-info";
+
+    const caption = document.createElement("div");
+    caption.className = "caption";
+    caption.textContent = `@${post.username || 'user'}: ${post.caption || ''}`;
+
+    // Actions container
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    // Like button
+    const likeBtn = document.createElement("button");
+    likeBtn.className = "action-btn";
+    likeBtn.textContent = "❤️";
+
+    // Like count display
+    const likeCount = document.createElement("div");
+    likeCount.className = "like-count";
+    likeCount.textContent = (post.likes || 0) + " likes";
+
+    likeBtn.onclick = async () => {
+      if (!currentUser) {
+        alert("Please log in to like posts.");
+        return;
+      }
+      try {
+        await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
+        post.likes = (post.likes || 0) + 1;
+        likeCount.textContent = post.likes + " likes";
+      } catch {
+        alert("Failed to like post.");
+      }
+    };
+
+    // Comment button
+    const commentBtn = document.createElement("button");
+    commentBtn.className = "action-btn";
+    commentBtn.textContent = "💬";
+    commentBtn.onclick = () => showCommentPopup(postId);
+
+    // Save/Bookmark button
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "action-btn";
+    saveBtn.textContent = "🔖";
+
+    actions.append(likeBtn, commentBtn, saveBtn);
+    bottomInfo.append(caption, actions);
+
+    overlay.append(topInfo, bottomInfo);
+
+    reel.append(media, overlay, likeCount);
+
+    return reel;
+  }
+
+  async function loadFeed(initial = false) {
+    if (isLoading) return;
+    isLoading = true;
+
+    const q = initial
+      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
+      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      if (initial) feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
+      isLoading = false;
+      return;
+    }
+
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+    for (const docSnap of snapshot.docs) {
+      const post = docSnap.data();
+      const reel = await createReelElement(docSnap.id, post);
+      feed.appendChild(reel);
+    }
+
+    isLoading = false;
+  }
+
+  loadFeed(true);
+
+  feed.addEventListener("scroll", () => {
+    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
+      loadFeed();
+    }
+  });
+
+  // Comment popup handlers
+  document.getElementById("submit-comment").addEventListener("click", postComment);
+  document.querySelector("#comment-popup .close-btn").addEventListener("click", closeCommentPopup);
+
+</script>
 </body>
 </html>
