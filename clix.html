@@ -72,6 +72,7 @@
       font-size: 14px;
       z-index: 2;
       text-align: center;
+      cursor: pointer;
     }
     .overlay {
       position: absolute;
@@ -201,7 +202,7 @@
     }
     .mute-toggle-btn {
       position: absolute;
-      bottom: 80px; /* Adjusted position */
+      bottom: 80px;
       right: 10px;
       background: #0095f6;
       color: #fff;
@@ -284,17 +285,29 @@
               }
               // Apply global mute state
               video.muted = isGloballyMuted;
-              // Try playing
-              video.play().catch((e) => {
-                console.error("Error playing video:", e, "URL:", video.src);
-                const mediaContainer = entry.target.querySelector(".media-container");
-                mediaContainer.querySelectorAll(".error-message").forEach(el => el.remove());
-                const errorMessage = document.createElement("div");
-                errorMessage.className = "error-message";
-                errorMessage.textContent = e.name === "NotAllowedError" ? "Autoplay blocked. Tap to play." :
-                  e.name === "NotSupportedError" ? "Video format not supported." : "Failed to load video. Check URL or CORS.";
-                mediaContainer.appendChild(errorMessage);
-              });
+              // Try playing with retry
+              const attemptPlay = (retries = 2) => {
+                video.play().catch((e) => {
+                  console.error("Error playing video:", e, "URL:", video.src);
+                  const mediaContainer = entry.target.querySelector(".media-container");
+                  mediaContainer.querySelectorAll(".error-message").forEach(el => el.remove());
+                  const errorMessage = document.createElement("div");
+                  errorMessage.className = "error-message";
+                  errorMessage.textContent = e.name === "NotAllowedError" ? "Tap to play video" :
+                    e.name === "NotSupportedError" ? "Video format not supported." : "Failed to load video. Check URL or CORS.";
+                  mediaContainer.appendChild(errorMessage);
+                  // Tap to play fallback
+                  errorMessage.addEventListener("click", () => {
+                    video.muted = isGloballyMuted;
+                    video.play().then(() => errorMessage.remove()).catch(err => console.error("Manual play failed:", err));
+                  });
+                  // Retry if allowed
+                  if (retries > 0) {
+                    setTimeout(() => attemptPlay(retries - 1), 1000);
+                  }
+                });
+              };
+              attemptPlay();
               currentVideo = video;
             }
           } else {
@@ -312,7 +325,7 @@
       },
       {
         root: feed,
-        threshold: 0.6, // Trigger when 60% visible
+        threshold: 0.5, // Trigger when 50% visible
         rootMargin: "0px"
       }
     );
@@ -356,7 +369,7 @@
           mediaEl.loop = true;
           mediaEl.playsInline = true;
           mediaEl.setAttribute("webkit-playsinline", "true");
-          mediaEl.preload = currentVideo ? "none" : "metadata";
+          mediaEl.preload = currentVideo ? "none" : "auto"; // Prioritize visible video
           mediaEl.className = "media";
 
           // Toggle mute/unmute on click
