@@ -19,7 +19,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      -webkit-text-size-adjust: 100%;
+      -webkit-text-size-adjust: none;
       -webkit-tap-highlight-color: transparent;
     }
     .feed-container {
@@ -92,6 +92,10 @@
       background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
       padding: 10px;
     }
+    .top-bar .left {
+      display: flex;
+      align-items: center;
+    }
     .top-bar .left span {
       font-size: 18px;
       font-weight: 600;
@@ -105,6 +109,11 @@
       justify-content: center;
       align-items: center;
       font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .top-bar .right .icon:hover {
+      background: rgba(255, 255, 255, 0.5);
     }
     .bottom-bar {
       display: flex;
@@ -159,7 +168,7 @@
     }
     .actions {
       position: absolute;
-      bottom: 150px; /* Space for bottom bar and upload button */
+      bottom: 150px; /* Space for bottom bar and mute button */
       right: 10px;
       display: flex;
       flex-direction: column;
@@ -190,27 +199,9 @@
       text-align: center;
       margin-top: 4px;
     }
-    .upload-btn {
-      position: absolute;
-      bottom: 80px; /* Above bottom bar */
-      right: 10px;
-      background: #0095f6;
-      color: #fff;
-      font-size: 24px;
-      border: none;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      display: none; /* Hidden by default */
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
     .mute-toggle-btn {
       position: absolute;
-      bottom: 140px; /* Above upload button */
+      bottom: 80px; /* Adjusted position */
       right: 10px;
       background: #0095f6;
       color: #fff;
@@ -281,11 +272,9 @@
       (entries) => {
         entries.forEach((entry) => {
           const video = entry.target.querySelector("video.media");
-          const uploadBtn = entry.target.querySelector(".upload-btn");
           const muteToggleBtn = entry.target.querySelector(".mute-toggle-btn");
           if (entry.isIntersecting) {
-            // Show buttons
-            if (uploadBtn) uploadBtn.style.display = "flex";
+            // Show mute toggle button
             if (muteToggleBtn) muteToggleBtn.style.display = "flex";
             if (video) {
               // Pause previous video
@@ -309,8 +298,7 @@
               currentVideo = video;
             }
           } else {
-            // Hide buttons
-            if (uploadBtn) uploadBtn.style.display = "none";
+            // Hide mute toggle button
             if (muteToggleBtn) muteToggleBtn.style.display = "none";
             if (video && currentVideo === video) {
               video.pause();
@@ -402,7 +390,7 @@
             <span>Clix</span>
           </div>
           <div class="right">
-            <div class="icon">📷</div>
+            <div class="icon" onclick="location.href='upload.html'">📷</div>
           </div>
         `;
         overlay.appendChild(topBar);
@@ -460,13 +448,6 @@
         actions.appendChild(commentBtn);
         actions.appendChild(saveBtn);
 
-        const uploadBtn = document.createElement("button");
-        uploadBtn.className = "upload-btn";
-        uploadBtn.textContent = "＋";
-        uploadBtn.addEventListener("click", () => {
-          location.href = 'upload.html';
-        });
-
         const muteToggleBtn = document.createElement("button");
         muteToggleBtn.className = "mute-toggle-btn";
         muteToggleBtn.textContent = isGloballyMuted ? "🔇" : "🔊";
@@ -477,7 +458,6 @@
 
         postEl.appendChild(mediaContainer);
         postEl.appendChild(actions);
-        postEl.appendChild(uploadBtn);
         postEl.appendChild(muteToggleBtn);
 
         feed.appendChild(postEl);
@@ -501,4 +481,3 @@
   </script>
 </body>
 </html>
-
