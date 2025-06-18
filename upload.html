@@ -1,19 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clixly • Upload</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #0d0d10;
+      color: white;
+      padding: 20px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+    }
+    button {
+      background: #8a2be2;
+      color: white;
+      cursor: pointer;
+    }
+    .progress-bar {
+      background: #333;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 10px;
+      margin-bottom: 12px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #8a2be2;
+      width: 0%;
+    }
+    .thumbnail-preview {
+      max-width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Upload Post</h2>
-  <input type="file" id="mediaInput" accept="image/*,video/*"><br><br>
+  <h1>Upload to Clixly</h1>
+  <input type="file" id="videoInput" accept="video/*" required />
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <input type="text" id="caption" placeholder="Write a caption..." />
+  <input type="text" id="tags" placeholder="#tags, #funny, #music" />
+  <input type="text" id="location" placeholder="Location (optional)" />
+  <input type="text" id="friends" placeholder="Tag friends (comma-separated usernames)" />
+  <input type="datetime-local" id="scheduleTime" placeholder="Schedule time (optional)" />
   <button id="uploadBtn">Upload</button>
+  <button id="saveDraftBtn">Save Draft</button>
+
+  <img id="thumbnailPreview" class="thumbnail-preview" style="display:none;" />
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, collection, addDoc, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, collection, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -27,47 +75,89 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    const mediaInput = document.getElementById('mediaInput');
     const uploadBtn = document.getElementById('uploadBtn');
+    const saveDraftBtn = document.getElementById('saveDraftBtn');
+    const videoInput = document.getElementById('videoInput');
+    const progressFill = document.getElementById('progressFill');
+    const thumbnailPreview = document.getElementById('thumbnailPreview');
+
+    let currentUser;
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        alert("Login to upload");
+        window.location.href = "login.html";
+      }
+      currentUser = user;
+    });
+
+    function getThumbnail(file) {
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(file);
+      video.currentTime = 3;
+      video.addEventListener('loadeddata', () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 480;
+        canvas.height = 270;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        thumbnailPreview.src = canvas.toDataURL('image/jpeg');
+        thumbnailPreview.style.display = 'block';
+      });
+    }
 
     uploadBtn.onclick = async () => {
-      const file = mediaInput.files[0];
-      if (!file) return alert("Please select a media file.");
+      const file = videoInput.files[0];
+      if (!file || file.size > 5 * 60 * 1000 * 1024) return alert("Max 5 minutes allowed!");
+      const storageRef = ref(storage, 'videos/' + Date.now() + file.name);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "clixly_upload"); // ⚠️ Replace this
-      formData.append("cloud_name", "dd1xg9duv");       // ⚠️ Replace this
+      uploadTask.on('state_changed', (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        progressFill.style.width = progress + '%';
+      }, 
+      (error) => alert(error),
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        const post = {
+          userId: currentUser.uid,
+          username: currentUser.displayName || "Unknown",
+          caption: document.getElementById('caption').value,
+          tags: document.getElementById('tags').value.split(',').map(t => t.trim()),
+          location: document.getElementById('location').value,
+          taggedFriends: document.getElementById('friends').value.split(',').map(f => f.trim()),
+          videoUrl: url,
+          thumbnail: thumbnailPreview.src,
+          scheduledFor: document.getElementById('scheduleTime').value || null,
+          createdAt: serverTimestamp()
+        };
+        await addDoc(collection(db, "posts"), post);
+        alert("Uploaded!");
+        location.reload();
+      });
 
-      const isVideo = file.type.startsWith("video");
+      getThumbnail(file);
+    };
 
-      try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/dd1xg9duv/${isVideo ? 'video' : 'image'}/upload`, {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await res.json();
-        const url = data.secure_url;
-
-        onAuthStateChanged(auth, async (user) => {
-          if (!user) return alert("Login required");
-          await addDoc(collection(db, "posts"), {
-            userId: user.uid,
-            [isVideo ? 'videoUrl' : 'imageUrl']: url,
-            createdAt: serverTimestamp()
-          });
-          alert("Post uploaded!");
-        });
-      } catch (err) {
-        console.error(err);
-        alert("Upload failed.");
-      }
+    saveDraftBtn.onclick = async () => {
+      const draft = {
+        userId: currentUser.uid,
+        caption: document.getElementById('caption').value,
+        tags: document.getElementById('tags').value,
+        location: document.getElementById('location').value,
+        taggedFriends: document.getElementById('friends').value,
+        scheduledFor: document.getElementById('scheduleTime').value,
+        createdAt: serverTimestamp(),
+        draft: true
+      };
+      await addDoc(collection(db, "drafts"), draft);
+      alert("Draft saved!");
     };
   </script>
 </body>
 </html>
+
 
 
 
