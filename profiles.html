@@ -1,57 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • All Users</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore • Clixly</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #0d0d10;
+      margin: 0;
+      background-color: #0d0d10;
       color: white;
-      padding: 20px;
+      font-family: sans-serif;
     }
-    h1 {
+    h2 {
       text-align: center;
-      color: #8a2be2;
+      padding: 16px;
+      margin: 0;
+      background: #111;
     }
-    .user-card {
-      background: #1c1c26;
-      padding: 15px;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      padding: 16px;
+    }
+    .card {
+      background-color: #1a1a22;
       border-radius: 12px;
-      margin: 15px 0;
-      display: flex;
-      align-items: center;
-      gap: 15px;
+      padding: 12px;
+      text-align: center;
+      transition: transform 0.2s;
     }
-    .user-card img {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
+    .card:hover {
+      transform: scale(1.03);
+    }
+    .card img {
+      width: 100%;
+      max-width: 120px;
+      height: 120px;
       object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 8px;
     }
-    .user-card .info {
-      flex-grow: 1;
+    .username {
+      font-weight: bold;
+      margin-bottom: 6px;
     }
-    .user-card button {
+    .view-btn {
       background: #8a2be2;
       border: none;
       color: white;
-      padding: 8px 12px;
+      padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>All Clixly Users</h1>
-  <div id="user-list"></div>
+  <h2>Explore Users</h2>
+  <div class="grid" id="userGrid"></div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
       getFirestore,
       collection,
@@ -68,41 +78,29 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const userList = document.getElementById("user-list");
+    const userGrid = document.getElementById("userGrid");
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        alert("Login required.");
-        window.location.href = "login.html";
-        return;
-      }
-
+    async function loadUsers() {
       const querySnapshot = await getDocs(collection(db, "users"));
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const uid = docSnap.id;
-
-        // Don’t show current logged-in user
-        if (uid === user.uid) return;
+      querySnapshot.forEach((doc) => {
+        const user = doc.data();
+        const uid = doc.id;
 
         const card = document.createElement("div");
-        card.className = "user-card";
-
+        card.className = "card";
         card.innerHTML = `
-          <img src="${data.profilePicture || 'https://via.placeholder.com/60'}" />
-          <div class="info">
-            <strong>${data.username || 'Unnamed'}</strong><br />
-            <small>${data.bio || ''}</small>
-          </div>
-          <button onclick="location.href='profile.html?uid=${uid}'">View</button>
+          <img src="${user.profilePicture || 'https://via.placeholder.com/120'}" alt="Profile">
+          <div class="username">@${user.username || 'unknown'}</div>
+          <button class="view-btn" onclick="location.href='profile.html?uid=${uid}'">View Profile</button>
         `;
-
-        userList.appendChild(card);
+        userGrid.appendChild(card);
       });
-    });
+    }
+
+    loadUsers();
   </script>
 </body>
 </html>
+
