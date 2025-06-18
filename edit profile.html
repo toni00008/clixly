@@ -23,7 +23,7 @@
       margin-top: 20px;
       font-weight: bold;
     }
-    input, textarea {
+    input[type="text"], textarea {
       width: 100%;
       padding: 10px;
       margin-top: 8px;
@@ -31,6 +31,9 @@
       border-radius: 10px;
       font-size: 1em;
       box-sizing: border-box;
+    }
+    input[type="file"] {
+      margin-top: 8px;
     }
     button {
       margin-top: 30px;
@@ -44,7 +47,11 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
-    button:hover {
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    button:hover:enabled {
       background-color: #005bbb;
     }
     img {
@@ -67,10 +74,10 @@
 
   <h2>Edit Your Profile</h2>
 
-  <img id="profilePicPreview" src="" alt="Profile Picture" />
+  <img id="profilePicPreview" src="https://via.placeholder.com/100?text=No+Image" alt="Profile Picture" />
 
-  <label for="profilePic">Profile Picture URL</label>
-  <input type="text" id="profilePic" placeholder="Enter image URL" />
+  <label for="profilePicFile">Upload Profile Picture</label>
+  <input type="file" id="profilePicFile" accept="image/*" />
 
   <label for="username">Username</label>
   <input type="text" id="username" placeholder="Your username" />
@@ -78,7 +85,7 @@
   <label for="bio">Bio</label>
   <textarea id="bio" rows="4" placeholder="Short bio about yourself"></textarea>
 
-  <button id="saveBtn">💾 Save Changes</button>
+  <button id="saveBtn" disabled>💾 Save Changes</button>
 
   <p id="statusMessage" class="message"></p>
 
@@ -91,6 +98,7 @@
       getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -102,9 +110,9 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
+    const auth = getAuth();
 
-    const profilePicInput = document.getElementById('profilePic');
+    const profilePicFileInput = document.getElementById('profilePicFile');
     const usernameInput = document.getElementById('username');
     const bioInput = document.getElementById('bio');
     const profilePicPreview = document.getElementById('profilePicPreview');
@@ -112,47 +120,82 @@
     const statusMessage = document.getElementById('statusMessage');
 
     let currentUserId = null;
+    let uploadedProfilePicUrl = null;  // will store uploaded profile pic URL from Cloudinary
 
-    // Update profile picture live preview when input changes
-    profilePicInput.addEventListener('input', () => {
-      const url = profilePicInput.value.trim();
-      profilePicPreview.src = url || 'https://via.placeholder.com/100?text=No+Image';
-    });
+    // Cloudinary config — REPLACE with your details
+    const cloudName = "your_cloud_name";
+    const unsignedUploadPreset = "your_unsigned_preset";
+
+    function setStatus(message, color = 'black') {
+      statusMessage.style.color = color;
+      statusMessage.textContent = message;
+    }
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUserId = user.uid;
+        saveBtn.disabled = false;
 
-        // Load user profile data from Firestore
-        const userDoc = await getDoc(doc(db, 'users', currentUserId));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          profilePicInput.value = data.profilePic || '';
-          usernameInput.value = data.username || '';
-          bioInput.value = data.bio || '';
-          profilePicPreview.src = data.profilePic || 'https://via.placeholder.com/100?text=No+Image';
-        } else {
-          // No profile data yet
-          profilePicPreview.src = 'https://via.placeholder.com/100?text=No+Image';
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUserId));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            usernameInput.value = data.username || '';
+            bioInput.value = data.bio || '';
+            uploadedProfilePicUrl = data.profilePic || null;
+
+            profilePicPreview.src = uploadedProfilePicUrl || 'https://via.placeholder.com/100?text=No+Image';
+          } else {
+            profilePicPreview.src = 'https://via.placeholder.com/100?text=No+Image';
+          }
+        } catch (err) {
+          console.error('Error loading profile:', err);
+          setStatus('Error loading profile data', 'red');
         }
-
       } else {
-        // Not logged in — redirect to login page or show message
         document.body.innerHTML = '<p style="text-align:center; margin-top: 50px;">Please <a href="login.html">log in</a> to edit your profile.</p>';
+      }
+    });
+
+    profilePicFileInput.addEventListener('change', async () => {
+      const file = profilePicFileInput.files[0];
+      if (!file) return;
+
+      setStatus('Uploading profile picture...', 'black');
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("clixly_upload", unsignedUploadPreset);
+
+      try {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${dd1xg9duv}/upload`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const data = await response.json();
+
+        uploadedProfilePicUrl = data.secure_url;
+        profilePicPreview.src = uploadedProfilePicUrl;
+        setStatus('Profile picture uploaded. Don\'t forget to save changes.', 'green');
+      } catch (err) {
+        console.error('Upload error:', err);
+        setStatus('Upload failed: ' + err.message, 'red');
       }
     });
 
     saveBtn.addEventListener('click', async () => {
       const username = usernameInput.value.trim();
       const bio = bioInput.value.trim();
-      const profilePic = profilePicInput.value.trim();
 
       if (!username) {
-        statusMessage.textContent = '❗ Username cannot be empty.';
+        setStatus('❗ Username cannot be empty.', 'red');
         return;
       }
-      if (!profilePic) {
-        statusMessage.textContent = '❗ Profile picture URL cannot be empty.';
+      if (!uploadedProfilePicUrl) {
+        setStatus('❗ Please upload a profile picture.', 'red');
         return;
       }
 
@@ -160,16 +203,15 @@
         await setDoc(doc(db, 'users', currentUserId), {
           username,
           bio,
-          profilePic,
+          profilePic: uploadedProfilePicUrl,
           uid: currentUserId,
           email: auth.currentUser.email || ''
         }, { merge: true });
 
-        statusMessage.style.color = 'green';
-        statusMessage.textContent = '✅ Profile updated successfully!';
+        setStatus('✅ Profile updated successfully!', 'green');
       } catch (error) {
-        statusMessage.style.color = 'red';
-        statusMessage.textContent = '❌ Error updating profile: ' + error.message;
+        console.error('Error updating profile:', error);
+        setStatus('❌ Error updating profile: ' + error.message, 'red');
       }
     });
   </script>
