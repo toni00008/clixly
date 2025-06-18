@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Upload • Clix</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       background: #000;
@@ -50,15 +50,15 @@
 <body>
 
   <h2>Upload to Clix</h2>
-  <input type="file" id="mediaFile" accept="video/*,image/*" required>
+  <input type="file" id="mediaFile" accept="video/*,image/*" required />
   <textarea id="caption" placeholder="Write a caption..."></textarea>
-  <button onclick="handleUpload()">Upload</button>
+  <button id="uploadBtn">Upload</button>  <!-- Changed here -->
   <div id="progress"><div id="progressBar"></div></div>
   <div id="preview"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -78,8 +78,7 @@
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
-        const userDoc = await (await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"))
-          .getDoc((await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js")).doc(db, "users", user.uid));
+        const userDoc = await getDoc(doc(db, "users", user.uid));
         currentUser.username = userDoc.exists() ? userDoc.data().username : "anonymous";
       } else {
         alert("You must be logged in to upload.");
@@ -98,7 +97,7 @@
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "clixly_upload"); // ✅ Your Cloudinary preset
+      formData.append("upload_preset", "clixly_upload"); // Your Cloudinary preset
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload");
@@ -142,6 +141,9 @@
       xhr.onerror = () => alert("Upload error.");
       xhr.send(formData);
     }
+
+    // Attach event listener here (fixes the missing handleUpload error)
+    document.getElementById("uploadBtn").addEventListener("click", handleUpload);
   </script>
 </body>
 </html>
