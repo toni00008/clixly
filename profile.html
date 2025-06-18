@@ -38,10 +38,11 @@
       border-radius: 12px;
       margin: 10px 0;
     }
-    .post img {
+    video, img {
       width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 12px;
     }
   </style>
 </head>
@@ -55,9 +56,9 @@
     <button class="follow-btn" id="follow-btn" style="margin-left:auto;">Follow</button>
   </div>
 
+  <h3>Posts</h3>
   <div id="posts"></div>
 
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -87,13 +88,10 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const params = new URLSearchParams(window.location.search);
-    const uid = params.get("uid");
-
-    // ✅ Redirect if no UID
+    const uid = new URLSearchParams(window.location.search).get("uid");
     if (!uid) {
-      alert("No user ID found. Redirecting...");
-      window.location.href = "profiles.html";
+      document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
+      throw new Error("UID not found in URL");
     }
 
     const usernameEl = document.getElementById("username");
@@ -106,32 +104,31 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        alert("Login required.");
+        alert("Please login first.");
         window.location.href = "login.html";
         return;
       }
 
       currentUserUid = user.uid;
 
-      // 🧠 Fetch target user's data
+      // Load selected user's data
       const userRef = doc(db, "users", uid);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
-        alert("User not found.");
-        window.location.href = "profiles.html";
+        document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
         return;
       }
 
       const userData = userSnap.data();
-      usernameEl.textContent = userData.username || "Unnamed";
+      usernameEl.textContent = userData.username || "Unknown";
       bioEl.textContent = userData.bio || "";
       picEl.src = userData.profilePicture || "https://via.placeholder.com/80";
 
-      // Follow / Unfollow logic
+      // Handle follow/unfollow
       const currentUserRef = doc(db, "users", currentUserUid);
-      const currentSnap = await getDoc(currentUserRef);
-      const currentData = currentSnap.data();
-      const isFollowing = (currentData.following || []).includes(uid);
+      const currentUserSnap = await getDoc(currentUserRef);
+      const currentUserData = currentUserSnap.data();
+      const isFollowing = (currentUserData.following || []).includes(uid);
 
       followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
       followBtn.onclick = async () => {
@@ -148,20 +145,35 @@
         }
       };
 
-      // 🔥 Load user's posts
+      // Load that user's posts
       const q = query(collection(db, "posts"), where("userId", "==", uid));
       const querySnapshot = await getDocs(q);
-      querySnapshot.forEach((doc) => {
-        const post = doc.data();
-        const postEl = document.createElement("div");
-        postEl.className = "post";
-        postEl.innerHTML = `
-          <b>${userData.username}</b>
-          <img src="${post.imageUrl}" alt="Post" />
-          <div class="likes">❤️ ${post.likes || 0}</div>
-        `;
-        postsDiv.appendChild(postEl);
-      });
+
+      if (querySnapshot.empty) {
+        postsDiv.innerHTML = "<p>No posts yet.</p>";
+      } else {
+        querySnapshot.forEach((docSnap) => {
+          const post = docSnap.data();
+          const postEl = document.createElement("div");
+          postEl.className = "post";
+
+          let mediaHTML = "";
+          if (post.imageUrl.endsWith(".mp4")) {
+            mediaHTML = `<video controls src="${post.imageUrl}"></video>`;
+          } else {
+            mediaHTML = `<img src="${post.imageUrl}" alt="Post" />`;
+          }
+
+          postEl.innerHTML = `
+            <strong>${userData.username}</strong>
+            <p>${post.caption || ""}</p>
+            ${mediaHTML}
+            <div class="likes">❤️ ${post.likes || 0}</div>
+          `;
+
+          postsDiv.appendChild(postEl);
+        });
+      }
     });
   </script>
 </body>
