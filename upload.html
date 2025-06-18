@@ -1,77 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • Upload</title>
+  <meta charset="UTF-8">
+  <title>Upload • Clix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: sans-serif;
-      background: #0d0d10;
-      color: white;
+      background: #000;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
       padding: 20px;
     }
     input, textarea, button {
       width: 100%;
+      padding: 12px;
       margin: 10px 0;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 8px;
       border: none;
+      border-radius: 8px;
+    }
+    input[type="file"] {
+      background: #222;
+      color: #fff;
     }
     button {
-      background-color: #8a2be2;
+      background: #ff0050;
       color: white;
-      font-weight: bold;
+      font-size: 1.2em;
       cursor: pointer;
     }
-    #thumbnail-preview {
-      display: none;
-      width: 100%;
-      margin-top: 10px;
-      border-radius: 10px;
-    }
-    #progress-bar {
-      width: 100%;
+    #progress {
       height: 10px;
-      background: #333;
-      border-radius: 10px;
-      margin-top: 10px;
+      background: #444;
+      border-radius: 8px;
       overflow: hidden;
+      margin-top: 10px;
     }
-    #progress-fill {
+    #progressBar {
       height: 100%;
-      width: 0%;
-      background: limegreen;
-      transition: width 0.3s ease;
+      width: 0;
+      background: #ff0050;
+    }
+    video, img {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>Upload a Video to Clixly</h2>
 
-  <input type="file" id="videoFile" accept="video/*" />
-  <video id="thumbnail-preview" controls></video>
-
-  <input type="text" id="title" placeholder="Title" />
-  <textarea id="description" placeholder="Write a description..."></textarea>
-  <input type="text" id="hashtags" placeholder="#tags, #hashtag, #coolvideo" />
-  <input type="text" id="location" placeholder="Location (optional)" />
-  <input type="text" id="taggedFriends" placeholder="Tag Friends (comma-separated usernames)" />
-  <label for="schedule">Schedule Post (Optional):</label>
-  <input type="datetime-local" id="schedule" />
-  
-  <div id="progress-bar"><div id="progress-fill"></div></div>
-  
-  <button id="uploadBtn">Upload</button>
-  <button id="saveDraftBtn">Save as Draft</button>
+  <h2>Upload to Clix</h2>
+  <input type="file" id="mediaFile" accept="video/*,image/*" required>
+  <textarea id="caption" placeholder="Write a caption..."></textarea>
+  <button onclick="handleUpload()">Upload</button>
+  <div id="progress"><div id="progressBar"></div></div>
+  <div id="preview"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // ✅ Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -82,103 +71,78 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
-
-    const cloudinaryURL = "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload";
-    const uploadPreset = "clixly_upload";
-
-    const videoInput = document.getElementById("videoFile");
-    const preview = document.getElementById("thumbnail-preview");
-    const progressFill = document.getElementById("progress-fill");
+    const auth = getAuth(app);
 
     let currentUser = null;
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        alert("Please log in to upload.");
-        window.location.href = "login.html";
-      } else {
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
         currentUser = user;
+        const userDoc = await (await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"))
+          .getDoc((await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js")).doc(db, "users", user.uid));
+        currentUser.username = userDoc.exists() ? userDoc.data().username : "anonymous";
+      } else {
+        alert("You must be logged in to upload.");
+        window.location.href = "login.html";
       }
     });
 
-    videoInput.onchange = () => {
-      const file = videoInput.files[0];
-      if (file && file.size <= 300 * 1024 * 1024) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "block";
-      } else {
-        alert("Max file size is 5 minutes or ~300MB.");
-        videoInput.value = '';
-      }
-    };
+    async function handleUpload() {
+      const fileInput = document.getElementById("mediaFile");
+      const caption = document.getElementById("caption").value.trim();
+      const progressBar = document.getElementById("progressBar");
+      const preview = document.getElementById("preview");
 
-    async function uploadToCloudinary(file) {
-      return new Promise((resolve, reject) => {
-        const form = new FormData();
-        form.append("file", file);
-        form.append("upload_preset", uploadPreset);
+      const file = fileInput.files[0];
+      if (!file || !currentUser) return alert("Please select a file and make sure you're logged in.");
 
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", cloudinaryURL);
-        
-        xhr.upload.onprogress = (e) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "clixly_upload"); // ✅ Your Cloudinary preset
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "https://api.cloudinary.com/v1_1/dd1xg9duv/video/upload");
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
           const percent = (e.loaded / e.total) * 100;
-          progressFill.style.width = `${percent}%`;
-        };
+          progressBar.style.width = percent + "%";
+        }
+      };
 
-        xhr.onload = () => {
+      xhr.onload = async () => {
+        if (xhr.status === 200) {
           const res = JSON.parse(xhr.responseText);
-          if (res.secure_url) resolve(res.secure_url);
-          else reject("Upload failed");
-        };
+          const mediaURL = res.secure_url;
+          const type = file.type.startsWith("video") ? "video" : "image";
 
-        xhr.onerror = () => reject("Upload error");
-        xhr.send(form);
-      });
+          if (type === "video") {
+            preview.innerHTML = `<video src="${mediaURL}" controls autoplay muted></video>`;
+          } else {
+            preview.innerHTML = `<img src="${mediaURL}" alt="Preview" />`;
+          }
+
+          await addDoc(collection(db, "clixPosts"), {
+            mediaURL,
+            caption,
+            createdAt: serverTimestamp(),
+            username: currentUser.username,
+            userId: currentUser.uid,
+            type,
+            likes: 0
+          });
+
+          alert("Upload successful! Redirecting to feed...");
+          window.location.href = "index.html";
+        } else {
+          alert("Upload failed.");
+        }
+      };
+
+      xhr.onerror = () => alert("Upload error.");
+      xhr.send(formData);
     }
-
-    async function handleUpload(isDraft = false) {
-      const file = videoInput.files[0];
-      const title = document.getElementById("title").value.trim();
-      const description = document.getElementById("description").value.trim();
-      const hashtags = document.getElementById("hashtags").value.trim().split(",").map(x => x.trim());
-      const location = document.getElementById("location").value.trim();
-      const taggedFriends = document.getElementById("taggedFriends").value.trim().split(",").map(x => x.trim());
-      const schedule = document.getElementById("schedule").value;
-
-      if (!file || !title) return alert("Please select video and title.");
-
-      try {
-        const videoUrl = await uploadToCloudinary(file);
-
-        await addDoc(collection(db, "posts"), {
-          userId: currentUser.uid,
-          title,
-          description,
-          hashtags,
-          location,
-          taggedFriends,
-          scheduledAt: schedule || null,
-          isDraft,
-          videoUrl,
-          createdAt: serverTimestamp()
-        });
-
-        alert(isDraft ? "Draft saved!" : "Upload successful!");
-        window.location.href = isDraft ? "drafts.html" : "index.html";
-
-      } catch (err) {
-        console.error(err);
-        alert("Upload failed.");
-      }
-    }
-
-    document.getElementById("uploadBtn").onclick = () => handleUpload(false);
-    document.getElementById("saveDraftBtn").onclick = () => handleUpload(true);
   </script>
 </body>
 </html>
-
 
