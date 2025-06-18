@@ -2,165 +2,275 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • Feed</title>
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       background: #000;
-      overflow-y: scroll;
-    }
-    .reel {
-      position: relative;
+      color: #fff;
       height: 100vh;
-      width: 100%;
-      scroll-snap-align: start;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    .reel video, .reel img {
+    .feed-container {
+      flex: 1;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .post {
+      position: relative;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #111;
+      aspect-ratio: 9/16;
+      box-shadow: 0 0 15px #ff0050;
+    }
+    .media-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+    }
+    video.media,
+    img.media {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
+      z-index: 1;
     }
-    .overlay {
+    .username-overlay {
       position: absolute;
-      bottom: 20px;
-      left: 15px;
-      color: white;
-      z-index: 10;
-    }
-    .username {
+      top: 12px;
+      left: 12px;
       font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .caption {
-      font-size: 14px;
-      margin-bottom: 10px;
+      color: rgba(255,255,255,0.85);
+      z-index: 10;
+      text-shadow: 0 0 5px rgba(0,0,0,0.7);
     }
     .actions {
       position: absolute;
-      right: 15px;
-      bottom: 60px;
+      bottom: 12px;
+      right: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
+      gap: 14px;
+      z-index: 10;
     }
-    .actions button {
-      background: rgba(255,255,255,0.2);
+    .action-btn {
+      background: rgba(0,0,0,0.3);
+      border: none;
+      color: white;
+      font-size: 1.8em;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 6px #ff0050;
+    }
+    .action-btn:hover {
+      background: rgba(255, 0, 80, 0.8);
+    }
+    .like-count {
+      color: #ff0050;
+      font-size: 0.9em;
+      font-weight: bold;
+      text-align: center;
+      margin-top: -6px;
+    }
+    .caption {
+      text-align: center;
+      padding: 10px 12px;
+      font-size: 0.95em;
+      color: #eee;
+      max-width: 500px;
+      margin: 6px auto 0;
+    }
+    .upload-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff0050;
+      color: white;
+      font-size: 2em;
       border: none;
       border-radius: 50%;
-      padding: 10px;
-      color: white;
-      font-size: 18px;
+      width: 60px;
+      height: 60px;
+      z-index: 100;
       cursor: pointer;
+      box-shadow: 0 0 10px #ff0050;
     }
-    .feed {
-      scroll-snap-type: y mandatory;
-      height: 100vh;
-      overflow-y: scroll;
+    .feed-container::-webkit-scrollbar {
+      width: 8px;
     }
-    p.error-message {
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 16px;
+    .feed-container::-webkit-scrollbar-thumb {
+      background: #ff0050;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="feed" id="feed">
-    <p style="color:white; text-align:center; margin-top:50px;">Loading posts...</p>
-  </div>
 
-  <!-- Firebase & Firestore -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+<div class="feed-container" id="feed"></div>
+<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+  };
 
-    const feedDiv = document.getElementById("feed");
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const feed = document.getElementById("feed");
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
+  let lastVisible = null;
+  let isLoading = false;
+
+  async function loadFeed(initial = false) {
+    if (isLoading) return;
+    isLoading = true;
+
+    const q = initial
+      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
+      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      if (initial) {
+        feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
+      }
+      isLoading = false;
+      return;
+    }
+
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const postId = docSnap.id;
+
+      const postEl = document.createElement("div");
+      postEl.className = "post";
+
+      const mediaContainer = document.createElement("div");
+      mediaContainer.className = "media-container";
+
+      let mediaEl;
+      if (post.type === "video") {
+        mediaEl = document.createElement("video");
+        mediaEl.src = post.mediaURL || "";
+        mediaEl.autoplay = true;
+        mediaEl.muted = true;
+        mediaEl.loop = true;
+        mediaEl.playsInline = true;
+        mediaEl.className = "media";
+
+        // Tap to toggle mute
+        mediaEl.addEventListener("click", () => {
+          mediaEl.muted = !mediaEl.muted;
+        });
+
+      } else {
+        mediaEl = document.createElement("img");
+        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+        mediaEl.alt = post.caption || "Image Post";
+        mediaEl.className = "media";
       }
 
-      try {
-        const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
+      mediaContainer.appendChild(mediaEl);
 
-        feedDiv.innerHTML = "";  // Clear loading text
+      const usernameOverlay = document.createElement("div");
+      usernameOverlay.className = "username-overlay";
+      usernameOverlay.textContent = `@${post.username || 'user'}`;
+      mediaContainer.appendChild(usernameOverlay);
 
-        if (snap.empty) {
-          feedDiv.innerHTML = `<p class="error-message">No posts to show yet.</p>`;
-          return;
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const likeBtn = document.createElement("button");
+      likeBtn.className = "action-btn";
+      likeBtn.textContent = "❤️";
+
+      const commentBtn = document.createElement("button");
+      commentBtn.className = "action-btn";
+      commentBtn.textContent = "🗨️";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "action-btn";
+      saveBtn.textContent = "🔖";
+
+      const likeCount = document.createElement("div");
+      likeCount.className = "like-count";
+      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
+
+      likeBtn.addEventListener("click", async () => {
+        try {
+          const newLikes = parseInt(likeCount.textContent) + 1;
+          likeCount.textContent = newLikes;
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
+          });
+        } catch (e) {
+          alert("Failed to like post. Try again.");
         }
+      });
 
-        for (const docSnap of snap.docs) {
-          const post = docSnap.data();
-          const userId = post.userId;
-          const mediaUrl = post.imageUrl;
-          const caption = post.caption || "";
-          const isVideo = mediaUrl && mediaUrl.endsWith(".mp4");
+      actions.appendChild(likeBtn);
+      actions.appendChild(commentBtn);
+      actions.appendChild(saveBtn);
+      actions.appendChild(likeCount);
 
-          let username = "User";
-          try {
-            if (userId) {
-              const userRef = doc(db, "users", userId);
-              const userSnap = await getDoc(userRef);
-              if (userSnap.exists()) {
-                username = userSnap.data().username || "User";
-              }
-            }
-          } catch (e) {
-            console.log("User fetch error:", e);
-          }
+      postEl.appendChild(mediaContainer);
+      postEl.appendChild(actions);
 
-          const postEl = document.createElement("div");
-          postEl.className = "reel";
-          postEl.innerHTML = `
-            ${isVideo ? `<video src="${mediaUrl}" autoplay loop muted playsinline></video>` : `<img src="${mediaUrl || ''}" />`}
-            <div class="overlay">
-              <div class="username">@${username}</div>
-              <div class="caption">${caption}</div>
-            </div>
-            <div class="actions">
-              <button>❤️</button>
-              <button onclick="window.location.href='profile.html?uid=${userId}'">👤</button>
-              <button>💬</button>
-            </div>
-          `;
-          feedDiv.appendChild(postEl);
-        }
-      } catch (error) {
-        console.error("Firestore query failed:", error);
-        feedDiv.innerHTML = `<p class="error-message">Failed to load posts. Please check your connection or try again later.</p>`;
-      }
+      const caption = document.createElement("div");
+      caption.className = "caption";
+      caption.innerHTML = post.caption ? post.caption : '';
+      postEl.appendChild(caption);
+
+      feed.appendChild(postEl);
     });
-  </script>
+
+    isLoading = false;
+  }
+
+  loadFeed(true);
+  feed.addEventListener('scroll', () => {
+    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
+      loadFeed();
+    }
+  });
+</script>
+
 </body>
 </html>
+
+
 
