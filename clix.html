@@ -2,445 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clixly • Feed</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: sans-serif;
       background: #000;
-      color: #fff;
-      overflow-x: hidden;
+      overflow-y: scroll;
+    }
+    .reel {
+      position: relative;
       height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .feed-container {
-      flex: 1;
-      overflow-y: auto;
-      scroll-behavior: smooth;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .post {
-      position: relative;
-      max-width: 500px;
-      margin: 0 auto;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #111;
-      aspect-ratio: 9 / 16;
-      box-shadow: 0 0 15px #ff0050;
-    }
-
-    .media-container {
-      position: relative;
       width: 100%;
-      height: 100%;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
-      border-radius: 16px;
-      background: #000;
-      z-index: 1;
     }
-
-    video.media,
-    img.media {
-      position: relative;
-      z-index: 1;
+    .reel video, .reel img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      user-select: none;
-      display: block;
     }
-
-    /* Username and follow button container inside video top-left */
-    .user-follow-container {
+    .overlay {
       position: absolute;
-      top: 10px;
-      left: 12px;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 4px 8px;
-      border-radius: 20px;
-    }
-
-    .username-overlay {
-      font-weight: 700;
-      font-size: 1em;
-      color: rgba(255,255,255,0.85);
-      text-shadow: 0 0 5px rgba(0,0,0,0.7);
-      user-select: none;
-    }
-
-    .follow-btn {
-      background: #ff0050;
-      border: none;
+      bottom: 20px;
+      left: 15px;
       color: white;
-      padding: 4px 12px;
-      font-size: 0.8em;
-      font-weight: 700;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: background 0.3s ease;
+      z-index: 10;
     }
-    .follow-btn.following {
-      background: #aaa;
-      color: #333;
+    .username {
+      font-weight: bold;
+      margin-bottom: 5px;
     }
-    .follow-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .caption {
+      font-size: 14px;
+      margin-bottom: 10px;
     }
-
-    /* Actions bottom-right inside video */
     .actions {
       position: absolute;
-      right: 12px;
-      bottom: 12px;
-      z-index: 10;
+      right: 15px;
+      bottom: 60px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 15px;
     }
-
-    .action-btn {
-      font-size: 1.8em;
-      background: rgba(0,0,0,0.3);
+    .actions button {
+      background: rgba(255,255,255,0.2);
       border: none;
-      color: #fff;
-      cursor: pointer;
       border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 0 6px #ff0050;
-      transition: background 0.3s ease;
-    }
-    .action-btn:hover {
-      background: rgba(255, 0, 80, 0.8);
-    }
-
-    .like-count {
-      color: #ff0050;
-      font-weight: 700;
-      font-size: 0.9em;
-      user-select: none;
-      pointer-events: none;
-      margin-top: -8px;
-      text-align: center;
-      text-shadow: 0 0 5px rgba(0,0,0,0.7);
-      width: 44px;
-    }
-
-    /* Caption below video */
-    .caption {
-      padding: 10px 12px;
-      font-size: 0.95em;
-      color: #eee;
-      max-width: 500px;
-      margin: 6px auto 0;
-      text-align: center;
-      user-select: none;
-    }
-
-    .upload-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #ff0050;
+      padding: 10px;
       color: white;
-      font-size: 2em;
-      border: none;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      z-index: 100;
+      font-size: 18px;
       cursor: pointer;
-      box-shadow: 0 0 10px #ff0050;
-      transition: background 0.3s ease;
     }
-    .upload-btn:hover {
-      background: #e00048;
-    }
-
-    /* Scrollbar style for feed container */
-    .feed-container::-webkit-scrollbar {
-      width: 8px;
-    }
-    .feed-container::-webkit-scrollbar-thumb {
-      background: #ff0050;
-      border-radius: 4px;
+    .feed {
+      scroll-snap-type: y mandatory;
+      height: 100vh;
+      overflow-y: scroll;
     }
   </style>
 </head>
 <body>
+  <div class="feed" id="feed"></div>
 
-<div class="feed-container" id="feed"></div>
-<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
+  <!-- Firebase & Firestore -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-    getFirestore, collection, query, orderBy, limit, startAfter, getDocs,
-    doc, updateDoc, increment, setDoc, deleteDoc,
-    onSnapshot
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import {
-    getAuth, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+      authDomain: "clixly-bc284.firebaseapp.com",
+      projectId: "clixly-bc284",
+      storageBucket: "clixly-bc284.appspot.com",
+      messagingSenderId: "33343695899",
+      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
+    };
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-    authDomain: "clixly-bc284.firebaseapp.com",
-    projectId: "clixly-bc284",
-    storageBucket: "clixly-bc284.appspot.com",
-    messagingSenderId: "33343695899",
-    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
-    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
-  };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth();
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-  const feed = document.getElementById("feed");
+    const feedDiv = document.getElementById("feed");
 
-  let currentUser = null;
-  let lastVisible = null;
-  let isLoading = false;
-
-  // Keep track of follow states for posts userIds
-  const followStates = new Map();
-
-  onAuthStateChanged(auth, (user) => {
-    currentUser = user;
-    // Reload feed when login state changes
-    feed.innerHTML = "";
-    lastVisible = null;
-    loadFeed(true);
-  });
-
-  async function checkFollowing(targetUid) {
-    if (!currentUser) return false;
-    const followDoc = doc(db, "following", currentUser.uid, "list", targetUid);
-    let followed = false;
-    try {
-      const snap = await getDocs(query(collection(db, "following", currentUser.uid, "list"), where("id", "==", targetUid)));
-    } catch(e) {}
-    const docSnap = await doc(db, "following", currentUser.uid, "list", targetUid).get();
-    return docSnap.exists();
-  }
-
-  async function isFollowing(targetUid) {
-    if (!currentUser) return false;
-    const docRef = doc(db, "following", currentUser.uid, "list", targetUid);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists();
-  }
-
-  async function toggleFollow(targetUid, btn) {
-    if (!currentUser) {
-      alert("Please log in to follow users.");
-      return;
-    }
-    btn.disabled = true;
-    const followingRef = doc(db, "following", currentUser.uid, "list", targetUid);
-    const followersRef = doc(db, "followers", targetUid, "list", currentUser.uid);
-
-    const docSnap = await getDoc(followingRef);
-
-    try {
-      if (docSnap.exists()) {
-        // Unfollow
-        await deleteDoc(followingRef);
-        await deleteDoc(followersRef);
-        btn.textContent = "Follow";
-        btn.classList.remove("following");
-      } else {
-        // Follow
-        await setDoc(followingRef, { followedAt: new Date() });
-        await setDoc(followersRef, { followedAt: new Date() });
-        btn.textContent = "Following";
-        btn.classList.add("following");
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
       }
-    } catch (err) {
-      alert("Failed to update follow status. Try again.");
-      console.error(err);
-    }
-    btn.disabled = false;
-  }
 
-  // Helper to create post elements
-  function createPostElement(post, postId) {
-    const postEl = document.createElement("div");
-    postEl.className = "post";
+      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+      const snap = await getDocs(q);
 
-    const mediaContainer = document.createElement("div");
-    mediaContainer.className = "media-container";
+      snap.forEach(async (doc) => {
+        const post = doc.data();
+        const userId = post.userId;
+        const mediaUrl = post.imageUrl;
+        const caption = post.caption || "";
+        const isVideo = mediaUrl.includes(".mp4") || mediaUrl.includes("video");
 
-    let mediaEl;
-    if (post.type === "video") {
-      mediaEl = document.createElement("video");
-      mediaEl.src = post.mediaURL || "";
-      mediaEl.autoplay = true;
-      mediaEl.muted = true;
-      mediaEl.loop = true;
-      mediaEl.playsInline = true;
-      mediaEl.className = "media";
-      mediaEl.addEventListener("click", () => {
-        mediaEl.muted = !mediaEl.muted;
-      });
-    } else {
-      mediaEl = document.createElement("img");
-      mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
-      mediaEl.alt = post.caption || "Image Post";
-      mediaEl.className = "media";
-    }
-    mediaContainer.appendChild(mediaEl);
-
-    // User container with username and follow button
-    const userFollowContainer = document.createElement("div");
-    userFollowContainer.className = "user-follow-container";
-
-    const usernameOverlay = document.createElement("div");
-    usernameOverlay.className = "username-overlay";
-    usernameOverlay.textContent = `@${post.username || 'user'}`;
-    userFollowContainer.appendChild(usernameOverlay);
-
-    const followBtn = document.createElement("button");
-    followBtn.className = "follow-btn";
-    followBtn.textContent = "Follow";
-    followBtn.disabled = true; // disable until state loaded
-
-    userFollowContainer.appendChild(followBtn);
-
-    mediaContainer.appendChild(userFollowContainer);
-
-    // Actions overlay
-    const actions = document.createElement("div");
-    actions.className = "actions";
-
-    const likeBtn = document.createElement("button");
-    likeBtn.className = "action-btn";
-    likeBtn.textContent = "❤️";
-
-    const commentBtn = document.createElement("button");
-    commentBtn.className = "action-btn";
-    commentBtn.textContent = "🗨️";
-
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "action-btn";
-    saveBtn.textContent = "🔖";
-
-    const likeCount = document.createElement("div");
-    likeCount.className = "like-count";
-    likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
-
-    likeBtn.addEventListener("click", async () => {
-      try {
-        await updateDoc(doc(db, "clixPosts", postId), {
-          likes: increment(1)
-        });
-        likeCount.textContent = parseInt(likeCount.textContent) + 1;
-      } catch (e) {
-        alert("Failed to like post. Try again.");
-      }
-    });
-
-    // TODO: Add commentBtn & saveBtn event listeners
-
-    actions.appendChild(likeBtn);
-    actions.appendChild(commentBtn);
-    actions.appendChild(saveBtn);
-    actions.appendChild(likeCount);
-
-    postEl.appendChild(mediaContainer);
-    postEl.appendChild(actions);
-
-    // Caption below
-    const caption = document.createElement("div");
-    caption.className = "caption";
-    caption.innerHTML = post.caption ? post.caption : '';
-    postEl.appendChild(caption);
-
-    // Load follow state for current post user
-    if (currentUser && currentUser.uid !== post.userId) {
-      followBtn.disabled = true;
-      const followRef = doc(db, "following", currentUser.uid, "list", post.userId);
-
-      const unsubscribe = onSnapshot(followRef, (docSnap) => {
-        if (docSnap.exists()) {
-          followBtn.textContent = "Following";
-          followBtn.classList.add("following");
-        } else {
-          followBtn.textContent = "Follow";
-          followBtn.classList.remove("following");
+        let username = "User";
+        try {
+          const userDoc = await getDocs(collection(db, "users"));
+          userDoc.forEach((u) => {
+            if (u.id === userId) {
+              username = u.data().username || "User";
+            }
+          });
+        } catch (e) {
+          console.log("User fetch error:", e);
         }
-        followBtn.disabled = false;
+
+        const postEl = document.createElement("div");
+        postEl.className = "reel";
+        postEl.innerHTML = `
+          ${isVideo ? `<video src="${mediaUrl}" autoplay loop muted playsinline></video>` : `<img src="${mediaUrl}" />`}
+          <div class="overlay">
+            <div class="username">@${username}</div>
+            <div class="caption">${caption}</div>
+          </div>
+          <div class="actions">
+            <button>❤️</button>
+            <button onclick="window.location.href='profile.html?uid=${userId}'">👤</button>
+            <button>💬</button>
+          </div>
+        `;
+        feedDiv.appendChild(postEl);
       });
-
-      // Handle follow/unfollow on click
-      followBtn.onclick = () => {
-        toggleFollow(post.userId, followBtn);
-      };
-    } else {
-      // Hide follow button if user is not logged in or own post
-      followBtn.style.display = "none";
-    }
-
-    return postEl;
-  }
-
-  async function loadFeed(initial = false) {
-    if (isLoading) return;
-    isLoading = true;
-
-    const q = initial
-      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
-      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
-
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      if (initial) {
-        feed.innerHTML = "<p style='text-align:center; color:#fff;'>No posts yet.</p>";
-      }
-      isLoading = false;
-      return;
-    }
-
-    lastVisible = snapshot.docs[snapshot.docs.length - 1];
-
-    snapshot.forEach(docSnap => {
-      const post = docSnap.data();
-      const postId = docSnap.id;
-      const postEl = createPostElement(post, postId);
-      feed.appendChild(postEl);
     });
-
-    isLoading = false;
-  }
-
-  // Initial load
-  loadFeed(true);
-
-  // Infinite scroll handler
-  feed.addEventListener('scroll', () => {
-    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
-      loadFeed();
-    }
-  });
-</script>
-
+  </script>
 </body>
 </html>
-
-
