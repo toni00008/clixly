@@ -5,92 +5,57 @@
   <title>Clix • Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
     body {
-      background: #000;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      -webkit-text-size-adjust: 100%;
-      -webkit-tap-highlight-color: transparent;
+      background: #000; color: #fff; height: 100vh; overflow: hidden;
+      display: flex; justify-content: center; align-items: center;
+      -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
     }
     .feed-container {
-      width: 100%;
-      max-width: 375px;
-      height: 100vh;
-      overflow-y: auto;
-      scroll-behavior: smooth;
-      position: relative;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-      scroll-snap-type: y mandatory;
+      width: 100%; max-width: 375px; height: 100vh; overflow-y: auto;
+      scroll-snap-type: y mandatory; -ms-overflow-style: none; scrollbar-width: none;
     }
-    .feed-container::-webkit-scrollbar {
-      display: none;
-    }
+    .feed-container::-webkit-scrollbar { display: none; }
     .post {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      background: #000;
-      display: flex;
-      flex-direction: column;
-      scroll-snap-align: start;
+      width: 100%; height: 100vh; background: #000;
+      display: flex; flex-direction: column; scroll-snap-align: start;
     }
-    .media-container {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      background: #000;
-    }
-    video.media,
-    img.media {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      z-index: 1;
+    .media-container { width: 100%; height: 100%; position: relative; background: #000; }
+    video.media, img.media {
+      width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1;
     }
     .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 15px;
-      z-index: 10;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 15px; z-index: 10;
     }
-    .top-bar, .bottom-bar, .actions, .upload-btn {
-      position: relative;
+    .top-bar, .bottom-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      background: linear-gradient(rgba(0, 0, 0, 0.5), transparent); padding: 10px;
     }
+    .bottom-bar {
+      flex-direction: column; align-items: flex-start; gap: 6px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+    }
+    .username-overlay { font-weight: bold; font-size: 16px; }
+    .caption { font-size: 14px; max-height: 48px; overflow: hidden; text-overflow: ellipsis; }
+    .audio-info { font-size: 12px; color: #ccc; display: flex; gap: 5px; }
+    .actions {
+      position: absolute; bottom: 100px; right: 10px;
+      display: flex; flex-direction: column; align-items: center; gap: 18px; z-index: 10;
+    }
+    .action-btn {
+      background: rgba(255,255,255,0.1); border: none; color: #fff;
+      font-size: 22px; width: 44px; height: 44px; border-radius: 50%;
+      display: flex; justify-content: center; align-items: center; cursor: pointer;
+    }
+    .like-count { font-size: 12px; color: #fff; margin-top: 4px; }
     .upload-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #0095f6;
-      color: #fff;
-      font-size: 24px;
-      border: none;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      position: fixed; bottom: 20px; right: 20px;
+      background: #0095f6; color: #fff; font-size: 24px;
+      border: none; border-radius: 50%; width: 50px; height: 50px;
+      display: flex; align-items: center; justify-content: center; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer;
     }
   </style>
 </head>
@@ -123,33 +88,29 @@
     let currentVideo = null;
     let isGlobalMuted = true;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const video = entry.target.querySelector("video.media");
-          if (video) {
-            if (entry.isIntersecting) {
-              if (currentVideo && currentVideo !== video) {
-                currentVideo.pause();
-                currentVideo.currentTime = 0;
-              }
-              video.muted = isGlobalMuted;
-              video.play().catch(() => {});
-              currentVideo = video;
-            } else if (currentVideo === video) {
-              video.pause();
-              video.currentTime = 0;
-              currentVideo = null;
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const video = entry.target.querySelector("video.media");
+        if (video) {
+          if (entry.isIntersecting) {
+            if (currentVideo && currentVideo !== video) {
+              currentVideo.pause();
+              currentVideo.currentTime = 0;
             }
+            video.muted = isGlobalMuted;
+            video.play().catch(console.warn);
+            currentVideo = video;
+          } else if (currentVideo === video) {
+            video.pause();
+            video.currentTime = 0;
+            currentVideo = null;
           }
-        });
-      },
-      {
-        root: feed,
-        threshold: 0.8,
-        rootMargin: "0px"
-      }
-    );
+        }
+      });
+    }, {
+      root: feed,
+      threshold: 0.8
+    });
 
     async function loadFeed(initial = false) {
       if (isLoading) return;
@@ -161,9 +122,7 @@
 
       const snapshot = await getDocs(q);
       if (snapshot.empty) {
-        if (initial) {
-          feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
-        }
+        if (initial) feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
         isLoading = false;
         return;
       }
@@ -184,15 +143,14 @@
         if (post.type === "video") {
           mediaEl = document.createElement("video");
           mediaEl.src = post.mediaURL;
-          mediaEl.autoplay = false;
           mediaEl.muted = isGlobalMuted;
+          mediaEl.autoplay = false;
           mediaEl.loop = true;
           mediaEl.playsInline = true;
           mediaEl.setAttribute("webkit-playsinline", "true");
           mediaEl.className = "media";
 
-          mediaEl.addEventListener("click", (e) => {
-            e.preventDefault();
+          mediaEl.addEventListener("click", () => {
             if (isGlobalMuted) {
               isGlobalMuted = false;
               document.querySelectorAll("video.media").forEach(v => v.muted = false);
@@ -203,13 +161,60 @@
         } else {
           mediaEl = document.createElement("img");
           mediaEl.src = post.mediaURL;
-          mediaEl.alt = post.caption || "Image Post";
+          mediaEl.alt = post.caption || "Image";
           mediaEl.className = "media";
         }
 
         mediaContainer.appendChild(mediaEl);
+
+        const overlay = document.createElement("div");
+        overlay.className = "overlay";
+        overlay.innerHTML = `
+          <div class="top-bar">
+            <span>Clix</span>
+            <div class="icon">📷</div>
+          </div>
+          <div class="bottom-bar">
+            <span class="username-overlay">@${post.username || 'user'}</span>
+            <div class="caption">${post.caption || ''}</div>
+            <div class="audio-info"><div class="icon">🎵</div><span>Original Audio</span></div>
+          </div>
+        `;
+        mediaContainer.appendChild(overlay);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const likeBtn = document.createElement("button");
+        likeBtn.className = "action-btn";
+        likeBtn.textContent = "❤️";
+
+        const commentBtn = document.createElement("button");
+        commentBtn.className = "action-btn";
+        commentBtn.textContent = "🗨️";
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "action-btn";
+        saveBtn.textContent = "🔖";
+
+        const likeCount = document.createElement("div");
+        likeCount.className = "like-count";
+        likeCount.textContent = post.likes || 0;
+
+        likeBtn.addEventListener("click", async () => {
+          likeCount.textContent = parseInt(likeCount.textContent) + 1;
+          await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
+        });
+
+        actions.appendChild(likeBtn);
+        actions.appendChild(likeCount);
+        actions.appendChild(commentBtn);
+        actions.appendChild(saveBtn);
+
         postEl.appendChild(mediaContainer);
+        postEl.appendChild(actions);
         feed.appendChild(postEl);
+
         observer.observe(postEl);
       });
 
@@ -217,17 +222,16 @@
     }
 
     loadFeed(true);
-    feed.addEventListener('scroll', () => {
+    feed.addEventListener("scroll", () => {
       if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
         loadFeed();
       }
     });
 
-    window.addEventListener('unload', () => {
+    window.addEventListener("unload", () => {
       observer.disconnect();
     });
   </script>
 </body>
 </html>
-
 
