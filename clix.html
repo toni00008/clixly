@@ -18,6 +18,7 @@
       height: 100vh;
       overflow-y: scroll;
       scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
     }
 
     .reel {
@@ -77,6 +78,7 @@
       gap: 16px;
       align-items: center;
       margin-left: 10px;
+      pointer-events: auto;
     }
 
     .action-btn {
@@ -90,7 +92,12 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      pointer-events: auto;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 0, 80, 0.8);
     }
 
     .upload-btn {
@@ -137,6 +144,24 @@
     let isLoading = false;
     let globalMuted = true;
 
+    // Intersection Observer to play/pause videos in view
+    const observerOptions = {
+      root: feed,
+      rootMargin: '0px',
+      threshold: 0.75 // 75% visible
+    };
+
+    const videoObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const video = entry.target;
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});  // Play video when in view
+        } else {
+          video.pause(); // Pause when out of view
+        }
+      });
+    }, observerOptions);
+
     async function loadFeed(initial = false) {
       if (isLoading) return;
       isLoading = true;
@@ -146,7 +171,11 @@
         : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
 
       const snapshot = await getDocs(q);
-      if (snapshot.empty) return;
+      if (snapshot.empty) {
+        if (initial) feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
+        isLoading = false;
+        return;
+      }
 
       lastVisible = snapshot.docs[snapshot.docs.length - 1];
 
@@ -157,19 +186,31 @@
         const reel = document.createElement("div");
         reel.className = "reel";
 
-        const media = document.createElement(post.type === "video" ? "video" : "img");
-        media.src = post.mediaURL || "";
-        media.className = "media";
-
+        let media;
         if (post.type === "video") {
+          media = document.createElement("video");
+          media.src = post.mediaURL || "";
           media.muted = globalMuted;
-          media.autoplay = true;
+          media.autoplay = false;  // autoplay false, controlled by observer
           media.loop = true;
           media.playsInline = true;
+          media.className = "media";
+
           media.addEventListener("click", () => {
             globalMuted = !globalMuted;
-            document.querySelectorAll("video").forEach(v => v.muted = globalMuted);
+            document.querySelectorAll("video").forEach(v => {
+              v.muted = globalMuted;
+            });
           });
+
+          // Observe this video for playing/pausing
+          videoObserver.observe(media);
+
+        } else {
+          media = document.createElement("img");
+          media.src = post.mediaURL || "https://via.placeholder.com/400x600";
+          media.alt = post.caption || "Image Post";
+          media.className = "media";
         }
 
         const overlay = document.createElement("div");
@@ -193,7 +234,11 @@
         likeBtn.className = "action-btn";
         likeBtn.textContent = "❤️";
         likeBtn.onclick = async () => {
-          await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
+          try {
+            await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
+          } catch {
+            alert("Failed to like post.");
+          }
         };
 
         const commentBtn = document.createElement("button");
@@ -216,6 +261,7 @@
     }
 
     loadFeed(true);
+
     feed.addEventListener("scroll", () => {
       if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
         loadFeed();
@@ -224,5 +270,3 @@
   </script>
 </body>
 </html>
-
-
