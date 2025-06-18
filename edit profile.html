@@ -2,220 +2,274 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Edit Profile • Clixly</title>
+  <title>Clix • Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', sans-serif;
-      max-width: 500px;
-      margin: 40px auto;
-      background: #f9f9f9;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      background: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 20px;
-      font-weight: bold;
-    }
-    input[type="text"], textarea {
-      width: 100%;
+    .feed-container {
+      flex: 1;
+      overflow-y: auto;
+      scroll-behavior: smooth;
       padding: 10px;
-      margin-top: 8px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      font-size: 1em;
-      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
-    input[type="file"] {
-      margin-top: 8px;
+    .post {
+      position: relative;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #111;
+      aspect-ratio: 9/16;
+      box-shadow: 0 0 15px #ff0050;
     }
-    button {
-      margin-top: 30px;
-      padding: 12px;
+    .media-container {
       width: 100%;
-      background-color: #0077ff;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 1.1em;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
+      height: 100%;
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
     }
-    button:disabled {
-      background-color: #999;
-      cursor: not-allowed;
-    }
-    button:hover:enabled {
-      background-color: #005bbb;
-    }
-    img {
-      display: block;
-      margin: 20px auto;
-      width: 100px;
-      height: 100px;
+    video.media,
+    img.media {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      border-radius: 50%;
-      border: 2px solid #0077ff;
+      display: block;
+      z-index: 1;
     }
-    .message {
+    .username-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      font-weight: bold;
+      color: rgba(255,255,255,0.85);
+      z-index: 10;
+      text-shadow: 0 0 5px rgba(0,0,0,0.7);
+    }
+    .actions {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      z-index: 10;
+    }
+    .action-btn {
+      background: rgba(0,0,0,0.3);
+      border: none;
+      color: white;
+      font-size: 1.8em;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 6px #ff0050;
+    }
+    .action-btn:hover {
+      background: rgba(255, 0, 80, 0.8);
+    }
+    .like-count {
+      color: #ff0050;
+      font-size: 0.9em;
+      font-weight: bold;
       text-align: center;
-      margin-top: 20px;
-      font-weight: 600;
+      margin-top: -6px;
+    }
+    .caption {
+      text-align: center;
+      padding: 10px 12px;
+      font-size: 0.95em;
+      color: #eee;
+      max-width: 500px;
+      margin: 6px auto 0;
+    }
+    .upload-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff0050;
+      color: white;
+      font-size: 2em;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      z-index: 100;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff0050;
+    }
+    .feed-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    .feed-container::-webkit-scrollbar-thumb {
+      background: #ff0050;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
 
-  <h2>Edit Your Profile</h2>
+<div class="feed-container" id="feed"></div>
+<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
-  <img id="profilePicPreview" src="https://via.placeholder.com/100?text=No+Image" alt="Profile Picture" />
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  <label for="profilePicFile">Upload Profile Picture</label>
-  <input type="file" id="profilePicFile" accept="image/*" />
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
+    authDomain: "clixly-bc284.firebaseapp.com",
+    projectId: "clixly-bc284",
+    storageBucket: "clixly-bc284.appspot.com",
+    messagingSenderId: "33343695899",
+    appId: "1:33343695899:web:25b8f943e077dfb1b85cbe",
+    databaseURL: "https://clixly-bc284-default-rtdb.firebaseio.com"
+  };
 
-  <label for="username">Username</label>
-  <input type="text" id="username" placeholder="Your username" />
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const feed = document.getElementById("feed");
 
-  <label for="bio">Bio</label>
-  <textarea id="bio" rows="4" placeholder="Short bio about yourself"></textarea>
+  let lastVisible = null;
+  let isLoading = false;
 
-  <button id="saveBtn" disabled>💾 Save Changes</button>
+  async function loadFeed(initial = false) {
+    if (isLoading) return;
+    isLoading = true;
 
-  <p id="statusMessage" class="message"></p>
+    const q = initial
+      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
+      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, doc, getDoc, setDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    // Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
-      authDomain: "clixly-bc284.firebaseapp.com",
-      projectId: "clixly-bc284",
-      storageBucket: "clixly-bc284.appspot.com",
-      messagingSenderId: "33343695899",
-      appId: "1:33343695899:web:25b8f943e077dfb1b85cbe"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
-
-    const profilePicFileInput = document.getElementById('profilePicFile');
-    const usernameInput = document.getElementById('username');
-    const bioInput = document.getElementById('bio');
-    const profilePicPreview = document.getElementById('profilePicPreview');
-    const saveBtn = document.getElementById('saveBtn');
-    const statusMessage = document.getElementById('statusMessage');
-
-    let currentUserId = null;
-    let uploadedProfilePicUrl = null;  // will store uploaded profile pic URL from Cloudinary
-
-    // Cloudinary config — YOUR INFO
-    const cloudName = "dd1xg9duv";
-    const unsignedUploadPreset = "clixly_upload";
-
-    function setStatus(message, color = 'black') {
-      statusMessage.style.color = color;
-      statusMessage.textContent = message;
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      if (initial) {
+        feed.innerHTML = "<p style='text-align:center; color:#aaa;'>No posts yet.</p>";
+      }
+      isLoading = false;
+      return;
     }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUserId = user.uid;
-        saveBtn.disabled = false;
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
 
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUserId));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            usernameInput.value = data.username || '';
-            bioInput.value = data.bio || '';
-            uploadedProfilePicUrl = data.profilePic || null;
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const postId = docSnap.id;
 
-            profilePicPreview.src = uploadedProfilePicUrl || 'https://via.placeholder.com/100?text=No+Image';
-          } else {
-            profilePicPreview.src = 'https://via.placeholder.com/100?text=No+Image';
-          }
-        } catch (err) {
-          console.error('Error loading profile:', err);
-          setStatus('Error loading profile data', 'red');
-        }
-      } else {
-        document.body.innerHTML = '<p style="text-align:center; margin-top: 50px;">Please <a href="login.html">log in</a> to edit your profile.</p>';
-      }
-    });
+      const postEl = document.createElement("div");
+      postEl.className = "post";
 
-    profilePicFileInput.addEventListener('change', async () => {
-      const file = profilePicFileInput.files[0];
-      if (!file) return;
+      const mediaContainer = document.createElement("div");
+      mediaContainer.className = "media-container";
 
-      setStatus('Uploading profile picture...', 'black');
+      let mediaEl;
+      if (post.type === "video") {
+        mediaEl = document.createElement("video");
+        mediaEl.src = post.mediaURL || "";
+        mediaEl.autoplay = true;
+        mediaEl.muted = true;
+        mediaEl.loop = true;
+        mediaEl.playsInline = true;
+        mediaEl.className = "media";
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", unsignedUploadPreset);
-
-      try {
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
-          method: "POST",
-          body: formData
+        // Tap to toggle mute
+        mediaEl.addEventListener("click", () => {
+          mediaEl.muted = !mediaEl.muted;
         });
 
-        if (!response.ok) throw new Error("Upload failed");
-
-        const data = await response.json();
-
-        uploadedProfilePicUrl = data.secure_url;
-        profilePicPreview.src = uploadedProfilePicUrl;
-        setStatus('Profile picture uploaded. Don\'t forget to save changes.', 'green');
-      } catch (err) {
-        console.error('Upload error:', err);
-        setStatus('Upload failed: ' + err.message, 'red');
+      } else {
+        mediaEl = document.createElement("img");
+        mediaEl.src = post.mediaURL || "https://via.placeholder.com/400x600";
+        mediaEl.alt = post.caption || "Image Post";
+        mediaEl.className = "media";
       }
+
+      mediaContainer.appendChild(mediaEl);
+
+      const usernameOverlay = document.createElement("div");
+      usernameOverlay.className = "username-overlay";
+      usernameOverlay.textContent = `@${post.username || 'user'}`;
+      mediaContainer.appendChild(usernameOverlay);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const likeBtn = document.createElement("button");
+      likeBtn.className = "action-btn";
+      likeBtn.textContent = "❤️";
+
+      const commentBtn = document.createElement("button");
+      commentBtn.className = "action-btn";
+      commentBtn.textContent = "🗨️";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "action-btn";
+      saveBtn.textContent = "🔖";
+
+      const likeCount = document.createElement("div");
+      likeCount.className = "like-count";
+      likeCount.textContent = (typeof post.likes === "number") ? post.likes : 0;
+
+      likeBtn.addEventListener("click", async () => {
+        try {
+          const newLikes = parseInt(likeCount.textContent) + 1;
+          likeCount.textContent = newLikes;
+          await updateDoc(doc(db, "clixPosts", postId), {
+            likes: increment(1)
+          });
+        } catch (e) {
+          alert("Failed to like post. Try again.");
+        }
+      });
+
+      actions.appendChild(likeBtn);
+      actions.appendChild(commentBtn);
+      actions.appendChild(saveBtn);
+      actions.appendChild(likeCount);
+
+      postEl.appendChild(mediaContainer);
+      postEl.appendChild(actions);
+
+      const caption = document.createElement("div");
+      caption.className = "caption";
+      caption.innerHTML = post.caption ? post.caption : '';
+      postEl.appendChild(caption);
+
+      feed.appendChild(postEl);
     });
 
-    saveBtn.addEventListener('click', async () => {
-      const username = usernameInput.value.trim();
-      const bio = bioInput.value.trim();
+    isLoading = false;
+  }
 
-      if (!username) {
-        setStatus('❗ Username cannot be empty.', 'red');
-        return;
-      }
-      if (!uploadedProfilePicUrl) {
-        setStatus('❗ Please upload a profile picture.', 'red');
-        return;
-      }
-
-      try {
-        await setDoc(doc(db, 'users', currentUserId), {
-          username,
-          bio,
-          profilePic: uploadedProfilePicUrl,
-          uid: currentUserId,
-          email: auth.currentUser.email || ''
-        }, { merge: true });
-
-        setStatus('✅ Profile updated successfully!', 'green');
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        setStatus('❌ Error updating profile: ' + error.message, 'red');
-      }
-    });
-  </script>
+  loadFeed(true);
+  feed.addEventListener('scroll', () => {
+    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
+      loadFeed();
+    }
+  });
+</script>
 
 </body>
 </html>
+
 
