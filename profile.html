@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clixly • User Profile</title>
+  <title>Clixly • Profile</title>
   <style>
     body {
       font-family: sans-serif;
       background: #0d0d10;
       color: white;
+      margin: 0;
       padding: 20px;
     }
     .profile-header {
@@ -32,23 +33,23 @@
       cursor: pointer;
       font-weight: bold;
     }
-    .post {
-      background: #1c1c26;
-      padding: 12px;
-      border-radius: 12px;
-      margin: 10px 0;
+    .posts-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
     }
-    video, img {
+    .post-item img,
+    .post-item video {
       width: 100%;
-      max-height: 400px;
+      height: 200px;
       object-fit: cover;
-      border-radius: 12px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
   <div class="profile-header">
-    <img id="profile-pic" src="" alt="Profile" />
+    <img id="profile-pic" src="https://via.placeholder.com/80" alt="Profile" />
     <div>
       <h2 id="username">Loading...</h2>
       <p id="bio"></p>
@@ -56,8 +57,7 @@
     <button class="follow-btn" id="follow-btn" style="margin-left:auto;">Follow</button>
   </div>
 
-  <h3>Posts</h3>
-  <div id="posts"></div>
+  <div class="posts-container" id="posts"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -91,7 +91,7 @@
     const uid = new URLSearchParams(window.location.search).get("uid");
     if (!uid) {
       document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
-      throw new Error("UID not found in URL");
+      throw new Error("UID not in URL");
     }
 
     const usernameEl = document.getElementById("username");
@@ -104,33 +104,32 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        alert("Please login first.");
         window.location.href = "login.html";
         return;
       }
 
       currentUserUid = user.uid;
 
-      // Load selected user's data
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
+      // Fetch profile user data
+      const profileRef = doc(db, "users", uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (!profileSnap.exists()) {
         document.body.innerHTML = "<h2 style='color:red;'>User not found.</h2>";
         return;
       }
 
-      const userData = userSnap.data();
-      usernameEl.textContent = userData.username || "Unknown";
+      const userData = profileSnap.data();
+      usernameEl.textContent = userData.username || "Unnamed";
       bioEl.textContent = userData.bio || "";
       picEl.src = userData.profilePicture || "https://via.placeholder.com/80";
 
-      // Handle follow/unfollow
+      // Follow state
       const currentUserRef = doc(db, "users", currentUserUid);
-      const currentUserSnap = await getDoc(currentUserRef);
-      const currentUserData = currentUserSnap.data();
-      const isFollowing = (currentUserData.following || []).includes(uid);
-
+      const currentSnap = await getDoc(currentUserRef);
+      const isFollowing = (currentSnap.data().following || []).includes(uid);
       followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
+
       followBtn.onclick = async () => {
         if (isFollowing) {
           await updateDoc(currentUserRef, {
@@ -145,35 +144,24 @@
         }
       };
 
-      // Load that user's posts
-      const q = query(collection(db, "posts"), where("userId", "==", uid));
-      const querySnapshot = await getDocs(q);
+      // Fetch user's posts
+      const q = query(collection(db, "clixPosts"), where("userId", "==", uid));
+      const snapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
-        postsDiv.innerHTML = "<p>No posts yet.</p>";
-      } else {
-        querySnapshot.forEach((docSnap) => {
-          const post = docSnap.data();
-          const postEl = document.createElement("div");
-          postEl.className = "post";
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        const mediaUrl = post.imageUrl || post.videoUrl;
+        const postEl = document.createElement("div");
+        postEl.className = "post-item";
 
-          let mediaHTML = "";
-          if (post.imageUrl.endsWith(".mp4")) {
-            mediaHTML = `<video controls src="${post.imageUrl}"></video>`;
-          } else {
-            mediaHTML = `<img src="${post.imageUrl}" alt="Post" />`;
-          }
+        if (mediaUrl?.includes(".mp4")) {
+          postEl.innerHTML = `<video src="${mediaUrl}" controls muted></video>`;
+        } else {
+          postEl.innerHTML = `<img src="${mediaUrl}" alt="Post" />`;
+        }
 
-          postEl.innerHTML = `
-            <strong>${userData.username}</strong>
-            <p>${post.caption || ""}</p>
-            ${mediaHTML}
-            <div class="likes">❤️ ${post.likes || 0}</div>
-          `;
-
-          postsDiv.appendChild(postEl);
-        });
-      }
+        postsDiv.appendChild(postEl);
+      });
     });
   </script>
 </body>
