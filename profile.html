@@ -45,6 +45,12 @@
       object-fit: cover;
       border-radius: 10px;
     }
+    p.empty-msg {
+      color: #aaa;
+      text-align: center;
+      margin-top: 40px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -120,14 +126,21 @@
       }
 
       const userData = profileSnap.data();
+
+      // Debug print user data
+      console.log("User data:", userData);
+
       usernameEl.textContent = userData.username || "Unnamed";
       bioEl.textContent = userData.bio || "";
+
+      // Fix profile pic field name here if different in your DB:
       picEl.src = userData.profilePicture || "https://via.placeholder.com/80";
 
-      // Follow state
+      // Fetch current user following info for follow button
       const currentUserRef = doc(db, "users", currentUserUid);
       const currentSnap = await getDoc(currentUserRef);
-      const isFollowing = (currentSnap.data().following || []).includes(uid);
+      const currentUserData = currentSnap.data() || {};
+      let isFollowing = (currentUserData.following || []).includes(uid);
       followBtn.textContent = isFollowing ? "Unfollow" : "Follow";
 
       followBtn.onclick = async () => {
@@ -136,11 +149,13 @@
             following: arrayRemove(uid)
           });
           followBtn.textContent = "Follow";
+          isFollowing = false;
         } else {
           await updateDoc(currentUserRef, {
             following: arrayUnion(uid)
           });
           followBtn.textContent = "Unfollow";
+          isFollowing = true;
         }
       };
 
@@ -148,20 +163,33 @@
       const q = query(collection(db, "clixPosts"), where("userId", "==", uid));
       const snapshot = await getDocs(q);
 
-      snapshot.forEach(docSnap => {
-        const post = docSnap.data();
-        const mediaUrl = post.imageUrl || post.videoUrl;
-        const postEl = document.createElement("div");
-        postEl.className = "post-item";
+      if (snapshot.empty) {
+        postsDiv.innerHTML = "<p class='empty-msg'>No posts yet.</p>";
+      } else {
+        postsDiv.innerHTML = ""; // clear before appending
 
-        if (mediaUrl?.includes(".mp4")) {
-          postEl.innerHTML = `<video src="${mediaUrl}" controls muted></video>`;
-        } else {
-          postEl.innerHTML = `<img src="${mediaUrl}" alt="Post" />`;
-        }
+        snapshot.forEach(docSnap => {
+          const post = docSnap.data();
 
-        postsDiv.appendChild(postEl);
-      });
+          // Debug print post data
+          console.log("Post data:", post);
+
+          // Make sure to match your actual field name for media URL:
+          const mediaUrl = post.mediaURL || ""; 
+          if (!mediaUrl) return;  // skip posts without media
+
+          const postEl = document.createElement("div");
+          postEl.className = "post-item";
+
+          if (mediaUrl.endsWith(".mp4")) {
+            postEl.innerHTML = `<video src="${mediaUrl}" controls muted></video>`;
+          } else {
+            postEl.innerHTML = `<img src="${mediaUrl}" alt="Post" />`;
+          }
+
+          postsDiv.appendChild(postEl);
+        });
+      }
     });
   </script>
 </body>
