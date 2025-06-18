@@ -68,15 +68,23 @@
       height: 100vh;
       overflow-y: scroll;
     }
+    p.error-message {
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
-  <div class="feed" id="feed"></div>
+  <div class="feed" id="feed">
+    <p style="color:white; text-align:center; margin-top:50px;">Loading posts...</p>
+  </div>
 
   <!-- Firebase & Firestore -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -100,45 +108,59 @@
         return;
       }
 
-      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-      const snap = await getDocs(q);
+      try {
+        const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
 
-      snap.forEach(async (doc) => {
-        const post = doc.data();
-        const userId = post.userId;
-        const mediaUrl = post.imageUrl;
-        const caption = post.caption || "";
-        const isVideo = mediaUrl.includes(".mp4") || mediaUrl.includes("video");
+        feedDiv.innerHTML = "";  // Clear loading text
 
-        let username = "User";
-        try {
-          const userDoc = await getDocs(collection(db, "users"));
-          userDoc.forEach((u) => {
-            if (u.id === userId) {
-              username = u.data().username || "User";
-            }
-          });
-        } catch (e) {
-          console.log("User fetch error:", e);
+        if (snap.empty) {
+          feedDiv.innerHTML = `<p class="error-message">No posts to show yet.</p>`;
+          return;
         }
 
-        const postEl = document.createElement("div");
-        postEl.className = "reel";
-        postEl.innerHTML = `
-          ${isVideo ? `<video src="${mediaUrl}" autoplay loop muted playsinline></video>` : `<img src="${mediaUrl}" />`}
-          <div class="overlay">
-            <div class="username">@${username}</div>
-            <div class="caption">${caption}</div>
-          </div>
-          <div class="actions">
-            <button>❤️</button>
-            <button onclick="window.location.href='profile.html?uid=${userId}'">👤</button>
-            <button>💬</button>
-          </div>
-        `;
-        feedDiv.appendChild(postEl);
-      });
+        for (const docSnap of snap.docs) {
+          const post = docSnap.data();
+          const userId = post.userId;
+          const mediaUrl = post.imageUrl;
+          const caption = post.caption || "";
+          const isVideo = mediaUrl && mediaUrl.endsWith(".mp4");
+
+          let username = "User";
+          try {
+            if (userId) {
+              const userRef = doc(db, "users", userId);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                username = userSnap.data().username || "User";
+              }
+            }
+          } catch (e) {
+            console.log("User fetch error:", e);
+          }
+
+          const postEl = document.createElement("div");
+          postEl.className = "reel";
+          postEl.innerHTML = `
+            ${isVideo ? `<video src="${mediaUrl}" autoplay loop muted playsinline></video>` : `<img src="${mediaUrl || ''}" />`}
+            <div class="overlay">
+              <div class="username">@${username}</div>
+              <div class="caption">${caption}</div>
+            </div>
+            <div class="actions">
+              <button>❤️</button>
+              <button onclick="window.location.href='profile.html?uid=${userId}'">👤</button>
+              <button>💬</button>
+            </div>
+          `;
+          feedDiv.appendChild(postEl);
+        }
+      } catch (error) {
+        console.error("Firestore query failed:", error);
+        feedDiv.innerHTML = `<p class="error-message">Failed to load posts. Please check your connection or try again later.</p>`;
+      }
     });
   </script>
 </body>
 </html>
+
