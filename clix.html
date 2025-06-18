@@ -28,6 +28,7 @@
       position: relative;
       -ms-overflow-style: none; /* IE and Edge */
       scrollbar-width: none; /* Firefox */
+      scroll-snap-type: y mandatory; /* Enable scroll snapping */
     }
     .feed-container::-webkit-scrollbar {
       display: none; /* Chrome, Safari */
@@ -39,6 +40,7 @@
       background: #000;
       display: flex;
       flex-direction: column;
+      scroll-snap-align: start; /* Snap each post to viewport */
     }
     .media-container {
       width: 100%;
@@ -222,6 +224,37 @@
     let lastVisible = null;
     let isLoading = false;
 
+    // Store currently playing video
+    let currentVideo = null;
+
+    // Intersection Observer to manage video playback
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target.querySelector("video.media");
+          if (video) {
+            if (entry.isIntersecting) {
+              // Pause the previous video
+              if (currentVideo && currentVideo !== video) {
+                currentVideo.pause();
+              }
+              // Play the current video
+              video.play().catch((e) => console.error("Error playing video:", e));
+              currentVideo = video;
+            } else if (currentVideo === video) {
+              // Pause video when it leaves the viewport
+              video.pause();
+              currentVideo = null;
+            }
+          }
+        });
+      },
+      {
+        root: feed,
+        threshold: 0.9, // Trigger when 90% of the post is visible
+      }
+    );
+
     async function loadFeed(initial = false) {
       if (isLoading) return;
       isLoading = true;
@@ -255,15 +288,11 @@
         if (post.type === "video") {
           mediaEl = document.createElement("video");
           mediaEl.src = post.mediaURL || "";
-          mediaEl.autoplay = true;
+          mediaEl.autoplay = false; // Controlled by Intersection Observer
           mediaEl.muted = true;
           mediaEl.loop = true;
           mediaEl.playsInline = true;
           mediaEl.className = "media";
-
-          mediaEl.addEventListener("click", () => {
-            mediaEl.muted = !mediaEl.muted;
-          });
         } else {
           mediaEl = document.createElement("img");
           mediaEl.src = post.mediaURL || "https://via.placeholder.com/375x667";
@@ -345,6 +374,9 @@
         postEl.appendChild(actions);
 
         feed.appendChild(postEl);
+
+        // Observe the post for visibility
+        observer.observe(postEl);
       });
 
       isLoading = false;
@@ -355,6 +387,11 @@
       if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 50) {
         loadFeed();
       }
+    });
+
+    // Cleanup observer on page unload
+    window.addEventListener('unload', () => {
+      observer.disconnect();
     });
   </script>
 </body>
