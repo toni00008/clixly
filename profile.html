@@ -146,7 +146,23 @@
 
         usernameEl.textContent = userData.username || "Unnamed User";
         bioEl.textContent = userData.bio || "";
-        picEl.src = userData.profilePicture || "https://via.placeholder.com/80";
+
+        console.log("Profile picture URL from Firestore:", userData.profilePicture);
+        if (userData.profilePicture) {
+          // Add cache-busting query param to force reload
+          const cacheBustedUrl = `${userData.profilePicture}?t=${Date.now()}`;
+          picEl.src = cacheBustedUrl;
+          console.log("Using cache-busted profile pic URL:", cacheBustedUrl);
+        } else {
+          picEl.src = "https://via.placeholder.com/80";
+          console.log("No profile picture found, using placeholder.");
+        }
+
+        // Handle profile pic load errors gracefully
+        picEl.onerror = () => {
+          console.error("Failed to load profile picture from URL:", picEl.src);
+          picEl.src = "https://via.placeholder.com/80"; // fallback image
+        };
 
         // Check follow state
         const currentUserRef = doc(db, "users", currentUserUid);
