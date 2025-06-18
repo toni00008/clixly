@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Clix • Feed</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
     * {
       margin: 0;
@@ -19,10 +19,13 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
     }
     .feed-container {
-      width: 375px;
-      height: 667px;
+      width: 100%;
+      max-width: 375px;
+      height: 100vh;
       overflow-y: auto;
       scroll-behavior: smooth;
       position: relative;
@@ -36,7 +39,7 @@
     .post {
       position: relative;
       width: 100%;
-      height: 100%;
+      height: 100vh;
       background: #000;
       display: flex;
       flex-direction: column;
@@ -55,6 +58,9 @@
       object-fit: cover;
       display: block;
       z-index: 1;
+    }
+    video.media {
+      background: url('https://via.placeholder.com/375x667') no-repeat center center/cover; /* Fallback image */
     }
     .overlay {
       position: absolute;
@@ -223,27 +229,32 @@
 
     let lastVisible = null;
     let isLoading = false;
-
-    // Store currently playing video
     let currentVideo = null;
 
-    // Intersection Observer to manage video playback
+    // Intersection Observer for video playback
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const video = entry.target.querySelector("video.media");
           if (video) {
             if (entry.isIntersecting) {
-              // Pause the previous video
+              // Pause previous video
               if (currentVideo && currentVideo !== video) {
                 currentVideo.pause();
+                currentVideo.currentTime = 0; // Reset to start
               }
-              // Play the current video
-              video.play().catch((e) => console.error("Error playing video:", e));
+              // Play current video
+              video.muted = true; // Ensure muted for autoplay
+              video.play().catch((e) => {
+                console.error("Error playing video:", e);
+                // Fallback: show placeholder if video fails
+                video.style.backgroundImage = "url('https://via.placeholder.com/375x667')";
+              });
               currentVideo = video;
             } else if (currentVideo === video) {
-              // Pause video when it leaves the viewport
+              // Pause when out of view
               video.pause();
+              video.currentTime = 0; // Reset to start
               currentVideo = null;
             }
           }
@@ -251,7 +262,8 @@
       },
       {
         root: feed,
-        threshold: 0.9, // Trigger when 90% of the post is visible
+        threshold: 0.8, // Trigger when 80% visible
+        rootMargin: "0px" // Adjust for mobile
       }
     );
 
@@ -287,12 +299,19 @@
         let mediaEl;
         if (post.type === "video") {
           mediaEl = document.createElement("video");
-          mediaEl.src = post.mediaURL || "";
-          mediaEl.autoplay = false; // Controlled by Intersection Observer
+          mediaEl.src = post.mediaURL || "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"; // Placeholder video for testing
+          mediaEl.autoplay = false; // Controlled by observer
           mediaEl.muted = true;
           mediaEl.loop = true;
           mediaEl.playsInline = true;
+          mediaEl.setAttribute("webkit-playsinline", "true"); // iOS compatibility
           mediaEl.className = "media";
+
+          // Toggle mute/unmute on click
+          mediaEl.addEventListener("click", (e) => {
+            e.preventDefault(); // Prevent default behavior
+            mediaEl.muted = !mediaEl.muted;
+          });
         } else {
           mediaEl = document.createElement("img");
           mediaEl.src = post.mediaURL || "https://via.placeholder.com/375x667";
