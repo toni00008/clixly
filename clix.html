@@ -33,6 +33,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      position: absolute;
+      top: 0; left: 0;
     }
 
     .overlay {
@@ -57,11 +59,12 @@
     .actions {
       position: absolute;
       right: 16px;
-      bottom: 80px;
+      bottom: 100px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 18px;
+      z-index: 3;
     }
 
     .action-btn {
@@ -81,10 +84,11 @@
 
     .mute-toggle {
       position: absolute;
-      top: 16px;
-      right: 16px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 8px;
+      top: 20px;
+      right: 20px;
+      z-index: 4;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
       border-radius: 50%;
       font-size: 1.4em;
       cursor: pointer;
@@ -103,30 +107,12 @@
       display: none;
       z-index: 100;
     }
-
-    .upload-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #ff0050;
-      color: white;
-      font-size: 2em;
-      border: none;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      z-index: 100;
-      cursor: pointer;
-      box-shadow: 0 0 10px #ff0050;
-    }
   </style>
 </head>
 <body>
 
 <div class="feed" id="feed"></div>
 <div id="commentPopup" class="comment-popup"></div>
-<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
-<div class="mute-toggle" id="muteToggle">🔇</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -147,16 +133,9 @@
   const db = getFirestore(app);
 
   const feed = document.getElementById("feed");
-  const muteToggle = document.getElementById("muteToggle");
   const commentPopup = document.getElementById("commentPopup");
 
   let isMuted = true;
-
-  muteToggle.addEventListener("click", () => {
-    isMuted = !isMuted;
-    document.querySelectorAll("video").forEach(v => v.muted = isMuted);
-    muteToggle.textContent = isMuted ? "🔇" : "🔊";
-  });
 
   async function loadFeed() {
     const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(10));
@@ -171,18 +150,13 @@
 
       const video = document.createElement("video");
       video.src = post.mediaURL;
-      video.autoplay = false;
       video.loop = true;
       video.playsInline = true;
       video.muted = isMuted;
-      postEl.appendChild(video);
 
       const overlay = document.createElement("div");
       overlay.className = "overlay";
-
-      const caption = document.createElement("div");
-      caption.className = "caption";
-      caption.innerHTML = `<span class="username">@${post.username || "user"}</span> ${post.caption || ""}`;
+      overlay.innerHTML = `<div class="caption"><span class="username">@${post.username || 'user'}</span> ${post.caption || ''}</div>`;
 
       const actions = document.createElement("div");
       actions.className = "actions";
@@ -208,7 +182,7 @@
       });
 
       commentBtn.addEventListener("click", () => {
-        commentPopup.innerHTML = `<h3 style="color:white;">Comments for @${post.username}</h3><p style="color:gray;">(Coming soon)</p>`;
+        commentPopup.innerHTML = `<h3 style='color:white;'>Comments for @${post.username}</h3><p style='color:gray;'>(Coming soon)</p>`;
         commentPopup.style.display = "block";
         setTimeout(() => {
           commentPopup.addEventListener("click", () => commentPopup.style.display = "none", { once: true });
@@ -219,13 +193,22 @@
       actions.appendChild(commentBtn);
       actions.appendChild(likeCount);
 
-      overlay.appendChild(caption);
+      const muteToggle = document.createElement("div");
+      muteToggle.className = "mute-toggle";
+      muteToggle.textContent = isMuted ? "🔇" : "🔊";
+      muteToggle.addEventListener("click", () => {
+        isMuted = !isMuted;
+        video.muted = isMuted;
+        muteToggle.textContent = isMuted ? "🔇" : "🔊";
+      });
+
+      postEl.appendChild(video);
       postEl.appendChild(overlay);
       postEl.appendChild(actions);
+      postEl.appendChild(muteToggle);
       feed.appendChild(postEl);
     });
 
-    // Auto-play logic
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const video = entry.target.querySelector("video");
@@ -247,3 +230,4 @@
 
 </body>
 </html>
+
