@@ -7,93 +7,105 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
+      font-family: 'Segoe UI', sans-serif;
       background: #000;
       color: #fff;
-      font-family: Arial, sans-serif;
+      height: 100vh;
       overflow: hidden;
     }
-    .feed {
+    .feed-container {
       height: 100vh;
       overflow-y: scroll;
       scroll-snap-type: y mandatory;
     }
     .post {
-      scroll-snap-align: start;
       position: relative;
       height: 100vh;
-      width: 100%;
+      scroll-snap-align: start;
     }
-    video {
-      height: 100%;
+    .media-container {
       width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    video.media,
+    img.media {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
     }
-    .overlay {
+    .username-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 1rem;
-      z-index: 2;
-      pointer-events: none;
-    }
-    .top-left {
-      pointer-events: auto;
+      top: 16px;
+      left: 16px;
       font-weight: bold;
+      color: #fff;
       text-shadow: 0 0 5px #000;
+      z-index: 2;
     }
-    .bottom-left {
-      pointer-events: auto;
-      text-shadow: 0 0 5px #000;
-    }
-    .bottom-left .caption {
-      font-size: 0.95rem;
-      margin-top: 0.25rem;
-    }
-    .right-buttons {
+    .actions {
       position: absolute;
-      right: 1rem;
-      bottom: 5rem;
+      bottom: 60px;
+      right: 16px;
       display: flex;
       flex-direction: column;
-      gap: 0.8rem;
-      pointer-events: auto;
+      gap: 14px;
+      z-index: 2;
     }
-    .right-buttons button {
-      background: rgba(0,0,0,0.4);
+    .action-btn {
+      background: rgba(0,0,0,0.5);
       border: none;
-      color: white;
-      font-size: 1.4rem;
-      padding: 0.6rem;
+      color: #fff;
+      font-size: 1.5em;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
     }
-    .comment-popup {
+    .like-count {
+      color: #ff0050;
+      font-size: 0.9em;
+      font-weight: bold;
+      text-align: center;
+    }
+    .caption {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 80px;
+      color: #fff;
+      z-index: 2;
+      font-size: 0.95em;
+      text-shadow: 0 0 5px #000;
+    }
+    .upload-btn {
       position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: #111;
-      padding: 1rem;
-      display: none;
+      bottom: 20px;
+      right: 20px;
+      background: #ff0050;
+      color: white;
+      font-size: 2em;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      z-index: 100;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff0050;
     }
   </style>
 </head>
 <body>
-
-<div class="feed" id="feed"></div>
-
-<div class="comment-popup" id="commentPopup">
-  <p style="color:white">💬 Comments coming soon!</p>
-</div>
+<div class="feed-container" id="feed"></div>
+<button class="upload-btn" onclick="location.href='upload.html'">＋</button>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, collection, getDocs, orderBy, query, updateDoc, doc, increment
+    getFirestore, collection, query, orderBy, limit, startAfter, getDocs, doc, updateDoc, increment
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -108,107 +120,102 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const feed = document.getElementById("feed");
+  let lastVisible = null;
+  let isLoading = false;
 
-  async function loadPosts() {
-    const q = query(collection(db, "clixPosts"), orderBy("createdAt", "desc"));
+  async function loadFeed(initial = false) {
+    if (isLoading) return;
+    isLoading = true;
+
+    const q = initial
+      ? query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), limit(5))
+      : query(collection(db, "clixPosts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
+
     const snapshot = await getDocs(q);
+    if (snapshot.empty) return;
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
+
     snapshot.forEach(docSnap => {
       const post = docSnap.data();
-      const id = docSnap.id;
+      const postId = docSnap.id;
 
       const postEl = document.createElement("div");
       postEl.className = "post";
 
+      const mediaContainer = document.createElement("div");
+      mediaContainer.className = "media-container";
+
       const video = document.createElement("video");
       video.src = post.mediaURL;
-      video.muted = true;
-      video.loop = true;
-      video.playsInline = true;
+      video.className = "media";
       video.autoplay = false;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      mediaContainer.appendChild(video);
 
-      const overlay = document.createElement("div");
-      overlay.className = "overlay";
+      const username = document.createElement("div");
+      username.className = "username-overlay";
+      username.textContent = `@${post.username || 'user'}`;
+      mediaContainer.appendChild(username);
 
-      const topLeft = document.createElement("div");
-      topLeft.className = "top-left";
-      topLeft.textContent = `@${post.username || "user"}`;
-      overlay.appendChild(topLeft);
-
-      const bottomLeft = document.createElement("div");
-      bottomLeft.className = "bottom-left";
-      const caption = document.createElement("div");
-      caption.className = "caption";
-      caption.textContent = post.caption || "";
-      bottomLeft.appendChild(caption);
-      overlay.appendChild(bottomLeft);
-
-      const rightButtons = document.createElement("div");
-      rightButtons.className = "right-buttons";
-
-      const muteBtn = document.createElement("button");
-      muteBtn.textContent = "🔇";
-      muteBtn.onclick = () => {
-        video.muted = !video.muted;
-        muteBtn.textContent = video.muted ? "🔇" : "🔊";
-      };
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
       const likeBtn = document.createElement("button");
+      likeBtn.className = "action-btn";
       likeBtn.textContent = "❤️";
-      likeBtn.onclick = async () => {
-        await updateDoc(doc(db, "clixPosts", id), { likes: increment(1) });
-        likeCount.textContent = Number(likeCount.textContent) + 1;
-      };
 
       const likeCount = document.createElement("div");
-      likeCount.style.textAlign = "center";
+      likeCount.className = "like-count";
       likeCount.textContent = post.likes || 0;
 
-      const commentBtn = document.createElement("button");
-      commentBtn.textContent = "💬";
-      commentBtn.onclick = () => {
-        document.getElementById("commentPopup").style.display = "block";
-        setTimeout(() => {
-          document.getElementById("commentPopup").style.display = "none";
-        }, 2000);
+      likeBtn.onclick = async () => {
+        likeCount.textContent = +likeCount.textContent + 1;
+        await updateDoc(doc(db, "clixPosts", postId), { likes: increment(1) });
       };
 
-      rightButtons.appendChild(muteBtn);
-      rightButtons.appendChild(likeBtn);
-      rightButtons.appendChild(likeCount);
-      rightButtons.appendChild(commentBtn);
+      const commentBtn = document.createElement("button");
+      commentBtn.className = "action-btn";
+      commentBtn.textContent = "💬";
 
-      postEl.appendChild(video);
-      postEl.appendChild(overlay);
-      postEl.appendChild(rightButtons);
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "action-btn";
+      saveBtn.textContent = "🔖";
+
+      actions.append(likeBtn, commentBtn, saveBtn, likeCount);
+      mediaContainer.appendChild(actions);
+
+      const caption = document.createElement("div");
+      caption.className = "caption";
+      caption.textContent = post.caption || '';
+      mediaContainer.appendChild(caption);
+
+      postEl.appendChild(mediaContainer);
       feed.appendChild(postEl);
     });
+    observeVideos();
+    isLoading = false;
   }
 
-  loadPosts();
+  function observeVideos() {
+    const videos = document.querySelectorAll("video.media");
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        entry.target.pause();
+        if (entry.isIntersecting) {
+          entry.target.play();
+        }
+      });
+    }, { threshold: 0.7 });
+    videos.forEach(video => observer.observe(video));
+  }
 
-  // Only play video in view
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      const video = entry.target.querySelector("video");
-      if (!video) return;
-      if (entry.isIntersecting) {
-        video.play();
-      } else {
-        video.pause();
-      }
-    });
-  }, { threshold: 0.7 });
-
-  const checkScroll = () => {
-    document.querySelectorAll(".post").forEach(post => {
-      observer.observe(post);
-    });
-  };
-
-  feed.addEventListener("scroll", checkScroll);
-  window.addEventListener("load", checkScroll);
+  loadFeed(true);
+  feed.addEventListener('scroll', () => {
+    if (feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 100) loadFeed();
+  });
 </script>
 
 </body>
 </html>
-
