@@ -2,103 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Edit Profile • Clixly</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clixly • Edit Profile</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      max-width: 500px;
-      margin: 40px auto;
-      background: #f9f9f9;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      font-family: sans-serif;
+      background: #0d0d10;
+      color: white;
+      padding: 20px;
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
+    .form-group {
+      margin-bottom: 15px;
     }
     label {
       display: block;
-      margin-top: 20px;
       font-weight: bold;
+      margin-bottom: 5px;
     }
-    input[type="text"], textarea {
+    input, textarea {
       width: 100%;
       padding: 10px;
-      margin-top: 8px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      font-size: 1em;
-      box-sizing: border-box;
-    }
-    input[type="file"] {
-      margin-top: 8px;
-    }
-    button {
-      margin-top: 30px;
-      padding: 12px;
-      width: 100%;
-      background-color: #0077ff;
+      background: #1c1c24;
       color: white;
       border: none;
+      border-radius: 8px;
+    }
+    button {
+      background: #8a2be2;
+      color: white;
+      padding: 10px 20px;
+      border: none;
       border-radius: 10px;
-      font-size: 1.1em;
+      font-weight: bold;
       cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:disabled {
-      background-color: #999;
-      cursor: not-allowed;
-    }
-    button:hover:enabled {
-      background-color: #005bbb;
-    }
-    img {
-      display: block;
-      margin: 20px auto;
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 2px solid #0077ff;
-    }
-    .message {
-      text-align: center;
-      margin-top: 20px;
-      font-weight: 600;
     }
   </style>
 </head>
 <body>
-
   <h2>Edit Your Profile</h2>
 
-  <img id="profilePicPreview" src="https://via.placeholder.com/100?text=No+Image" alt="Profile Picture" />
+  <div class="form-group">
+    <label for="username">Username</label>
+    <input type="text" id="username" placeholder="Enter username">
+  </div>
 
-  <label for="profilePicFile">Upload Profile Picture</label>
-  <input type="file" id="profilePicFile" accept="image/*" />
+  <div class="form-group">
+    <label for="bio">Bio</label>
+    <textarea id="bio" rows="3" placeholder="Enter bio"></textarea>
+  </div>
 
-  <label for="username">Username</label>
-  <input type="text" id="username" placeholder="Your username" />
+  <div class="form-group">
+    <label for="profile-pic">Profile Picture URL</label>
+    <input type="text" id="profile-pic" placeholder="Paste image URL">
+  </div>
 
-  <label for="bio">Bio</label>
-  <textarea id="bio" rows="4" placeholder="Short bio about yourself"></textarea>
-
-  <button id="saveBtn" disabled>💾 Save Changes</button>
-
-  <p id="statusMessage" class="message"></p>
+  <button id="saveBtn">Save Changes</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, doc, getDoc, setDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
       authDomain: "clixly-bc284.firebaseapp.com",
@@ -109,114 +73,54 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
-    const auth = getAuth();
 
-    const profilePicFileInput = document.getElementById('profilePicFile');
-    const usernameInput = document.getElementById('username');
-    const bioInput = document.getElementById('bio');
-    const profilePicPreview = document.getElementById('profilePicPreview');
-    const saveBtn = document.getElementById('saveBtn');
-    const statusMessage = document.getElementById('statusMessage');
+    const usernameInput = document.getElementById("username");
+    const bioInput = document.getElementById("bio");
+    const picInput = document.getElementById("profile-pic");
+    const saveBtn = document.getElementById("saveBtn");
 
-    let currentUserId = null;
-    let uploadedProfilePicUrl = null;  // will store uploaded profile pic URL from Cloudinary
-
-    // Cloudinary config — YOUR INFO
-    const cloudName = "dd1xg9duv";
-    const unsignedUploadPreset = "clixly_upload";
-
-    function setStatus(message, color = 'black') {
-      statusMessage.style.color = color;
-      statusMessage.textContent = message;
-    }
+    let currentUser = null;
 
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUserId = user.uid;
-        saveBtn.disabled = false;
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
 
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUserId));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            usernameInput.value = data.username || '';
-            bioInput.value = data.bio || '';
-            uploadedProfilePicUrl = data.profilePic || null;
+      currentUser = user;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
 
-            profilePicPreview.src = uploadedProfilePicUrl || 'https://via.placeholder.com/100?text=No+Image';
-          } else {
-            profilePicPreview.src = 'https://via.placeholder.com/100?text=No+Image';
-          }
-        } catch (err) {
-          console.error('Error loading profile:', err);
-          setStatus('Error loading profile data', 'red');
-        }
-      } else {
-        document.body.innerHTML = '<p style="text-align:center; margin-top: 50px;">Please <a href="login.html">log in</a> to edit your profile.</p>';
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        usernameInput.value = data.username || "";
+        bioInput.value = data.bio || "";
+        picInput.value = data.profilePicture || "";
       }
     });
 
-    profilePicFileInput.addEventListener('change', async () => {
-      const file = profilePicFileInput.files[0];
-      if (!file) return;
+    saveBtn.addEventListener("click", async () => {
+      if (!currentUser) return;
 
-      setStatus('Uploading profile picture...', 'black');
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", unsignedUploadPreset);
+      const userRef = doc(db, "users", currentUser.uid);
 
       try {
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
-          method: "POST",
-          body: formData
+        await updateDoc(userRef, {
+          username: usernameInput.value.trim(),
+          bio: bioInput.value.trim(),
+          profilePicture: picInput.value.trim()
         });
 
-        if (!response.ok) throw new Error("Upload failed");
-
-        const data = await response.json();
-
-        uploadedProfilePicUrl = data.secure_url;
-        profilePicPreview.src = uploadedProfilePicUrl;
-        setStatus('Profile picture uploaded. Don\'t forget to save changes.', 'green');
+        alert("✅ Profile updated!");
+        window.location.href = `profile.html?uid=${currentUser.uid}`;
       } catch (err) {
-        console.error('Upload error:', err);
-        setStatus('Upload failed: ' + err.message, 'red');
-      }
-    });
-
-    saveBtn.addEventListener('click', async () => {
-      const username = usernameInput.value.trim();
-      const bio = bioInput.value.trim();
-
-      if (!username) {
-        setStatus('❗ Username cannot be empty.', 'red');
-        return;
-      }
-      if (!uploadedProfilePicUrl) {
-        setStatus('❗ Please upload a profile picture.', 'red');
-        return;
-      }
-
-      try {
-        await setDoc(doc(db, 'users', currentUserId), {
-          username,
-          bio,
-          profilePic: uploadedProfilePicUrl,
-          uid: currentUserId,
-          email: auth.currentUser.email || ''
-        }, { merge: true });
-
-        setStatus('✅ Profile updated successfully!', 'green');
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        setStatus('❌ Error updating profile: ' + error.message, 'red');
+        console.error("Error updating profile:", err);
+        alert("❌ Failed to update. Try again.");
       }
     });
   </script>
-
 </body>
 </html>
-
 
