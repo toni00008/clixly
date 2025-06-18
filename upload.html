@@ -1,101 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Upload - Clixly</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f2f5f9;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .upload-container {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 500px;
-    }
-
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-
-    .preview-img {
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      display: none;
-    }
-
-    input[type="file"], textarea, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1em;
-    }
-
-    textarea {
-      resize: none;
-      height: 100px;
-    }
-
-    #charCount {
-      text-align: right;
-      font-size: 0.85em;
-      color: #555;
-    }
-
-    button {
-      background-color: #0077ff;
-      color: white;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-      transition: 0.3s ease;
-    }
-
-    button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-
-    button:hover:enabled {
-      background-color: #005dc1;
-    }
-
-    #status {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 0.95em;
-      color: #444;
-    }
-  </style>
+  <title>Clixly • Upload</title>
 </head>
 <body>
-  <div class="upload-container">
-    <h2>📤 Upload Post</h2>
-    <img id="previewImg" class="preview-img" src="#" alt="Preview">
-    <input type="file" id="imageInput" accept="image/*,video/*">
-    <textarea id="caption" placeholder="Write a caption... (Max 300 chars)"></textarea>
-    <div id="charCount">0 / 300</div>
-    <button id="uploadBtn">🚀 Upload</button>
-    <div id="status"></div>
-  </div>
+  <h2>Upload Post</h2>
+  <input type="file" id="mediaInput" accept="image/*,video/*"><br><br>
+  <button id="uploadBtn">Upload</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, collection, addDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDNnoWHDiOUZWMlw-mMdlnDovEDR74zFew",
@@ -110,100 +28,43 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const imageInput = document.getElementById('imageInput');
-    const captionInput = document.getElementById('caption');
+    const mediaInput = document.getElementById('mediaInput');
     const uploadBtn = document.getElementById('uploadBtn');
-    const statusDiv = document.getElementById('status');
-    const previewImg = document.getElementById('previewImg');
-    const charCount = document.getElementById('charCount');
 
-    let currentUser = null;
+    uploadBtn.onclick = async () => {
+      const file = mediaInput.files[0];
+      if (!file) return alert("Please select a media file.");
 
-    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dd1xg9duv/auto/upload";
-    const CLOUDINARY_UPLOAD_PRESET = "clixly_upload";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "clixly_upload"); // ⚠️ Replace this
+      formData.append("cloud_name", "dd1xg9duv");       // ⚠️ Replace this
 
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        statusDiv.innerHTML = 'You must <a href="login.html">login</a> to upload posts.';
-        uploadBtn.disabled = true;
-        return;
-      }
-      currentUser = user;
-      uploadBtn.disabled = false;
-      statusDiv.textContent = '';
-    });
-
-    imageInput.addEventListener('change', () => {
-      const file = imageInput.files[0];
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          previewImg.src = e.target.result;
-          previewImg.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      } else {
-        previewImg.style.display = 'none';
-      }
-    });
-
-    captionInput.addEventListener('input', () => {
-      const len = captionInput.value.length;
-      charCount.textContent = `${len} / 300`;
-      if (len > 300) {
-        captionInput.style.borderColor = "red";
-        uploadBtn.disabled = true;
-      } else {
-        captionInput.style.borderColor = "#ccc";
-        uploadBtn.disabled = false;
-      }
-    });
-
-    uploadBtn.addEventListener('click', async () => {
-      const file = imageInput.files[0];
-      const caption = captionInput.value.trim();
-
-      if (!file) return alert('Please select a file to upload.');
-
-      uploadBtn.disabled = true;
-      statusDiv.textContent = '📡 Uploading file to Cloudinary...';
+      const isVideo = file.type.startsWith("video");
 
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-        const response = await fetch(CLOUDINARY_URL, {
-          method: 'POST',
+        const res = await fetch(`https://api.cloudinary.com/v1_1/dd1xg9duv/${isVideo ? 'video' : 'image'}/upload`, {
+          method: "POST",
           body: formData
         });
 
-        if (!response.ok) throw new Error('Cloudinary upload failed');
+        const data = await res.json();
+        const url = data.secure_url;
 
-        const data = await response.json();
-        const fileURL = data.secure_url;
-
-        statusDiv.textContent = '📝 Saving post to Firestore...';
-
-        await addDoc(collection(db, 'clixPosts'), {
-          mediaURL: fileURL,
-          caption: caption,
-          userEmail: currentUser.email,
-          createdAt: serverTimestamp()
+        onAuthStateChanged(auth, async (user) => {
+          if (!user) return alert("Login required");
+          await addDoc(collection(db, "posts"), {
+            userId: user.uid,
+            [isVideo ? 'videoUrl' : 'imageUrl']: url,
+            createdAt: serverTimestamp()
+          });
+          alert("Post uploaded!");
         });
-
-        statusDiv.textContent = '✅ Post uploaded successfully!';
-        imageInput.value = '';
-        captionInput.value = '';
-        previewImg.style.display = 'none';
-        charCount.textContent = '0 / 300';
-      } catch (error) {
-        alert('❌ Upload failed: ' + error.message);
-        statusDiv.textContent = '';
-      } finally {
-        uploadBtn.disabled = false;
+      } catch (err) {
+        console.error(err);
+        alert("Upload failed.");
       }
-    });
+    };
   </script>
 </body>
 </html>
